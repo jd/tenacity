@@ -19,7 +19,7 @@ if sys.argv[-1] == 'publish':
 settings.update(
     name='retrying',
     version='1.0.0',
-    description='Retry any arbitrary function conditionally via a decorator',
+    description='Retry any arbitrary function conditionally via a decorator.',
     long_description=open('README.rst').read(),
     author='Ray Holder',
     url='https://github.com/rholder/retrying',

@@ -1,0 +1,232 @@
+## Copyright 2013 Ray Holder
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+## http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+
+import time
+import unittest
+
+from retrying import RetryError
+from retrying import Retrying
+from retrying import retry
+
+class TestStopConditions(unittest.TestCase):
+
+    def test_never_stop(self):
+        r = Retrying(stop='never_stop')
+        self.assertFalse(r.stop(3, 6546))
+
+    def test_stop_after_attempt(self):
+        r = Retrying(stop='stop_after_attempt', stop_max_attempt_number=3)
+        self.assertFalse(r.stop(2, 6546))
+        self.assertTrue(r.stop(3, 6546))
+        self.assertTrue(r.stop(4, 6546))
+
+    def test_stop_after_delay(self):
+        r = Retrying(stop='stop_after_delay', stop_max_delay=1000)
+        self.assertFalse(r.stop(2, 999))
+        self.assertTrue(r.stop(2, 1000))
+        self.assertTrue(r.stop(2, 1001))
+
+class TestWaitConditions(unittest.TestCase):
+
+    def test_no_sleep(self):
+        r = Retrying(wait='no_sleep')
+        self.assertEqual(0, r.wait(18, 9879))
+
+    def test_fixed_sleep(self):
+        r = Retrying(wait='fixed_sleep', wait_fixed=1000)
+        self.assertEqual(1000, r.wait(12, 6546))
+
+    def test_incrementing_sleep(self):
+        r = Retrying(wait='incrementing_sleep', wait_incrementing_start=500, wait_incrementing_increment=100)
+        self.assertEqual(500, r.wait(1, 6546))
+        self.assertEqual(600, r.wait(2, 6546))
+        self.assertEqual(700, r.wait(3, 6546))
+
+    def test_random_sleep(self):
+        r = Retrying(wait='random_sleep', wait_random_min=1000, wait_random_max=2000)
+        times = set()
+        times.add(r.wait(1, 6546))
+        times.add(r.wait(1, 6546))
+        times.add(r.wait(1, 6546))
+        times.add(r.wait(1, 6546))
+        self.assertTrue(len(times) > 1) # this is kind of non-deterministic...
+        for t in times:
+            self.assertTrue(t >= 1000)
+            self.assertTrue(t <= 2000)
+
+    def test_random_sleep_without_min(self):
+        r = Retrying(wait='random_sleep', wait_random_max=2000)
+        times = set()
+        times.add(r.wait(1, 6546))
+        times.add(r.wait(1, 6546))
+        times.add(r.wait(1, 6546))
+        times.add(r.wait(1, 6546))
+        self.assertTrue(len(times) > 1) # this is kind of non-deterministic...
+        for t in times:
+            self.assertTrue(t >= 0)
+            self.assertTrue(t <= 2000)
+
+    def test_exponential(self):
+        r = Retrying(wait='exponential_sleep')
+        self.assertEqual(r.wait(1, 0), 2)
+        self.assertEqual(r.wait(2, 0), 4)
+        self.assertEqual(r.wait(3, 0), 8)
+        self.assertEqual(r.wait(4, 0), 16)
+        self.assertEqual(r.wait(5, 0), 32)
+        self.assertEqual(r.wait(6, 0), 64)
+
+    def test_exponential_with_max_wait(self):
+        r = Retrying(wait='exponential_sleep', wait_exponential_max=40)
+        self.assertEqual(r.wait(1, 0), 2)
+        self.assertEqual(r.wait(2, 0), 4)
+        self.assertEqual(r.wait(3, 0), 8)
+        self.assertEqual(r.wait(4, 0), 16)
+        self.assertEqual(r.wait(5, 0), 32)
+        self.assertEqual(r.wait(6, 0), 40)
+        self.assertEqual(r.wait(7, 0), 40)
+        self.assertEqual(r.wait(50, 0), 40)
+
+    def test_exponential_with_max_wait_and_multiplier(self):
+        r = Retrying(wait='exponential_sleep', wait_exponential_max=50000, wait_exponential_multiplier=1000)
+        self.assertEqual(r.wait(1, 0), 2000)
+        self.assertEqual(r.wait(2, 0), 4000)
+        self.assertEqual(r.wait(3, 0), 8000)
+        self.assertEqual(r.wait(4, 0), 16000)
+        self.assertEqual(r.wait(5, 0), 32000)
+        self.assertEqual(r.wait(6, 0), 50000)
+        self.assertEqual(r.wait(7, 0), 50000)
+        self.assertEqual(r.wait(50, 0), 50000)
+
+
+
+class NoneReturnUntilAfterCount:
+    """
+    This class holds counter state for invoking a method several times in a row.
+    """
+
+    def __init__(self, count):
+        self.counter = 0
+        self.count = count
+
+    def go(self):
+        """
+        Return None until after count threshold has been crossed, then return True.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            return None
+        return True
+
+class NoIOErrorAfterCount:
+    """
+    This class holds counter state for invoking a method several times in a row.
+    """
+
+    def __init__(self, count):
+        self.counter = 0
+        self.count = count
+
+    def go(self):
+        """
+        Raise an IOError until after count threshold has been crossed, then return True.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            raise IOError()
+        return True
+
+class NoNameErrorAfterCount:
+    """
+    This class holds counter state for invoking a method several times in a row.
+    """
+
+    def __init__(self, count):
+        self.counter = 0
+        self.count = count
+
+    def go(self):
+        """
+        Raise an NameError until after count threshold has been crossed, then return True.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            raise NameError()
+        return True
+
+
+def retry_if_result_none(result):
+    return result is None
+
+def retry_if_exception_of_type(retryable_types):
+    def retry_if_exception_these_types(exception):
+        return isinstance(exception, retryable_types)
+    return retry_if_exception_these_types
+
+def current_time_ms():
+    return int(round(time.time() * 1000))
+
+@retry(wait='fixed_sleep', wait_fixed=50, retry_on_result=retry_if_result_none)
+def _retryable_test_with_wait(thing):
+    return thing.go()
+
+@retry(stop='stop_after_attempt', stop_max_attempt_number=3, retry_on_result=retry_if_result_none)
+def _retryable_test_with_stop(thing):
+    return thing.go()
+
+@retry(retry_on_exception=retry_if_exception_of_type(IOError))
+def _retryable_test_with_exception_type_io(thing):
+    return thing.go()
+
+@retry(stop='stop_after_attempt', stop_max_attempt_number=3,retry_on_exception=retry_if_exception_of_type(IOError))
+def _retryable_test_with_exception_type_io_attempt_limit(thing):
+    return thing.go()
+
+
+class TestDecoratorWrapper(unittest.TestCase):
+
+    def test_with_wait(self):
+        start = current_time_ms()
+        result = _retryable_test_with_wait(NoneReturnUntilAfterCount(5))
+        t = current_time_ms() - start
+        self.assertTrue(t >= 250)
+        self.assertTrue(result)
+
+    def test_with_stop(self):
+        try:
+            _retryable_test_with_stop(NoneReturnUntilAfterCount(5))
+            self.fail("Expected RetryError after 3 attempts")
+        except RetryError as e:
+            self.assertEqual(3, e.failed_attempts)
+
+    def test_retry_if_exception_of_type(self):
+        self.assertTrue(_retryable_test_with_exception_type_io(NoIOErrorAfterCount(5)))
+
+        try:
+            _retryable_test_with_exception_type_io(NoNameErrorAfterCount(5))
+            self.fail("Expected NameError")
+        except NameError as n:
+            self.assertTrue(isinstance(n, NameError))
+
+        try:
+            _retryable_test_with_exception_type_io_attempt_limit(NoIOErrorAfterCount(5))
+            self.fail("RetryError expected")
+        except RetryError as re:
+            self.assertEqual(3, re.failed_attempts)
+            self.assertTrue(re.last_attempt.has_exception)
+            self.assertTrue(isinstance(re.last_attempt.value, IOError))
+
+    #TODO YOU ARE HERE, CONTINUE TESTING
+
+if __name__ == '__main__':
+    unittest.main()
