@@ -22,8 +22,8 @@ def retry(stop='never_stop', stop_max_attempt_number=5, stop_max_delay=100,
           wait_random_min=0, wait_random_max=1000,
           wait_incrementing_start=0, wait_incrementing_increment=100,
           wait_exponential_multiplier=100, wait_exponential_max=5000,
-          retry_on_exception=None, #TODO on_exception
-          retry_on_result=None): #TODO on_result
+          retry_on_exception=None,
+          retry_on_result=None):
     def wrap(f):
         def wrapped_f(*args, **kw):
             return Retrying(
@@ -54,15 +54,15 @@ class Retrying:
                  wait_random_min=0, wait_random_max=1000,
                  wait_incrementing_start=0, wait_incrementing_increment=100,
                  wait_exponential_multiplier=1, wait_exponential_max=sys.maxint,
-                 retry_on_exception=None, #TODO on_exception
-                 retry_on_result=None):   #TODO on_result
+                 retry_on_exception=None,
+                 retry_on_result=None):
 
         # stop behavior
         self.stop = getattr(self, stop)
         self._stop_max_attempt_number = stop_max_attempt_number
         self._stop_max_delay = stop_max_delay
 
-        # control wait behavior
+        # wait behavior
         self.wait = getattr(self, wait)
         self._wait_fixed = wait_fixed
         self._wait_random_min = wait_random_min
@@ -72,13 +72,13 @@ class Retrying:
         self._wait_exponential_multiplier = wait_exponential_multiplier
         self._wait_exponential_max = wait_exponential_max
 
-        # control retry on exception filter
+        # retry on exception filter
         if retry_on_exception is None:
             self._retry_on_exception = self.never_reject
         else:
             self._retry_on_exception = retry_on_exception
 
-        # control retry on result filter
+        # retry on result filter
         if retry_on_result is None:
             self._retry_on_result = self.never_reject
         else:
@@ -140,15 +140,6 @@ class Retrying:
 
             if not self.should_reject(attempt):
                 return attempt.get()
-
-#            if not attempt.has_exception:
-#                # filter by retry_on_result() here
-#                if not self._retry_on_result(attempt.value):
-#                    return attempt.value
-#            else:
-#                # filter by retry_on_exception() here
-#                if not self._retry_on_exception(attempt.value):
-#                    raise RetryError(attempt_number, attempt)
 
             delay_since_first_attempt_ms = int(round(time.time() * 1000)) - start_time
             if self.stop(attempt_number, delay_since_first_attempt_ms):
