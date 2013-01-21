@@ -19,12 +19,14 @@ if sys.argv[-1] == 'publish':
 settings.update(
     name='retrying',
     version='1.0.0',
-    description='Retry any arbitrary function conditionally via a decorator.',
-    long_description=open('README.rst').read(),
+    description='Retrying',
+    long_description=open('README.rst').read() + '\n\n' +
+                     open('HISTORY.rst').read(),
     author='Ray Holder',
     url='https://github.com/rholder/retrying',
     keywords="context manager decorator decorators retry retrying exception exponential backoff",
     py_modules= ['retrying'],
+    test_suite="test_retrying",
     classifiers=(
         'Intended Audience :: Developers',
         'Natural Language :: English',

@@ -108,8 +108,6 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(7, 0), 50000)
         self.assertEqual(r.wait(50, 0), 50000)
 
-
-
 class NoneReturnUntilAfterCount:
     """
     This class holds counter state for invoking a method several times in a row.
@@ -157,7 +155,7 @@ class NoNameErrorAfterCount:
 
     def go(self):
         """
-        Raise an NameError until after count threshold has been crossed, then return True.
+        Raise a NameError until after count threshold has been crossed, then return True.
         """
         if self.counter < self.count:
             self.counter += 1
@@ -225,8 +223,6 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.assertEqual(3, re.failed_attempts)
             self.assertTrue(re.last_attempt.has_exception)
             self.assertTrue(isinstance(re.last_attempt.value, IOError))
-
-    #TODO YOU ARE HERE, CONTINUE TESTING
 
 if __name__ == '__main__':
     unittest.main()
