@@ -24,7 +24,7 @@ settings.update(
                      open('HISTORY.rst').read(),
     author='Ray Holder',
     url='https://github.com/rholder/retrying',
-    keywords="context manager decorator decorators retry retrying exception exponential backoff",
+    keywords="decorator decorators retry retrying exception exponential backoff",
     py_modules= ['retrying'],
     test_suite="test_retrying",
     classifiers=(
