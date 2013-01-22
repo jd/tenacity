@@ -13,8 +13,10 @@
 ## limitations under the License.
 
 import random
-import sys
 import time
+
+# sys.maxint / 2, since Python 3.2 doesn't have a sys.maxint...
+MAX_WAIT = 1073741823
 
 def retry(*dargs, **dkw):
     """
@@ -47,7 +49,7 @@ class Retrying:
                  wait_fixed=1000,
                  wait_random_min=0, wait_random_max=1000,
                  wait_incrementing_start=0, wait_incrementing_increment=100,
-                 wait_exponential_multiplier=1, wait_exponential_max=sys.maxint,
+                 wait_exponential_multiplier=1, wait_exponential_max=MAX_WAIT,
                  retry_on_exception=None,
                  retry_on_result=None,
                  wrap_exception=False):
