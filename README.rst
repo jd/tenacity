@@ -102,9 +102,9 @@ Here are some snippets and parameters for building your own versions of retrying
     def might_return_none():
         print "Retry forever ignoring Exceptions with no wait if return value is None"
 
-    @retry(wrap_exception=True)
-    def only_raise_retry_error():
-        print "Retry forever ignoring Exceptions with no wait if return value is None"
+    @retry(retry_on_exception=retry_if_io_error, wrap_exception=True)
+    def only_raise_retry_error_when_not_io_error():
+        print "Retry forever with no wait if an IOError occurs, raise any other errors wrapped in RetryError"
 
 Any combination of stop, wait, etc. are also supported to give you the freedom to mix and match.
 
