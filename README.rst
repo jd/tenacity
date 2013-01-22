@@ -138,7 +138,7 @@ We can also use the result of the function to alter the behavior of retrying.
         print "Retry forever ignoring Exceptions with no wait if return value is None"
 
 
-Any combination of stop, wait, etc. are also supported to give you the freedom to mix and match.
+Any combination of stop, wait, etc. is also supported to give you the freedom to mix and match.
 
 Contribute
 ----------
