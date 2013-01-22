@@ -186,10 +186,32 @@ def _retryable_test_with_stop(thing):
 def _retryable_test_with_exception_type_io(thing):
     return thing.go()
 
-@retry(stop='stop_after_attempt', stop_max_attempt_number=3,retry_on_exception=retry_if_exception_of_type(IOError))
+@retry(retry_on_exception=retry_if_exception_of_type(IOError), wrap_exception=True)
+def _retryable_test_with_exception_type_io_wrap(thing):
+    return thing.go()
+
+@retry(
+    stop='stop_after_attempt',
+    stop_max_attempt_number=3,
+    retry_on_exception=retry_if_exception_of_type(IOError))
 def _retryable_test_with_exception_type_io_attempt_limit(thing):
     return thing.go()
 
+@retry(
+    stop='stop_after_attempt',
+    stop_max_attempt_number=3,
+    retry_on_exception=retry_if_exception_of_type(IOError),
+    wrap_exception=True)
+def _retryable_test_with_exception_type_io_attempt_limit_wrap(thing):
+    return thing.go()
+
+@retry
+def _retryable_default(thing):
+    return thing.go()
+
+@retry()
+def _retryable_default_f(thing):
+    return thing.go()
 
 class TestDecoratorWrapper(unittest.TestCase):
 
@@ -205,7 +227,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             _retryable_test_with_stop(NoneReturnUntilAfterCount(5))
             self.fail("Expected RetryError after 3 attempts")
         except RetryError as e:
-            self.assertEqual(3, e.failed_attempts)
+            self.assertEqual(3, e.last_attempt.attempt_number)
 
     def test_retry_if_exception_of_type(self):
         self.assertTrue(_retryable_test_with_exception_type_io(NoIOErrorAfterCount(5)))
@@ -220,9 +242,30 @@ class TestDecoratorWrapper(unittest.TestCase):
             _retryable_test_with_exception_type_io_attempt_limit(NoIOErrorAfterCount(5))
             self.fail("RetryError expected")
         except RetryError as re:
-            self.assertEqual(3, re.failed_attempts)
+            self.assertEqual(3, re.last_attempt.attempt_number)
             self.assertTrue(re.last_attempt.has_exception)
             self.assertTrue(isinstance(re.last_attempt.value, IOError))
+
+    def test_wrapped_exception(self):
+        self.assertTrue(_retryable_test_with_exception_type_io_wrap(NoIOErrorAfterCount(5)))
+
+        try:
+            _retryable_test_with_exception_type_io_wrap(NoNameErrorAfterCount(5))
+            self.fail("Expected RetryError")
+        except RetryError as r:
+            self.assertTrue(isinstance(r.last_attempt.value, NameError))
+
+        try:
+            _retryable_test_with_exception_type_io_attempt_limit_wrap(NoIOErrorAfterCount(5))
+            self.fail("RetryError expected")
+        except RetryError as re:
+            self.assertEqual(3, re.last_attempt.attempt_number)
+            self.assertTrue(re.last_attempt.has_exception)
+            self.assertTrue(isinstance(re.last_attempt.value, IOError))
+
+    def test_defaults(self):
+        self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))
+        self.assertTrue(_retryable_default_f(NoNameErrorAfterCount(5)))
 
 if __name__ == '__main__':
     unittest.main()
