@@ -26,8 +26,6 @@ until a value is returned.
 
     print do_something_unreliable()
 
-TODO flush out more examples
-
 
 Features
 --------
@@ -56,6 +54,59 @@ Or, if you absolutely must:
 
 But, you might regret that later.
 
+
+Examples
+----------
+
+Here are some snippets and parameters for building your own versions of retrying behavior:
+
+.. code-block:: python
+
+    @retry
+    def never_give_up_never_surrender():
+        print "Retry forever ignoring Exceptions, don't wait between retries"
+
+    @retry(stop='stop_after_attempt', stop_max_attempt_number=7)
+    def stop_after_7_attempts():
+        print "Stopping after 7 attempts"
+
+    @retry(stop='stop_after_delay', stop_max_delay=10000)
+    def stop_after_10_s():
+        print "Stopping after 10 seconds"
+
+    @retry(wait='fixed_sleep', wait_fixed=2000)
+    def wait_2_s():
+        print "Wait 2 second between retries"
+
+    @retry(wait='random_sleep', wait_random_min=1000, wait_random_max=2000)
+    def wait_random_1_to_2_s():
+        print "Randomly wait 1 to 2 seconds between retries"
+
+    @retry(wait='exponential_sleep', wait_exponential_multiplier=1000, wait_exponential_max=10000)
+    def wait_exponential_1000():
+        print "Wait 2^x * 1000 milliseconds between each retry, up to 10 seconds, then 10 seconds afterwards"
+
+    def retry_if_io_error(exception):
+        """Return True if we should retry (in this case when it's an IOError), False otherwise"""
+        return isinstance(exception, IOError)
+
+    @retry(retry_on_exception=retry_if_io_error)
+    def might_io_error():
+        print "Retry forever with no wait if an IOError occurs, raise any other errors"
+
+    def retry_if_result_none(result):
+        """Return True if we should retry (in this case when result is None), False otherwise"""
+        return result is None
+
+    @retry(retry_on_result=retry_if_result_none)
+    def might_return_none():
+        print "Retry forever ignoring Exceptions with no wait if return value is None"
+
+    @retry(wrap_exception=True)
+    def only_raise_retry_error():
+        print "Retry forever ignoring Exceptions with no wait if return value is None"
+
+Any combination of stop, wait, etc. are also supported to give you the freedom to mix and match.
 
 Contribute
 ----------
