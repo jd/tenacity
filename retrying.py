@@ -16,39 +16,33 @@ import random
 import sys
 import time
 
-def retry(stop='never_stop', stop_max_attempt_number=5, stop_max_delay=100,
-          wait='no_sleep',
-          wait_fixed=1000,
-          wait_random_min=0, wait_random_max=1000,
-          wait_incrementing_start=0, wait_incrementing_increment=100,
-          wait_exponential_multiplier=100, wait_exponential_max=5000,
-          retry_on_exception=None,
-          retry_on_result=None):
+def retry(*dargs, **dkw):
+    """
+    TODO comment
+    """
     def wrap(f):
         def wrapped_f(*args, **kw):
-            return Retrying(
-                stop=stop,
-                stop_max_attempt_number=stop_max_attempt_number,
-                stop_max_delay=stop_max_delay,
-                wait=wait,
-                wait_fixed=wait_fixed,
-                wait_random_min=wait_random_min,
-                wait_random_max=wait_random_max,
-                wait_incrementing_start=wait_incrementing_start,
-                wait_incrementing_increment=wait_incrementing_increment,
-                wait_exponential_multiplier=wait_exponential_multiplier,
-                wait_exponential_max=wait_exponential_max,
-                retry_on_exception=retry_on_exception,
-                retry_on_result=retry_on_result
-            ).call(f, *args, **kw)
+            return Retrying(*dargs, **dkw).call(f, *args, **kw)
         return wrapped_f
-    return wrap
+
+    def wrap_simple(f):
+        def wrapped_f(*args, **kw):
+            return Retrying().call(f, *args, **kw)
+        return wrapped_f
+
+    # support both @retry and @retry() as valid syntax
+    if len(dargs) == 1 and callable(dargs[0]):
+        return wrap_simple(dargs[0])
+    else:
+        return wrap
 
 
 class Retrying:
 
     def __init__(self,
-                 stop='never_stop', stop_max_attempt_number=5, stop_max_delay=100,
+                 stop='never_stop',
+                 stop_max_attempt_number=5,
+                 stop_max_delay=100,
                  wait='no_sleep',
                  wait_fixed=1000,
                  wait_random_min=0, wait_random_max=1000,
@@ -74,7 +68,7 @@ class Retrying:
 
         # retry on exception filter
         if retry_on_exception is None:
-            self._retry_on_exception = self.never_reject
+            self._retry_on_exception = self.always_reject
         else:
             self._retry_on_exception = retry_on_exception
 
@@ -85,15 +79,19 @@ class Retrying:
             self._retry_on_result = retry_on_result
 
     def never_stop(self, previous_attempt_number, delay_since_first_attempt_ms):
+        """Never stop retrying."""
         return False
 
     def stop_after_attempt(self, previous_attempt_number, delay_since_first_attempt_ms):
+        """Stop after the previous attempt >= max attempt number."""
         return previous_attempt_number >= self._stop_max_attempt_number
 
     def stop_after_delay(self, previous_attempt_number, delay_since_first_attempt_ms):
+        """Stop after the delay from the first >= max delay."""
         return delay_since_first_attempt_ms >= self._stop_max_delay
 
     def no_sleep(self, previous_attempt_number, delay_since_first_attempt_ms):
+        """Return 0, don't sleep at all before retrying."""
         return 0
 
     def fixed_sleep(self, previous_attempt_number, delay_since_first_attempt_ms):
@@ -119,6 +117,9 @@ class Retrying:
 
     def never_reject(self, result):
         return False
+
+    def always_reject(self, result):
+        return True
 
     def should_reject(self, attempt):
         reject = False
