@@ -10,11 +10,22 @@ except ImportError:
 
 settings = dict()
 
-
 # Publish Helper.
 if sys.argv[-1] == 'publish':
     os.system('python setup.py sdist upload')
     sys.exit()
+
+CLASSIFIERS = [
+    'Intended Audience :: Developers',
+    'Natural Language :: English',
+    'License :: OSI Approved :: Apache Software License',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 2.6',
+    'Programming Language :: Python :: 2.7',
+    'Programming Language :: Python :: 3.2',
+    'Topic :: Internet',
+    'Topic :: Utilities',
+]
 
 settings.update(
     name='retrying',
@@ -23,18 +34,12 @@ settings.update(
     long_description=open('README.rst').read() + '\n\n' +
                      open('HISTORY.rst').read(),
     author='Ray Holder',
+    license='Apache 2.0',
     url='https://github.com/rholder/retrying',
+    classifiers=CLASSIFIERS,
     keywords="decorator decorators retry retrying exception exponential backoff",
     py_modules= ['retrying'],
     test_suite="test_retrying",
-    classifiers=(
-        'Intended Audience :: Developers',
-        'Natural Language :: English',
-        'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
-    )
 )
 
 
