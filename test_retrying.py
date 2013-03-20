@@ -162,6 +162,34 @@ class NoNameErrorAfterCount:
             raise NameError()
         return True
 
+class CustomError:
+    """
+    This is a custom exception class that doesn't inherit from any of the Python base Exception hierarchy.
+    """
+    
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+class NoCustomErrorAfterCount:
+    """
+    This class holds counter state for invoking a method several times in a row.
+    """
+
+    def __init__(self, count):
+        self.counter = 0
+        self.count = count
+
+    def go(self):
+        """
+        Raise a CustomError until after count threshold has been crossed, then return True.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            raise CustomError("This is a Custom exception class")
+        return True
 
 def retry_if_result_none(result):
     return result is None
@@ -213,6 +241,29 @@ def _retryable_default(thing):
 def _retryable_default_f(thing):
     return thing.go()
 
+@retry(retry_on_exception=retry_if_exception_of_type(CustomError))
+def _retryable_test_with_exception_type_custom(thing):
+    return thing.go()
+
+@retry(retry_on_exception=retry_if_exception_of_type(CustomError), wrap_exception=True)
+def _retryable_test_with_exception_type_custom_wrap(thing):
+    return thing.go()
+
+@retry(
+    stop='stop_after_attempt',
+    stop_max_attempt_number=3,
+    retry_on_exception=retry_if_exception_of_type(CustomError))
+def _retryable_test_with_exception_type_custom_attempt_limit(thing):
+    return thing.go()
+
+@retry(
+    stop='stop_after_attempt',
+    stop_max_attempt_number=3,
+    retry_on_exception=retry_if_exception_of_type(CustomError),
+    wrap_exception=True)
+def _retryable_test_with_exception_type_custom_attempt_limit_wrap(thing):
+    return thing.go()
+
 class TestDecoratorWrapper(unittest.TestCase):
 
     def test_with_wait(self):
@@ -240,13 +291,31 @@ class TestDecoratorWrapper(unittest.TestCase):
 
         try:
             _retryable_test_with_exception_type_io_attempt_limit(NoIOErrorAfterCount(5))
-            self.fail("RetryError expected")
+            self.fail("Expected RetryError")
         except RetryError as re:
             self.assertEqual(3, re.last_attempt.attempt_number)
             self.assertTrue(re.last_attempt.has_exception)
             self.assertTrue(isinstance(re.last_attempt.value, IOError))
 
+        self.assertTrue(_retryable_test_with_exception_type_custom(NoCustomErrorAfterCount(5)))
+
+        try:
+            _retryable_test_with_exception_type_custom(NoNameErrorAfterCount(5))
+            self.fail("Expected NameError")
+        except NameError as n:
+            self.assertTrue(isinstance(n, NameError))
+
+        try:
+            _retryable_test_with_exception_type_custom_attempt_limit(NoCustomErrorAfterCount(5))
+            self.fail("Expected RetryError")
+        except RetryError as re:
+            self.assertEqual(3, re.last_attempt.attempt_number)
+            self.assertTrue(re.last_attempt.has_exception)
+            self.assertTrue(isinstance(re.last_attempt.value, CustomError))
+
     def test_wrapped_exception(self):
+
+        # base exception cases
         self.assertTrue(_retryable_test_with_exception_type_io_wrap(NoIOErrorAfterCount(5)))
 
         try:
@@ -257,15 +326,34 @@ class TestDecoratorWrapper(unittest.TestCase):
 
         try:
             _retryable_test_with_exception_type_io_attempt_limit_wrap(NoIOErrorAfterCount(5))
-            self.fail("RetryError expected")
+            self.fail("Expected RetryError")
         except RetryError as re:
             self.assertEqual(3, re.last_attempt.attempt_number)
             self.assertTrue(re.last_attempt.has_exception)
             self.assertTrue(isinstance(re.last_attempt.value, IOError))
 
+        # custom error cases
+        self.assertTrue(_retryable_test_with_exception_type_custom_wrap(NoCustomErrorAfterCount(5)))
+
+        try:
+            _retryable_test_with_exception_type_custom_wrap(NoNameErrorAfterCount(5))
+            self.fail("Expected RetryError")
+        except RetryError as r:
+            self.assertTrue(isinstance(r.last_attempt.value, NameError))
+
+        try:
+            _retryable_test_with_exception_type_custom_attempt_limit_wrap(NoCustomErrorAfterCount(5))
+            self.fail("Expected RetryError")
+        except RetryError as re:
+            self.assertEqual(3, re.last_attempt.attempt_number)
+            self.assertTrue(re.last_attempt.has_exception)
+            self.assertTrue(isinstance(re.last_attempt.value, CustomError))
+
     def test_defaults(self):
         self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))
         self.assertTrue(_retryable_default_f(NoNameErrorAfterCount(5)))
+        self.assertTrue(_retryable_default(NoCustomErrorAfterCount(5)))
+        self.assertTrue(_retryable_default_f(NoCustomErrorAfterCount(5)))
 
 if __name__ == '__main__':
     unittest.main()

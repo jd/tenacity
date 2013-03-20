@@ -18,7 +18,7 @@ if sys.argv[-1] == 'publish':
 
 settings.update(
     name='retrying',
-    version='1.0.0',
+    version='1.0.1',
     description='Retrying',
     long_description=open('README.rst').read() + '\n\n' +
                      open('HISTORY.rst').read(),

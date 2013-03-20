@@ -13,6 +13,7 @@
 ## limitations under the License.
 
 import random
+import sys
 import time
 
 # sys.maxint / 2, since Python 3.2 doesn't have a sys.maxint...
@@ -150,7 +151,8 @@ class Retrying:
         while True:
             try:
                 attempt = Attempt(fn(*args, **kwargs), attempt_number, False)
-            except BaseException as e:
+            except:
+                e = sys.exc_info()[1]
                 attempt = Attempt(e, attempt_number, True)
 
             if not self.should_reject(attempt):
