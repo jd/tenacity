@@ -162,11 +162,16 @@ class NoNameErrorAfterCount:
             raise NameError()
         return True
 
-class CustomError:
+class CustomError(Exception):
     """
-    This is a custom exception class that doesn't inherit from any of the Python base Exception hierarchy.
+    This is a custom exception class. Note that For Python 2.x, we don't
+    strictly need to extend BaseException, however, Python 3.x will complain.
+    While this test suite won't run correctly under Python 3.x without
+    extending from the Python exception hierarchy, the actual module code is
+    backwards compatible Python 2.x and will allow for cases where exception
+    classes don't extend from the hierarchy.
     """
-    
+
     def __init__(self, value):
         self.value = value
 
