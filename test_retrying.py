@@ -201,7 +201,7 @@ def retry_if_result_none(result):
 
 def retry_if_exception_of_type(retryable_types):
     def retry_if_exception_these_types(exception):
-        print "Detected Exception of type: {0}".format(str(type(exception)))
+        print("Detected Exception of type: {0}".format(str(type(exception))))
         return isinstance(exception, retryable_types)
     return retry_if_exception_these_types
 
@@ -287,7 +287,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.assertFalse(re.last_attempt.has_exception)
             self.assertEqual(3, re.last_attempt.attempt_number)
             self.assertTrue(re.last_attempt.value is None)
-            print re
+            print(re)
 
     def test_retry_if_exception_of_type(self):
         self.assertTrue(_retryable_test_with_exception_type_io(NoIOErrorAfterCount(5)))
@@ -297,7 +297,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.fail("Expected NameError")
         except NameError as n:
             self.assertTrue(isinstance(n, NameError))
-            print n
+            print(n)
 
         try:
             _retryable_test_with_exception_type_io_attempt_limit(NoIOErrorAfterCount(5))
@@ -308,7 +308,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.assertTrue(re.last_attempt.value[0] is not None)
             self.assertTrue(isinstance(re.last_attempt.value[1], IOError))
             self.assertTrue(re.last_attempt.value[2] is not None)
-            print re
+            print(re)
 
         self.assertTrue(_retryable_test_with_exception_type_custom(NoCustomErrorAfterCount(5)))
 
@@ -317,7 +317,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.fail("Expected NameError")
         except NameError as n:
             self.assertTrue(isinstance(n, NameError))
-            print n
+            print(n)
 
         try:
             _retryable_test_with_exception_type_custom_attempt_limit(NoCustomErrorAfterCount(5))
@@ -328,7 +328,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.assertTrue(re.last_attempt.value[0] is not None)
             self.assertTrue(isinstance(re.last_attempt.value[1], CustomError))
             self.assertTrue(re.last_attempt.value[2] is not None)
-            print re
+            print(re)
 
     def test_wrapped_exception(self):
 
@@ -340,7 +340,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.fail("Expected RetryError")
         except RetryError as re:
             self.assertTrue(isinstance(re.last_attempt.value[1], NameError))
-            print re
+            print(re)
 
         try:
             _retryable_test_with_exception_type_io_attempt_limit_wrap(NoIOErrorAfterCount(5))
@@ -351,7 +351,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.assertTrue(re.last_attempt.value[0] is not None)
             self.assertTrue(isinstance(re.last_attempt.value[1], IOError))
             self.assertTrue(re.last_attempt.value[2] is not None)
-            print re
+            print(re)
 
         # custom error cases
         self.assertTrue(_retryable_test_with_exception_type_custom_wrap(NoCustomErrorAfterCount(5)))
@@ -363,7 +363,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.assertTrue(re.last_attempt.value[0] is not None)
             self.assertTrue(isinstance(re.last_attempt.value[1], NameError))
             self.assertTrue(re.last_attempt.value[2] is not None)
-            print re
+            print(re)
 
         try:
             _retryable_test_with_exception_type_custom_attempt_limit_wrap(NoCustomErrorAfterCount(5))
@@ -374,7 +374,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.assertTrue(re.last_attempt.value[0] is not None)
             self.assertTrue(isinstance(re.last_attempt.value[1], CustomError))
             self.assertTrue(re.last_attempt.value[2] is not None)
-            print re
+            print(re)
 
     def test_defaults(self):
         self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))
