@@ -1,4 +1,4 @@
-## Copyright 2013 Ray Holder
+## Copyright 2013-2014 Ray Holder
 ##
 ## Licensed under the Apache License, Version 2.0 (the "License");
 ## you may not use this file except in compliance with the License.
@@ -12,9 +12,59 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 
+## --- The following is for portions of the "six" module ----------------------
+##
+## Copyright (c) 2010-2014 Benjamin Peterson
+##
+## Permission is hereby granted, free of charge, to any person obtaining a copy
+## of this software and associated documentation files (the "Software"), to deal
+## in the Software without restriction, including without limitation the rights
+## to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+## copies of the Software, and to permit persons to whom the Software is
+## furnished to do so, subject to the following conditions:
+##
+## The above copyright notice and this permission notice shall be included in all
+## copies or substantial portions of the Software.
+##
+## THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+## IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+## FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+## AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+## LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+## OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+## SOFTWARE.
+## ----------------------------------------------------------------------------
+
 import random
 import sys
 import time
+import traceback
+
+# Python 3 compatibility hacks, pilfered from https://pypi.python.org/pypi/six/1.6.1
+PY3 = sys.version_info[0] == 3
+if PY3:
+    def reraise(tp, value, tb=None):
+        if value.__traceback__ is not tb:
+            raise value.with_traceback(tb)
+        raise value
+
+else:
+    def exec_(_code_, _globs_=None, _locs_=None):
+        """Execute code in a namespace."""
+        if _globs_ is None:
+            frame = sys._getframe(1)
+            _globs_ = frame.f_globals
+            if _locs_ is None:
+                _locs_ = frame.f_locals
+            del frame
+        elif _locs_ is None:
+            _locs_ = _globs_
+        exec("""exec _code_ in _globs_, _locs_""")
+
+
+    exec_("""def reraise(tp, value, tb=None):
+    raise tp, value, tb
+""")
 
 # sys.maxint / 2, since Python 3.2 doesn't have a sys.maxint...
 MAX_WAIT = 1073741823
@@ -139,7 +189,7 @@ class Retrying:
     def should_reject(self, attempt):
         reject = False
         if attempt.has_exception:
-            reject |= self._retry_on_exception(attempt.value)
+            reject |= self._retry_on_exception(attempt.value[1])
         else:
             reject |= self._retry_on_result(attempt.value)
 
@@ -152,8 +202,8 @@ class Retrying:
             try:
                 attempt = Attempt(fn(*args, **kwargs), attempt_number, False)
             except:
-                e = sys.exc_info()[1]
-                attempt = Attempt(e, attempt_number, True)
+                tb = sys.exc_info()
+                attempt = Attempt(tb, attempt_number, True)
 
             if not self.should_reject(attempt):
                 return attempt.get(self._wrap_exception)
@@ -189,9 +239,15 @@ class Attempt:
             if wrap_exception:
                 raise RetryError(self)
             else:
-                raise self.value
+                reraise(self.value[0], self.value[1], self.value[2])
         else:
             return self.value
+
+    def __repr__(self):
+        if self.has_exception:
+            return "Attempts: {0}, Error:\n{1}".format(self.attempt_number, "".join(traceback.format_tb(self.value[2])))
+        else:
+            return "Attempts: {0}, Value: {1}".format(self.attempt_number, self.value)
 
 class RetryError(Exception):
     """
@@ -202,4 +258,4 @@ class RetryError(Exception):
         self.last_attempt = last_attempt
 
     def __str__(self):
-        return "Last attempt: %s" % str(self.last_attempt)
+        return "RetryError[{0}]".format(self.last_attempt)
