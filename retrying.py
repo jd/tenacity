@@ -15,6 +15,7 @@
 import random
 import sys
 import time
+import traceback
 
 # sys.maxint / 2, since Python 3.2 doesn't have a sys.maxint...
 MAX_WAIT = 1073741823
@@ -139,7 +140,7 @@ class Retrying:
     def should_reject(self, attempt):
         reject = False
         if attempt.has_exception:
-            reject |= self._retry_on_exception(attempt.value)
+            reject |= self._retry_on_exception(attempt.value[1])
         else:
             reject |= self._retry_on_result(attempt.value)
 
@@ -152,8 +153,8 @@ class Retrying:
             try:
                 attempt = Attempt(fn(*args, **kwargs), attempt_number, False)
             except:
-                e = sys.exc_info()[1]
-                attempt = Attempt(e, attempt_number, True)
+                tb = sys.exc_info()
+                attempt = Attempt(tb, attempt_number, True)
 
             if not self.should_reject(attempt):
                 return attempt.get(self._wrap_exception)
@@ -189,9 +190,15 @@ class Attempt:
             if wrap_exception:
                 raise RetryError(self)
             else:
-                raise self.value
+                raise self.value[0], self.value[1], self.value[2]
         else:
             return self.value
+
+    def __repr__(self):
+        if self.has_exception:
+            return "Attempts: {0}, Error:\n{1}".format(self.attempt_number, "".join(traceback.format_tb(self.value[2])))
+        else:
+            return "Attempts: {0}, Value: {1}".format(self.attempt_number, self.value)
 
 class RetryError(Exception):
     """
@@ -202,4 +209,4 @@ class RetryError(Exception):
         self.last_attempt = last_attempt
 
     def __str__(self):
-        return "Last attempt: %s" % str(self.last_attempt)
+        return "RetryError[{0}]".format(self.last_attempt)
