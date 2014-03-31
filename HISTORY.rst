@@ -3,6 +3,11 @@
 History
 -------
 
+1.1.0 (2014-03-31)
+++++++++++++++++++
+- Added proper exception propagation through reraising with Python 2.6, 2.7, and 3.2 compatibility
+- Update test suite for behavior changes
+
 1.0.1 (2013-03-20)
 ++++++++++++++++++
 - Fixed a bug where classes not extending from the Python exception hierarchy could slip through
