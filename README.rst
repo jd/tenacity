@@ -75,7 +75,7 @@ Let's be a little less persistent and set some boundaries, such as the number of
 
 .. code-block:: python
 
-    @retry(stop='stop_after_attempt', stop_max_attempt_number=7)
+    @retry(stop_max_attempt_number=7)
     def stop_after_7_attempts():
         print "Stopping after 7 attempts"
 
@@ -83,7 +83,7 @@ We don't have all day, so let's set a boundary for how long we should be retryin
 
 .. code-block:: python
 
-    @retry(stop='stop_after_delay', stop_max_delay=10000)
+    @retry(stop_max_delay=10000)
     def stop_after_10_s():
         print "Stopping after 10 seconds"
 
@@ -91,7 +91,7 @@ Most things don't like to be polled as fast as possible, so let's just wait 2 se
 
 .. code-block:: python
 
-    @retry(wait='fixed_sleep', wait_fixed=2000)
+    @retry(wait_fixed=2000)
     def wait_2_s():
         print "Wait 2 second between retries"
 
@@ -100,7 +100,7 @@ Some things perform best with a bit of randomness injected.
 
 .. code-block:: python
 
-    @retry(wait='random_sleep', wait_random_min=1000, wait_random_max=2000)
+    @retry(wait_random_min=1000, wait_random_max=2000)
     def wait_random_1_to_2_s():
         print "Randomly wait 1 to 2 seconds between retries"
 
@@ -108,7 +108,7 @@ Then again, it's hard to beat exponential backoff when retrying distributed serv
 
 .. code-block:: python
 
-    @retry(wait='exponential_sleep', wait_exponential_multiplier=1000, wait_exponential_max=10000)
+    @retry(wait_exponential_multiplier=1000, wait_exponential_max=10000)
     def wait_exponential_1000():
         print "Wait 2^x * 1000 milliseconds between each retry, up to 10 seconds, then 10 seconds afterwards"
 

@@ -13,3 +13,4 @@ Patches and Suggestions
 - Anthony McClosky
 - Jason Dunkelberger
 - Justin Turner Arthur
+- J Derek Wilson

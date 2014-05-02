@@ -22,17 +22,17 @@ from retrying import retry
 class TestStopConditions(unittest.TestCase):
 
     def test_never_stop(self):
-        r = Retrying(stop='never_stop')
+        r = Retrying()
         self.assertFalse(r.stop(3, 6546))
 
     def test_stop_after_attempt(self):
-        r = Retrying(stop='stop_after_attempt', stop_max_attempt_number=3)
+        r = Retrying(stop_max_attempt_number=3)
         self.assertFalse(r.stop(2, 6546))
         self.assertTrue(r.stop(3, 6546))
         self.assertTrue(r.stop(4, 6546))
 
     def test_stop_after_delay(self):
-        r = Retrying(stop='stop_after_delay', stop_max_delay=1000)
+        r = Retrying(stop_max_delay=1000)
         self.assertFalse(r.stop(2, 999))
         self.assertTrue(r.stop(2, 1000))
         self.assertTrue(r.stop(2, 1001))
@@ -40,21 +40,21 @@ class TestStopConditions(unittest.TestCase):
 class TestWaitConditions(unittest.TestCase):
 
     def test_no_sleep(self):
-        r = Retrying(wait='no_sleep')
+        r = Retrying()
         self.assertEqual(0, r.wait(18, 9879))
 
     def test_fixed_sleep(self):
-        r = Retrying(wait='fixed_sleep', wait_fixed=1000)
+        r = Retrying(wait_fixed=1000)
         self.assertEqual(1000, r.wait(12, 6546))
 
     def test_incrementing_sleep(self):
-        r = Retrying(wait='incrementing_sleep', wait_incrementing_start=500, wait_incrementing_increment=100)
+        r = Retrying(wait_incrementing_start=500, wait_incrementing_increment=100)
         self.assertEqual(500, r.wait(1, 6546))
         self.assertEqual(600, r.wait(2, 6546))
         self.assertEqual(700, r.wait(3, 6546))
 
     def test_random_sleep(self):
-        r = Retrying(wait='random_sleep', wait_random_min=1000, wait_random_max=2000)
+        r = Retrying(wait_random_min=1000, wait_random_max=2000)
         times = set()
         times.add(r.wait(1, 6546))
         times.add(r.wait(1, 6546))
@@ -66,7 +66,7 @@ class TestWaitConditions(unittest.TestCase):
             self.assertTrue(t <= 2000)
 
     def test_random_sleep_without_min(self):
-        r = Retrying(wait='random_sleep', wait_random_max=2000)
+        r = Retrying(wait_random_max=2000)
         times = set()
         times.add(r.wait(1, 6546))
         times.add(r.wait(1, 6546))
@@ -78,7 +78,7 @@ class TestWaitConditions(unittest.TestCase):
             self.assertTrue(t <= 2000)
 
     def test_exponential(self):
-        r = Retrying(wait='exponential_sleep')
+        r = Retrying(wait_exponential_max=100000)
         self.assertEqual(r.wait(1, 0), 2)
         self.assertEqual(r.wait(2, 0), 4)
         self.assertEqual(r.wait(3, 0), 8)
@@ -87,7 +87,7 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(6, 0), 64)
 
     def test_exponential_with_max_wait(self):
-        r = Retrying(wait='exponential_sleep', wait_exponential_max=40)
+        r = Retrying(wait_exponential_max=40)
         self.assertEqual(r.wait(1, 0), 2)
         self.assertEqual(r.wait(2, 0), 4)
         self.assertEqual(r.wait(3, 0), 8)
@@ -98,7 +98,7 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(50, 0), 40)
 
     def test_exponential_with_max_wait_and_multiplier(self):
-        r = Retrying(wait='exponential_sleep', wait_exponential_max=50000, wait_exponential_multiplier=1000)
+        r = Retrying(wait_exponential_max=50000, wait_exponential_multiplier=1000)
         self.assertEqual(r.wait(1, 0), 2000)
         self.assertEqual(r.wait(2, 0), 4000)
         self.assertEqual(r.wait(3, 0), 8000)
@@ -208,11 +208,11 @@ def retry_if_exception_of_type(retryable_types):
 def current_time_ms():
     return int(round(time.time() * 1000))
 
-@retry(wait='fixed_sleep', wait_fixed=50, retry_on_result=retry_if_result_none)
+@retry(wait_fixed=50, retry_on_result=retry_if_result_none)
 def _retryable_test_with_wait(thing):
     return thing.go()
 
-@retry(stop='stop_after_attempt', stop_max_attempt_number=3, retry_on_result=retry_if_result_none)
+@retry(stop_max_attempt_number=3, retry_on_result=retry_if_result_none)
 def _retryable_test_with_stop(thing):
     return thing.go()
 
@@ -225,14 +225,12 @@ def _retryable_test_with_exception_type_io_wrap(thing):
     return thing.go()
 
 @retry(
-    stop='stop_after_attempt',
     stop_max_attempt_number=3,
     retry_on_exception=retry_if_exception_of_type(IOError))
 def _retryable_test_with_exception_type_io_attempt_limit(thing):
     return thing.go()
 
 @retry(
-    stop='stop_after_attempt',
     stop_max_attempt_number=3,
     retry_on_exception=retry_if_exception_of_type(IOError),
     wrap_exception=True)
@@ -256,14 +254,12 @@ def _retryable_test_with_exception_type_custom_wrap(thing):
     return thing.go()
 
 @retry(
-    stop='stop_after_attempt',
     stop_max_attempt_number=3,
     retry_on_exception=retry_if_exception_of_type(CustomError))
 def _retryable_test_with_exception_type_custom_attempt_limit(thing):
     return thing.go()
 
 @retry(
-    stop='stop_after_attempt',
     stop_max_attempt_number=3,
     retry_on_exception=retry_if_exception_of_type(CustomError),
     wrap_exception=True)
