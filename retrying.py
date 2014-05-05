@@ -151,7 +151,7 @@ class Retrying(object):
             self.wait = lambda attempts, delay: max(f(attempts, delay) for f in wait_funcs)
 
         else:
-            self.wait = self.getattr(wait)
+            self.wait = getattr(self, wait)
 
         # retry on exception filter
         if retry_on_exception is None:

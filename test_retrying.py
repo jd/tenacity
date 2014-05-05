@@ -37,6 +37,9 @@ class TestStopConditions(unittest.TestCase):
         self.assertTrue(r.stop(2, 1000))
         self.assertTrue(r.stop(2, 1001))
 
+    def test_legacy_explicit_stop_type(self):
+        r = Retrying(stop="stop_after_attempt")
+
 class TestWaitConditions(unittest.TestCase):
 
     def test_no_sleep(self):
@@ -107,6 +110,9 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(6, 0), 50000)
         self.assertEqual(r.wait(7, 0), 50000)
         self.assertEqual(r.wait(50, 0), 50000)
+
+    def test_legacy_explicit_wait_type(self):
+        r = Retrying(wait="exponential_sleep")
 
 class NoneReturnUntilAfterCount:
     """
