@@ -193,7 +193,8 @@ class NoCustomErrorAfterCount:
         """
         if self.counter < self.count:
             self.counter += 1
-            raise CustomError("This is a Custom exception class")
+            derived_message = "This is a Custom exception class"
+            raise CustomError(derived_message)
         return True
 
 def retry_if_result_none(result):
@@ -370,6 +371,8 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.assertTrue(re.last_attempt.value[0] is not None)
             self.assertTrue(isinstance(re.last_attempt.value[1], CustomError))
             self.assertTrue(re.last_attempt.value[2] is not None)
+
+            self.assertTrue("This is a Custom exception class" in str(re.last_attempt.value[1]))
             print(re)
 
     def test_defaults(self):
