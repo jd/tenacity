@@ -3,6 +3,10 @@
 History
 -------
 
+1.2.1 (2014-05-05)
+++++++++++++++++++
+- Bug fix for explicitly passing in a wait type
+
 1.2.0 (2014-05-04)
 ++++++++++++++++++
 - Remove the need for explicit specification of stop/wait types when they can be inferred
