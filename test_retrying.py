@@ -311,7 +311,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             print(n)
 
         try:
-            _retryable_test_with_exception_type_io_attempt_limit(NoIOErrorAfterCount(5))
+            _retryable_test_with_exception_type_io_attempt_limit_wrap(NoIOErrorAfterCount(5))
             self.fail("Expected RetryError")
         except RetryError as re:
             self.assertEqual(3, re.last_attempt.attempt_number)
@@ -331,7 +331,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             print(n)
 
         try:
-            _retryable_test_with_exception_type_custom_attempt_limit(NoCustomErrorAfterCount(5))
+            _retryable_test_with_exception_type_custom_attempt_limit_wrap(NoCustomErrorAfterCount(5))
             self.fail("Expected RetryError")
         except RetryError as re:
             self.assertEqual(3, re.last_attempt.attempt_number)
