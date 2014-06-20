@@ -69,9 +69,12 @@ else:
 # sys.maxint / 2, since Python 3.2 doesn't have a sys.maxint...
 MAX_WAIT = 1073741823
 
+
 def retry(*dargs, **dkw):
     """
-    TODO comment
+    Decorator function that instantiates the Retrying object
+    @param *dargs: positional arguments passed to Retrying object
+    @param **dkw: keyword arguments passed to the Retrying object
     """
     # support both @retry and @retry() as valid syntax
     if len(dargs) == 1 and callable(dargs[0]):
@@ -238,6 +241,7 @@ class Retrying(object):
             delay_since_first_attempt_ms = int(round(time.time() * 1000)) - start_time
             if self.stop(attempt_number, delay_since_first_attempt_ms):
                 if not self._wrap_exception and attempt.has_exception:
+                    # get() on an attempt with an exception should cause it to be raised, but raise just in case
                     raise attempt.get()
                 else:
                     raise RetryError(attempt)
@@ -246,6 +250,7 @@ class Retrying(object):
                 time.sleep(sleep / 1000.0)
 
             attempt_number += 1
+
 
 class Attempt(object):
     """
@@ -278,6 +283,7 @@ class Attempt(object):
             return "Attempts: {0}, Error:\n{1}".format(self.attempt_number, "".join(traceback.format_tb(self.value[2])))
         else:
             return "Attempts: {0}, Value: {1}".format(self.attempt_number, self.value)
+
 
 class RetryError(Exception):
     """

@@ -16,3 +16,4 @@ Patches and Suggestions
 - J Derek Wilson
 - Alex Kuang
 - Simon Dollé
+- Rees Dooley
