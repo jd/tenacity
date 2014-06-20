@@ -2,6 +2,9 @@
 
 History
 -------
+1.2.2 (2014-06-20)
+++++++++++++++++++
+- Bug fix to not raise a RetryError on failure when exceptions aren't being wrapped
 
 1.2.1 (2014-05-05)
 ++++++++++++++++++
