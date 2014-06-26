@@ -17,3 +17,4 @@ Patches and Suggestions
 - Alex Kuang
 - Simon Dollé
 - Rees Dooley
+- Saul Shanabrook
