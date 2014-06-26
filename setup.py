@@ -23,13 +23,15 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 2.6',
     'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3.2',
+    'Programming Language :: Python :: 3.3',
+    'Programming Language :: Python :: 3.4',
     'Topic :: Internet',
     'Topic :: Utilities',
 ]
 
 settings.update(
     name='retrying',
-    version='1.2.2',
+    version='1.2.3-dev',
     description='Retrying',
     long_description=open('README.rst').read() + '\n\n' +
                      open('HISTORY.rst').read(),
