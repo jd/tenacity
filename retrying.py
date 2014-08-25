@@ -108,7 +108,9 @@ class Retrying(object):
                  wait_exponential_multiplier=None, wait_exponential_max=None,
                  retry_on_exception=None,
                  retry_on_result=None,
-                 wrap_exception=False):
+                 wrap_exception=False,
+                 stop_func=None,
+                 wait_func=None):
 
         self._stop_max_attempt_number = 5 if stop_max_attempt_number is None else stop_max_attempt_number
         self._stop_max_delay = 100 if stop_max_delay is None else stop_max_delay
@@ -129,7 +131,10 @@ class Retrying(object):
         if stop_max_delay is not None:
             stop_funcs.append(self.stop_after_delay)
 
-        if stop is None:
+        if stop_func is not None:
+            self.stop = stop_func
+
+        elif stop is None:
             self.stop = lambda attempts, delay: any(f(attempts, delay) for f in stop_funcs)
 
         else:
@@ -150,7 +155,10 @@ class Retrying(object):
         if wait_exponential_multiplier is not None or wait_exponential_max is not None:
             wait_funcs.append(self.exponential_sleep)
 
-        if wait is None:
+        if wait_func is not None:
+            self.wait = wait_func
+
+        elif wait is None:
             self.wait = lambda attempts, delay: max(f(attempts, delay) for f in wait_funcs)
 
         else:
