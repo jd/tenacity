@@ -31,7 +31,7 @@ CLASSIFIERS = [
 
 settings.update(
     name='retrying',
-    version='1.2.3-dev',
+    version='1.2.3',
     description='Retrying',
     long_description=open('README.rst').read() + '\n\n' +
                      open('HISTORY.rst').read(),
