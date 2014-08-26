@@ -37,7 +37,7 @@ with open('HISTORY.rst') as file_history:
 
 settings.update(
     name='retrying',
-    version='1.2.3',
+    version='1.2.4-dev',
     description='Retrying',
     long_description=readme + '\n\n' + history,
     author='Ray Holder',
