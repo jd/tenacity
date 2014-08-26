@@ -19,3 +19,4 @@ Patches and Suggestions
 - Rees Dooley
 - Saul Shanabrook
 - Daniel Nephin
+- Simeon Visser
