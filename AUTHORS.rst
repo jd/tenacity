@@ -18,3 +18,4 @@ Patches and Suggestions
 - Simon Dollé
 - Rees Dooley
 - Saul Shanabrook
+- Daniel Nephin
