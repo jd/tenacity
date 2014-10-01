@@ -36,35 +36,11 @@
 ## ----------------------------------------------------------------------------
 
 import random
+import six
 import sys
 import time
 import traceback
 
-# Python 3 compatibility hacks, pilfered from https://pypi.python.org/pypi/six/1.6.1
-PY3 = sys.version_info[0] == 3
-if PY3:
-    def reraise(tp, value, tb=None):
-        if value.__traceback__ is not tb:
-            raise value.with_traceback(tb)
-        raise value
-
-else:
-    def exec_(_code_, _globs_=None, _locs_=None):
-        """Execute code in a namespace."""
-        if _globs_ is None:
-            frame = sys._getframe(1)
-            _globs_ = frame.f_globals
-            if _locs_ is None:
-                _locs_ = frame.f_locals
-            del frame
-        elif _locs_ is None:
-            _locs_ = _globs_
-        exec("""exec _code_ in _globs_, _locs_""")
-
-
-    exec_("""def reraise(tp, value, tb=None):
-    raise tp, value, tb
-""")
 
 # sys.maxint / 2, since Python 3.2 doesn't have a sys.maxint...
 MAX_WAIT = 1073741823
@@ -282,7 +258,7 @@ class Attempt(object):
             if wrap_exception:
                 raise RetryError(self)
             else:
-                reraise(self.value[0], self.value[1], self.value[2])
+                six.reraise(self.value[0], self.value[1], self.value[2])
         else:
             return self.value
 
