@@ -2,6 +2,10 @@
 
 History
 -------
+1.3.0 (2014-09-30)
+++++++++++++++++++
+- Add upstream six dependency, remove embedded six functionality
+
 1.2.3 (2014-08-25)
 ++++++++++++++++++
 - Add support for custom wait and stop functions
