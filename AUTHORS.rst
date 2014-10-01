@@ -27,3 +27,4 @@ Patches and Suggestions
 - James Page
 - Josh Marshall
 - Dougal Matthews
+- Monty Taylor

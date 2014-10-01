@@ -2,6 +2,10 @@
 
 History
 -------
+1.3.1 (2014-09-30)
+++++++++++++++++++
+- Add requirements.txt to MANIFEST.in to fix pip installs
+
 1.3.0 (2014-09-30)
 ++++++++++++++++++
 - Add upstream six dependency, remove embedded six functionality
