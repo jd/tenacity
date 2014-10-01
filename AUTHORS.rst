@@ -20,3 +20,10 @@ Patches and Suggestions
 - Saul Shanabrook
 - Daniel Nephin
 - Simeon Visser
+- Joshua Harlow
+- Pierre-Yves Chibon
+- Haïkel Guémar
+- Thomas Goirand
+- James Page
+- Josh Marshall
+- Dougal Matthews
