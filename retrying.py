@@ -55,6 +55,8 @@ def retry(*dargs, **dkw):
     # support both @retry and @retry() as valid syntax
     if len(dargs) == 1 and callable(dargs[0]):
         def wrap_simple(f):
+
+            @six.wraps(f)
             def wrapped_f(*args, **kw):
                 return Retrying().call(f, *args, **kw)
 
@@ -64,6 +66,8 @@ def retry(*dargs, **dkw):
 
     else:
         def wrap(f):
+
+            @six.wraps(f)
             def wrapped_f(*args, **kw):
                 return Retrying(*dargs, **dkw).call(f, *args, **kw)
 
