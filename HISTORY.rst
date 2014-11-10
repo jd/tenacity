@@ -2,6 +2,11 @@
 
 History
 -------
+1.3.2 (2014-11-09)
+++++++++++++++++++
+- Ensure we wrap the decorated functions to prevent information loss
+- Allow a jitter value to be passed in
+
 1.3.1 (2014-09-30)
 ++++++++++++++++++
 - Add requirements.txt to MANIFEST.in to fix pip installs
