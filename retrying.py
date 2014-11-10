@@ -90,7 +90,8 @@ class Retrying(object):
                  retry_on_result=None,
                  wrap_exception=False,
                  stop_func=None,
-                 wait_func=None):
+                 wait_func=None,
+                 wait_jitter_max=None):
 
         self._stop_max_attempt_number = 5 if stop_max_attempt_number is None else stop_max_attempt_number
         self._stop_max_delay = 100 if stop_max_delay is None else stop_max_delay
@@ -101,6 +102,7 @@ class Retrying(object):
         self._wait_incrementing_increment = 100 if wait_incrementing_increment is None else wait_incrementing_increment
         self._wait_exponential_multiplier = 1 if wait_exponential_multiplier is None else wait_exponential_multiplier
         self._wait_exponential_max = MAX_WAIT if wait_exponential_max is None else wait_exponential_max
+        self._wait_jitter_max = 0 if wait_jitter_max is None else wait_jitter_max
 
         # TODO add chaining of stop behaviors
         # stop behavior
@@ -235,6 +237,9 @@ class Retrying(object):
                     raise RetryError(attempt)
             else:
                 sleep = self.wait(attempt_number, delay_since_first_attempt_ms)
+                if self._wait_jitter_max:
+                    jitter = random.random() * self._wait_jitter_max
+                    sleep = sleep + max(0, jitter)
                 time.sleep(sleep / 1000.0)
 
             attempt_number += 1
