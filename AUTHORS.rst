@@ -28,3 +28,4 @@ Patches and Suggestions
 - Josh Marshall
 - Dougal Matthews
 - Monty Taylor
+- Maxym Shalenyi
