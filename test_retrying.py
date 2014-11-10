@@ -19,6 +19,7 @@ from retrying import RetryError
 from retrying import Retrying
 from retrying import retry
 
+
 class TestStopConditions(unittest.TestCase):
 
     def test_never_stop(self):
@@ -38,7 +39,7 @@ class TestStopConditions(unittest.TestCase):
         self.assertTrue(r.stop(2, 1001))
 
     def test_legacy_explicit_stop_type(self):
-        r = Retrying(stop="stop_after_attempt")
+        Retrying(stop="stop_after_attempt")
 
     def test_stop_func(self):
         r = Retrying(stop_func=lambda attempt, delay: attempt == delay)
@@ -70,7 +71,9 @@ class TestWaitConditions(unittest.TestCase):
         times.add(r.wait(1, 6546))
         times.add(r.wait(1, 6546))
         times.add(r.wait(1, 6546))
-        self.assertTrue(len(times) > 1) # this is kind of non-deterministic...
+
+        # this is kind of non-deterministic...
+        self.assertTrue(len(times) > 1)
         for t in times:
             self.assertTrue(t >= 1000)
             self.assertTrue(t <= 2000)
@@ -82,7 +85,9 @@ class TestWaitConditions(unittest.TestCase):
         times.add(r.wait(1, 6546))
         times.add(r.wait(1, 6546))
         times.add(r.wait(1, 6546))
-        self.assertTrue(len(times) > 1) # this is kind of non-deterministic...
+
+        # this is kind of non-deterministic...
+        self.assertTrue(len(times) > 1)
         for t in times:
             self.assertTrue(t >= 0)
             self.assertTrue(t <= 2000)
@@ -119,7 +124,7 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(50, 0), 50000)
 
     def test_legacy_explicit_wait_type(self):
-        r = Retrying(wait="exponential_sleep")
+        Retrying(wait="exponential_sleep")
 
     def test_wait_func(self):
         r = Retrying(wait_func=lambda attempt, delay: attempt * delay)
@@ -146,6 +151,7 @@ class NoneReturnUntilAfterCount:
             return None
         return True
 
+
 class NoIOErrorAfterCount:
     """
     This class holds counter state for invoking a method several times in a row.
@@ -163,6 +169,7 @@ class NoIOErrorAfterCount:
             self.counter += 1
             raise IOError("Hi there, I'm an IOError")
         return True
+
 
 class NoNameErrorAfterCount:
     """
@@ -182,6 +189,7 @@ class NoNameErrorAfterCount:
             raise NameError("Hi there, I'm a NameError")
         return True
 
+
 class CustomError(Exception):
     """
     This is a custom exception class. Note that For Python 2.x, we don't
@@ -197,6 +205,7 @@ class CustomError(Exception):
 
     def __str__(self):
         return repr(self.value)
+
 
 class NoCustomErrorAfterCount:
     """
@@ -217,8 +226,10 @@ class NoCustomErrorAfterCount:
             raise CustomError(derived_message)
         return True
 
+
 def retry_if_result_none(result):
     return result is None
+
 
 def retry_if_exception_of_type(retryable_types):
     def retry_if_exception_these_types(exception):
@@ -226,30 +237,37 @@ def retry_if_exception_of_type(retryable_types):
         return isinstance(exception, retryable_types)
     return retry_if_exception_these_types
 
+
 def current_time_ms():
     return int(round(time.time() * 1000))
+
 
 @retry(wait_fixed=50, retry_on_result=retry_if_result_none)
 def _retryable_test_with_wait(thing):
     return thing.go()
 
+
 @retry(stop_max_attempt_number=3, retry_on_result=retry_if_result_none)
 def _retryable_test_with_stop(thing):
     return thing.go()
+
 
 @retry(retry_on_exception=retry_if_exception_of_type(IOError))
 def _retryable_test_with_exception_type_io(thing):
     return thing.go()
 
+
 @retry(retry_on_exception=retry_if_exception_of_type(IOError), wrap_exception=True)
 def _retryable_test_with_exception_type_io_wrap(thing):
     return thing.go()
+
 
 @retry(
     stop_max_attempt_number=3,
     retry_on_exception=retry_if_exception_of_type(IOError))
 def _retryable_test_with_exception_type_io_attempt_limit(thing):
     return thing.go()
+
 
 @retry(
     stop_max_attempt_number=3,
@@ -258,21 +276,26 @@ def _retryable_test_with_exception_type_io_attempt_limit(thing):
 def _retryable_test_with_exception_type_io_attempt_limit_wrap(thing):
     return thing.go()
 
+
 @retry
 def _retryable_default(thing):
     return thing.go()
+
 
 @retry()
 def _retryable_default_f(thing):
     return thing.go()
 
+
 @retry(retry_on_exception=retry_if_exception_of_type(CustomError))
 def _retryable_test_with_exception_type_custom(thing):
     return thing.go()
 
+
 @retry(retry_on_exception=retry_if_exception_of_type(CustomError), wrap_exception=True)
 def _retryable_test_with_exception_type_custom_wrap(thing):
     return thing.go()
+
 
 @retry(
     stop_max_attempt_number=3,
@@ -280,12 +303,14 @@ def _retryable_test_with_exception_type_custom_wrap(thing):
 def _retryable_test_with_exception_type_custom_attempt_limit(thing):
     return thing.go()
 
+
 @retry(
     stop_max_attempt_number=3,
     retry_on_exception=retry_if_exception_of_type(CustomError),
     wrap_exception=True)
 def _retryable_test_with_exception_type_custom_attempt_limit_wrap(thing):
     return thing.go()
+
 
 class TestDecoratorWrapper(unittest.TestCase):
 
