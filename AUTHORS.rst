@@ -29,3 +29,5 @@ Patches and Suggestions
 - Dougal Matthews
 - Monty Taylor
 - Maxym Shalenyi
+- Jonathan Herriott
+- Job Evers
