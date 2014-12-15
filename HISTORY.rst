@@ -2,6 +2,10 @@
 
 History
 -------
+1.3.3 (2014-12-14)
+++++++++++++++++++
+- Add minimum six version of 1.7.0 since anything less will break things
+
 1.3.2 (2014-11-09)
 ++++++++++++++++++
 - Ensure we wrap the decorated functions to prevent information loss
