@@ -146,7 +146,8 @@ class Retrying(object):
         """Stop after the time from the first attempt >= stop_max_delay."""
         return delay_since_first_attempt_ms >= self._stop_max_delay
 
-    def no_sleep(self, previous_attempt_number, delay_since_first_attempt_ms):
+    @staticmethod
+    def no_sleep(previous_attempt_number, delay_since_first_attempt_ms):
         """Don't sleep at all before retrying."""
         return 0
 
@@ -177,10 +178,12 @@ class Retrying(object):
             result = 0
         return result
 
-    def never_reject(self, result):
+    @staticmethod
+    def never_reject(result):
         return False
 
-    def always_reject(self, result):
+    @staticmethod
+    def always_reject(result):
         return True
 
     def should_reject(self, attempt):
