@@ -1,12 +1,12 @@
 Retrying
 =========================
-.. image:: https://travis-ci.org/rholder/retrying.png?branch=master
-    :target: https://travis-ci.org/rholder/retrying
-
-.. image:: https://badge.fury.io/py/retrying.png
+.. image:: https://img.shields.io/pypi/v/retrying.svg
     :target: https://pypi.python.org/pypi/retrying
 
-.. image:: https://pypip.in/d/retrying/badge.png
+.. image:: https://img.shields.io/travis/rholder/retrying.svg
+    :target: https://travis-ci.org/rholder/retrying
+
+.. image:: https://img.shields.io/pypi/dm/retrying.svg
     :target: https://pypi.python.org/pypi/retrying
 
 Retrying is an Apache 2.0 licensed general-purpose retrying library, written in
