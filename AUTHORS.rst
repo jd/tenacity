@@ -31,3 +31,4 @@ Patches and Suggestions
 - Maxym Shalenyi
 - Jonathan Herriott
 - Job Evers
+- Cyrus Durgin

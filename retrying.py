@@ -68,7 +68,9 @@ class Retrying(object):
                  wrap_exception=False,
                  stop_func=None,
                  wait_func=None,
-                 wait_jitter_max=None):
+                 wait_jitter_max=None,
+                 before_attempts=None,
+                 after_attempts=None):
 
         self._stop_max_attempt_number = 5 if stop_max_attempt_number is None else stop_max_attempt_number
         self._stop_max_delay = 100 if stop_max_delay is None else stop_max_delay
@@ -80,6 +82,8 @@ class Retrying(object):
         self._wait_exponential_multiplier = 1 if wait_exponential_multiplier is None else wait_exponential_multiplier
         self._wait_exponential_max = MAX_WAIT if wait_exponential_max is None else wait_exponential_max
         self._wait_jitter_max = 0 if wait_jitter_max is None else wait_jitter_max
+        self._before_attempts = before_attempts
+        self._after_attempts = after_attempts
 
         # TODO add chaining of stop behaviors
         # stop behavior
@@ -196,6 +200,9 @@ class Retrying(object):
         start_time = int(round(time.time() * 1000))
         attempt_number = 1
         while True:
+            if self._before_attempts:
+                self._before_attempts(attempt_number)
+
             try:
                 attempt = Attempt(fn(*args, **kwargs), attempt_number, False)
             except:
@@ -204,6 +211,9 @@ class Retrying(object):
 
             if not self.should_reject(attempt):
                 return attempt.get(self._wrap_exception)
+
+            if self._after_attempts:
+                self._after_attempts(attempt_number)
 
             delay_since_first_attempt_ms = int(round(time.time() * 1000)) - start_time
             if self.stop(attempt_number, delay_since_first_attempt_ms):
