@@ -62,6 +62,7 @@ class Retrying(object):
                  wait_fixed=None,
                  wait_random_min=None, wait_random_max=None,
                  wait_incrementing_start=None, wait_incrementing_increment=None,
+                 wait_incrementing_max=None,
                  wait_exponential_multiplier=None, wait_exponential_max=None,
                  retry_on_exception=None,
                  retry_on_result=None,
@@ -79,6 +80,7 @@ class Retrying(object):
         self._wait_incrementing_increment = 100 if wait_incrementing_increment is None else wait_incrementing_increment
         self._wait_exponential_multiplier = 1 if wait_exponential_multiplier is None else wait_exponential_multiplier
         self._wait_exponential_max = MAX_WAIT if wait_exponential_max is None else wait_exponential_max
+        self._wait_incrementing_max = MAX_WAIT if wait_incrementing_max is None else wait_incrementing_max
         self._wait_jitter_max = 0 if wait_jitter_max is None else wait_jitter_max
 
         # TODO add chaining of stop behaviors
@@ -165,6 +167,8 @@ class Retrying(object):
         wait_incrementing_start and incrementing by wait_incrementing_increment
         """
         result = self._wait_incrementing_start + (self._wait_incrementing_increment * (previous_attempt_number - 1))
+        if result > self._wait_incrementing_max:
+            result = self._wait_incrementing_max
         if result < 0:
             result = 0
         return result
