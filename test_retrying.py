@@ -434,5 +434,39 @@ class TestDecoratorWrapper(unittest.TestCase):
         self.assertTrue(_retryable_default(NoCustomErrorAfterCount(5)))
         self.assertTrue(_retryable_default_f(NoCustomErrorAfterCount(5)))
 
+class TestBeforeAfterAttempts(unittest.TestCase):
+    _attempt_number = 0
+
+    def test_before_attempts(self):
+        TestBeforeAfterAttempts._attempt_number = 0
+
+        def _before(attempt_number):
+            TestBeforeAfterAttempts._attempt_number = attempt_number
+
+        @retry(wait_fixed = 1000, stop_max_attempt_number = 1, before_attempts = _before)
+        def _test_before():
+            pass
+        
+        _test_before()
+
+        self.assertTrue(TestBeforeAfterAttempts._attempt_number is 1)
+
+    def test_after_attempts(self):
+        TestBeforeAfterAttempts._attempt_number = 0
+
+        def _after(attempt_number):
+            TestBeforeAfterAttempts._attempt_number = attempt_number
+
+        @retry(wait_fixed = 100, stop_max_attempt_number = 3, after_attempts = _after)
+        def _test_after():
+            if TestBeforeAfterAttempts._attempt_number < 2:
+                raise Exception("testing after_attempts handler")
+            else:
+                pass
+        
+        _test_after()
+
+        self.assertTrue(TestBeforeAfterAttempts._attempt_number is 2)
+
 if __name__ == '__main__':
     unittest.main()
