@@ -23,6 +23,12 @@ import traceback
 MAX_WAIT = 1073741823
 
 
+def _retry_if_exception_of_type(retryable_types):
+    def _retry_if_exception_these_types(exception):
+        return isinstance(exception, retryable_types)
+    return _retry_if_exception_these_types
+
+
 def retry(*dargs, **dkw):
     """
     Decorator function that instantiates the Retrying object
@@ -133,9 +139,14 @@ class Retrying(object):
         if retry_on_exception is None:
             self._retry_on_exception = self.always_reject
         else:
+            # this allows for providing a tuple of exception types that
+            # should be allowed to retry on, and avoids having to create
+            # a callback that does the same thing
+            if isinstance(retry_on_exception, (tuple)):
+                retry_on_exception = _retry_if_exception_of_type(
+                    retry_on_exception)
             self._retry_on_exception = retry_on_exception
 
-        # TODO simplify retrying by Exception types
         # retry on result filter
         if retry_on_result is None:
             self._retry_on_result = self.never_reject

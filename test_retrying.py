@@ -252,7 +252,7 @@ def _retryable_test_with_stop(thing):
     return thing.go()
 
 
-@retry(retry_on_exception=retry_if_exception_of_type(IOError))
+@retry(retry_on_exception=(IOError,))
 def _retryable_test_with_exception_type_io(thing):
     return thing.go()
 
@@ -264,14 +264,14 @@ def _retryable_test_with_exception_type_io_wrap(thing):
 
 @retry(
     stop_max_attempt_number=3,
-    retry_on_exception=retry_if_exception_of_type(IOError))
+    retry_on_exception=(IOError,))
 def _retryable_test_with_exception_type_io_attempt_limit(thing):
     return thing.go()
 
 
 @retry(
     stop_max_attempt_number=3,
-    retry_on_exception=retry_if_exception_of_type(IOError),
+    retry_on_exception=(IOError,),
     wrap_exception=True)
 def _retryable_test_with_exception_type_io_attempt_limit_wrap(thing):
     return thing.go()
