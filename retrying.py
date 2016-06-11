@@ -20,7 +20,10 @@ import traceback
 
 
 # sys.maxint / 2, since Python 3.2 doesn't have a sys.maxint...
-MAX_WAIT = 1073741823
+try:
+    MAX_WAIT = sys.maxint / 2
+except AttributeError:
+    MAX_WAIT = 1073741823
 
 
 def _retry_if_exception_of_type(retryable_types):
