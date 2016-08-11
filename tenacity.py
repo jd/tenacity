@@ -193,128 +193,6 @@ class _MaybeReject(object):
         return reject
 
 
-def _select_stop_strategy(stop=None, stop_max_attempt_number=None,
-                          stop_max_delay=None, stop_func=None):
-    if stop_func is not None:
-        return stop_func
-
-    if stop is not None:
-        for s_name, s in [
-                ('stop_after_attempt',
-                 _stop_after_attempt(_val_or(stop_max_attempt_number, 5))),
-                ('stop_after_delay',
-                 _stop_after_delay(_val_or(stop_max_delay, 100))),
-        ]:
-            if s_name == stop:
-                return s
-        # Match the original behavior if we didn't match to any
-        # known strategy
-        raise AttributeError("No stop strategy with name '%s'" % stop)
-
-    stop_strategies = []
-
-    if stop_max_attempt_number is not None:
-        stop_strategies.append(_stop_after_attempt(stop_max_attempt_number))
-
-    if stop_max_delay is not None:
-        stop_strategies.append(_stop_after_delay(stop_max_delay))
-
-    def any_strategy(previous_attempt_number, delay_since_first_attempt_ms):
-        return any(s(previous_attempt_number, delay_since_first_attempt_ms)
-                   for s in stop_strategies)
-
-    return any_strategy
-
-
-def _select_reject_strategy(retry_on_exception=None, retry_on_result=None):
-    if retry_on_exception is None:
-        retry_on_exception = _always_reject
-    else:
-        if isinstance(retry_on_exception, (tuple)):
-            retry_on_exception = _retry_if_exception_of_type(
-                retry_on_exception)
-    if retry_on_result is None:
-        retry_on_result = _never_reject
-    return _MaybeReject(retry_on_result=retry_on_result,
-                        retry_on_exception=retry_on_exception)
-
-
-def _select_wait_strategy(wait_func=None, wait=None,
-                          wait_fixed=None,
-                          wait_random_min=None, wait_random_max=None,
-                          wait_incrementing_start=None,
-                          wait_incrementing_increment=None,
-                          wait_incrementing_max=None,
-                          wait_exponential_multiplier=None,
-                          wait_exponential_max=None):
-    if wait_func is not None:
-        return wait_func
-
-    if wait is not None:
-        for w_name, w in [
-                ('exponential_sleep',
-                 _exponential_sleep(
-                     _val_or(wait_exponential_multiplier, 1),
-                     _val_or(wait_exponential_max, MAX_WAIT))),
-                ('incrementing_sleep',
-                 _incrementing_sleep(
-                     _val_or(wait_incrementing_start, 0),
-                     _val_or(wait_incrementing_increment, 100),
-                     _val_or(wait_incrementing_max, MAX_WAIT))),
-                ('fixed_sleep',
-                 _fixed_sleep(
-                     _val_or(wait_fixed, 1000))),
-                ('no_sleep', _no_sleep()),
-                ('random_sleep',
-                 _random_sleep(
-                     _val_or(wait_random_min, 0),
-                     _val_or(wait_random_max, 1000))),
-        ]:
-            if w_name == wait:
-                return w
-        # Match the original behavior if we didn't match to any
-        # known strategy
-        raise AttributeError("No wait strategy with name '%s'" % wait)
-
-    wait_strategies = []
-
-    if wait_fixed is not None:
-        wait_strategies.append(_fixed_sleep(wait_fixed))
-
-    if wait_random_min is not None or wait_random_max is not None:
-        wait_random_min = _val_or(wait_random_min, 0)
-        wait_random_max = _val_or(wait_random_max, 1000)
-        wait_strategies.append(_random_sleep(wait_random_min,
-                                             wait_random_max))
-
-    if (wait_incrementing_start is not None or
-       wait_incrementing_increment is not None):
-        wait_incrementing_start = _val_or(wait_incrementing_start, 0)
-        wait_incrementing_increment = _val_or(wait_incrementing_increment, 100)
-        wait_incrementing_max = _val_or(wait_incrementing_max, MAX_WAIT)
-        wait_strategies.append(
-            _incrementing_sleep(wait_incrementing_start,
-                                wait_incrementing_increment,
-                                wait_incrementing_max))
-
-    if (wait_exponential_multiplier is not None or
-       wait_exponential_max is not None):
-        wait_exponential_multiplier = _val_or(wait_exponential_multiplier, 1)
-        wait_exponential_max = _val_or(wait_exponential_max, MAX_WAIT)
-        wait_strategies.append(
-            _exponential_sleep(wait_exponential_multiplier,
-                               wait_exponential_max))
-
-    if not wait_strategies:
-        wait_strategies.append(_no_sleep())
-
-    def max_strategy(previous_attempt_number, delay_since_first_attempt_ms):
-        return max(s(previous_attempt_number, delay_since_first_attempt_ms)
-                   for s in wait_strategies)
-
-    return max_strategy
-
-
 class Retrying(object):
     """Retrying controller."""
 
@@ -336,11 +214,11 @@ class Retrying(object):
                  wait_jitter_max=None,
                  before_attempts=None,
                  after_attempts=None):
-        self.stop = _select_stop_strategy(
+        self.stop = self._select_stop_strategy(
             stop=stop, stop_func=stop_func,
             stop_max_attempt_number=stop_max_attempt_number,
             stop_max_delay=stop_max_delay)
-        self.wait = _select_wait_strategy(
+        self.wait = self._select_wait_strategy(
             wait_func=wait_func, wait=wait,
             wait_fixed=wait_fixed,
             wait_random_min=wait_random_min, wait_random_max=wait_random_max,
@@ -349,13 +227,142 @@ class Retrying(object):
             wait_incrementing_max=wait_incrementing_max,
             wait_exponential_multiplier=wait_exponential_multiplier,
             wait_exponential_max=wait_exponential_max)
-        self.should_reject = _select_reject_strategy(
+        self.should_reject = self._select_reject_strategy(
             retry_on_exception=retry_on_exception,
             retry_on_result=retry_on_result)
         self._wrap_exception = wrap_exception
         self._before_attempts = before_attempts
         self._after_attempts = after_attempts
         self._wait_jitter_max = wait_jitter_max
+
+    @staticmethod
+    def _select_stop_strategy(stop=None, stop_max_attempt_number=None,
+                              stop_max_delay=None, stop_func=None):
+        if stop_func is not None:
+            return stop_func
+
+        if stop is not None:
+            for s_name, s in [
+                    ('stop_after_attempt',
+                     _stop_after_attempt(_val_or(stop_max_attempt_number, 5))),
+                    ('stop_after_delay',
+                     _stop_after_delay(_val_or(stop_max_delay, 100))),
+            ]:
+                if s_name == stop:
+                    return s
+            # Match the original behavior if we didn't match to any
+            # known strategy
+            raise AttributeError("No stop strategy with name '%s'" % stop)
+
+        stop_strategies = []
+
+        if stop_max_attempt_number is not None:
+            stop_strategies.append(
+                _stop_after_attempt(stop_max_attempt_number))
+
+        if stop_max_delay is not None:
+            stop_strategies.append(_stop_after_delay(stop_max_delay))
+
+        def any_strategy(previous_attempt_number,
+                         delay_since_first_attempt_ms):
+            return any(s(previous_attempt_number,
+                         delay_since_first_attempt_ms)
+                       for s in stop_strategies)
+
+        return any_strategy
+
+    @staticmethod
+    def _select_reject_strategy(retry_on_exception=None, retry_on_result=None):
+        if retry_on_exception is None:
+            retry_on_exception = _always_reject
+        else:
+            if isinstance(retry_on_exception, (tuple)):
+                retry_on_exception = _retry_if_exception_of_type(
+                    retry_on_exception)
+        if retry_on_result is None:
+            retry_on_result = _never_reject
+        return _MaybeReject(retry_on_result=retry_on_result,
+                            retry_on_exception=retry_on_exception)
+
+    @staticmethod
+    def _select_wait_strategy(wait_func=None, wait=None,
+                              wait_fixed=None,
+                              wait_random_min=None, wait_random_max=None,
+                              wait_incrementing_start=None,
+                              wait_incrementing_increment=None,
+                              wait_incrementing_max=None,
+                              wait_exponential_multiplier=None,
+                              wait_exponential_max=None):
+        if wait_func is not None:
+            return wait_func
+
+        if wait is not None:
+            for w_name, w in [
+                    ('exponential_sleep',
+                     _exponential_sleep(
+                         _val_or(wait_exponential_multiplier, 1),
+                         _val_or(wait_exponential_max, MAX_WAIT))),
+                    ('incrementing_sleep',
+                     _incrementing_sleep(
+                         _val_or(wait_incrementing_start, 0),
+                         _val_or(wait_incrementing_increment, 100),
+                         _val_or(wait_incrementing_max, MAX_WAIT))),
+                    ('fixed_sleep',
+                     _fixed_sleep(
+                         _val_or(wait_fixed, 1000))),
+                    ('no_sleep', _no_sleep()),
+                    ('random_sleep',
+                     _random_sleep(
+                         _val_or(wait_random_min, 0),
+                         _val_or(wait_random_max, 1000))),
+            ]:
+                if w_name == wait:
+                    return w
+            # Match the original behavior if we didn't match to any
+            # known strategy
+            raise AttributeError("No wait strategy with name '%s'" % wait)
+
+        wait_strategies = []
+
+        if wait_fixed is not None:
+            wait_strategies.append(_fixed_sleep(wait_fixed))
+
+        if wait_random_min is not None or wait_random_max is not None:
+            wait_random_min = _val_or(wait_random_min, 0)
+            wait_random_max = _val_or(wait_random_max, 1000)
+            wait_strategies.append(_random_sleep(wait_random_min,
+                                                 wait_random_max))
+
+        if (wait_incrementing_start is not None or
+           wait_incrementing_increment is not None):
+            wait_incrementing_start = _val_or(wait_incrementing_start, 0)
+            wait_incrementing_increment = _val_or(
+                wait_incrementing_increment, 100)
+            wait_incrementing_max = _val_or(wait_incrementing_max, MAX_WAIT)
+            wait_strategies.append(
+                _incrementing_sleep(wait_incrementing_start,
+                                    wait_incrementing_increment,
+                                    wait_incrementing_max))
+
+        if (wait_exponential_multiplier is not None or
+           wait_exponential_max is not None):
+            wait_exponential_multiplier = _val_or(
+                wait_exponential_multiplier, 1)
+            wait_exponential_max = _val_or(wait_exponential_max, MAX_WAIT)
+            wait_strategies.append(
+                _exponential_sleep(wait_exponential_multiplier,
+                                   wait_exponential_max))
+
+        if not wait_strategies:
+            wait_strategies.append(_no_sleep())
+
+        def max_strategy(previous_attempt_number,
+                         delay_since_first_attempt_ms):
+            return max(s(previous_attempt_number,
+                         delay_since_first_attempt_ms)
+                       for s in wait_strategies)
+
+        return max_strategy
 
     def call(self, fn, *args, **kwargs):
         start_time = int(round(time.time() * 1000))
