@@ -15,9 +15,9 @@
 import time
 import unittest
 
-from retrying import RetryError
-from retrying import Retrying
-from retrying import retry
+from tenacity import RetryError
+from tenacity import Retrying
+from tenacity import retry
 
 
 class TestStopConditions(unittest.TestCase):

@@ -40,17 +40,18 @@ with open('requirements.txt') as file_requirements:
     requirements = file_requirements.read().splitlines()
 
 settings.update(
-    name='retrying',
+    name='tenacity',
     version='1.3.4-dev',
-    description='Retrying',
+    description='Tenacity',
     long_description=readme + '\n\n' + history,
-    author='Ray Holder',
+    author='Julien Danjou',
     license='Apache 2.0',
-    url='https://github.com/rholder/retrying',
+    url='https://github.com/jd/tenacity',
     classifiers=CLASSIFIERS,
-    keywords="decorator decorators retry retrying exception exponential backoff",
-    py_modules= ['retrying'],
-    test_suite="test_retrying",
+    keywords="decorator decorators retry retrying "
+    "tenacity exception exponential backoff",
+    py_modules=['tenacity'],
+    test_suite="test_tenacity",
     install_requires=requirements,
 )
 
