@@ -1,16 +1,16 @@
-## Copyright 2013-2014 Ray Holder
-##
-## Licensed under the Apache License, Version 2.0 (the "License");
-## you may not use this file except in compliance with the License.
-## You may obtain a copy of the License at
-##
-## http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
+# Copyright 2013-2014 Ray Holder
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import random
 import six
@@ -39,8 +39,8 @@ def _retry_if_exception_of_type(retryable_types):
 
 
 def retry(*dargs, **dkw):
-    """
-    Decorator function that instantiates the Retrying object
+    """Decorator function that instantiates the Retrying object.
+
     @param *dargs: positional arguments passed to Retrying object
     @param **dkw: keyword arguments passed to the Retrying object
     """
@@ -117,10 +117,10 @@ class _random_sleep(object):
 
 
 class _incrementing_sleep(object):
-    """
-    Wait strategy that waits an incremental amount of time after each
-    attempt, starting at a starting value and incrementing by a value for
-    each attempt (and restricting the upper limit to some maximum value).
+    """Wait an incremental amount of time after each attempt.
+
+    Starting at a starting value and incrementing by a value for each attempt
+    (and restricting the upper limit to some maximum value).
     """
 
     def __init__(self, wait_incrementing_start, wait_incrementing_increment,
@@ -130,7 +130,9 @@ class _incrementing_sleep(object):
         self.wait_incrementing_max = wait_incrementing_max
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
-        result = self.wait_incrementing_start + (self.wait_incrementing_increment * (previous_attempt_number - 1))
+        result = self.wait_incrementing_start + (
+            self.wait_incrementing_increment * (previous_attempt_number - 1)
+        )
         if result > self.wait_incrementing_max:
             result = self.wait_incrementing_max
         if result < 0:
@@ -202,7 +204,7 @@ def _select_stop_strategy(stop=None, stop_max_attempt_number=None,
                  _stop_after_attempt(_val_or(stop_max_attempt_number, 5))),
                 ('stop_after_delay',
                  _stop_after_delay(_val_or(stop_max_delay, 100))),
-            ]:
+        ]:
             if s_name == stop:
                 return s
         # Match the original behavior if we didn't match to any
@@ -251,19 +253,23 @@ def _select_wait_strategy(wait_func=None, wait=None,
     if wait is not None:
         for w_name, w in [
                 ('exponential_sleep',
-                 _exponential_sleep(_val_or(wait_exponential_multiplier, 1),
-                                    _val_or(wait_exponential_max, MAX_WAIT))),
+                 _exponential_sleep(
+                     _val_or(wait_exponential_multiplier, 1),
+                     _val_or(wait_exponential_max, MAX_WAIT))),
                 ('incrementing_sleep',
-                 _incrementing_sleep(_val_or(wait_incrementing_start, 0),
-                                     _val_or(wait_incrementing_increment, 100),
-                                     _val_or(wait_incrementing_max, MAX_WAIT))),
+                 _incrementing_sleep(
+                     _val_or(wait_incrementing_start, 0),
+                     _val_or(wait_incrementing_increment, 100),
+                     _val_or(wait_incrementing_max, MAX_WAIT))),
                 ('fixed_sleep',
-                 _fixed_sleep(_val_or(wait_fixed, 1000))),
+                 _fixed_sleep(
+                     _val_or(wait_fixed, 1000))),
                 ('no_sleep', _no_sleep()),
                 ('random_sleep',
-                 _random_sleep(_val_or(wait_random_min, 0),
-                               _val_or(wait_random_max, 1000))),
-            ]:
+                 _random_sleep(
+                     _val_or(wait_random_min, 0),
+                     _val_or(wait_random_max, 1000))),
+        ]:
             if w_name == wait:
                 return w
         # Match the original behavior if we didn't match to any
@@ -282,7 +288,7 @@ def _select_wait_strategy(wait_func=None, wait=None,
                                              wait_random_max))
 
     if (wait_incrementing_start is not None or
-           wait_incrementing_increment is not None):
+       wait_incrementing_increment is not None):
         wait_incrementing_start = _val_or(wait_incrementing_start, 0)
         wait_incrementing_increment = _val_or(wait_incrementing_increment, 100)
         wait_incrementing_max = _val_or(wait_incrementing_max, MAX_WAIT)
@@ -292,7 +298,7 @@ def _select_wait_strategy(wait_func=None, wait=None,
                                 wait_incrementing_max))
 
     if (wait_exponential_multiplier is not None or
-           wait_exponential_max is not None):
+       wait_exponential_max is not None):
         wait_exponential_multiplier = _val_or(wait_exponential_multiplier, 1)
         wait_exponential_max = _val_or(wait_exponential_max, MAX_WAIT)
         wait_strategies.append(
@@ -318,7 +324,8 @@ class Retrying(object):
                  stop_max_delay=None,
                  wait_fixed=None,
                  wait_random_min=None, wait_random_max=None,
-                 wait_incrementing_start=None, wait_incrementing_increment=None,
+                 wait_incrementing_start=None,
+                 wait_incrementing_increment=None,
                  wait_incrementing_max=None,
                  wait_exponential_multiplier=None, wait_exponential_max=None,
                  retry_on_exception=None,
@@ -359,7 +366,7 @@ class Retrying(object):
 
             try:
                 attempt = Attempt(fn(*args, **kwargs), attempt_number, False)
-            except:
+            except Exception:
                 tb = sys.exc_info()
                 attempt = Attempt(tb, attempt_number, True)
 
@@ -369,10 +376,13 @@ class Retrying(object):
             if self._after_attempts:
                 self._after_attempts(attempt_number)
 
-            delay_since_first_attempt_ms = int(round(time.time() * 1000)) - start_time
+            delay_since_first_attempt_ms = int(
+                round(time.time() * 1000)
+            ) - start_time
             if self.stop(attempt_number, delay_since_first_attempt_ms):
                 if not self._wrap_exception and attempt.has_exception:
-                    # get() on an attempt with an exception should cause it to be raised, but raise just in case
+                    # get() on an attempt with an exception should cause it
+                    # to be raised, but raise just in case
                     raise attempt.get()
                 else:
                     raise RetryError(attempt)
@@ -387,10 +397,10 @@ class Retrying(object):
 
 
 class Attempt(object):
-    """
-    An Attempt encapsulates a call to a target function that may end as a
-    normal return value from the function or an Exception depending on what
-    occurred during the execution.
+    """Encapsulates a call to a target function.
+
+    That may end as a normal return value from the function or an Exception
+    depending on what occurred during the execution.
     """
 
     def __init__(self, value, attempt_number, has_exception):
@@ -399,8 +409,8 @@ class Attempt(object):
         self.has_exception = has_exception
 
     def get(self, wrap_exception=False):
-        """
-        Return the return value of this Attempt instance or raise an Exception.
+        """Return the return value of this Attempt instance or raise.
+
         If wrap_exception is true, this Attempt is wrapped inside of a
         RetryError before being raised.
         """
@@ -414,15 +424,16 @@ class Attempt(object):
 
     def __repr__(self):
         if self.has_exception:
-            return "Attempts: {0}, Error:\n{1}".format(self.attempt_number, "".join(traceback.format_tb(self.value[2])))
+            return "Attempts: {0}, Error:\n{1}".format(
+                self.attempt_number,
+                "".join(traceback.format_tb(self.value[2])))
         else:
-            return "Attempts: {0}, Value: {1}".format(self.attempt_number, self.value)
+            return "Attempts: {0}, Value: {1}".format(
+                self.attempt_number, self.value)
 
 
 class RetryError(Exception):
-    """
-    A RetryError encapsulates the last Attempt instance right before giving up.
-    """
+    "Encapsulates the last Attempt instance right before giving up"
 
     def __init__(self, last_attempt):
         self.last_attempt = last_attempt

@@ -1,23 +1,23 @@
-## Copyright 2013 Ray Holder
-##
-## Licensed under the Apache License, Version 2.0 (the "License");
-## you may not use this file except in compliance with the License.
-## You may obtain a copy of the License at
-##
-## http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
+# Copyright 2013 Ray Holder
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import time
 import unittest
 
+from tenacity import retry
 from tenacity import RetryError
 from tenacity import Retrying
-from tenacity import retry
 
 
 class TestStopConditions(unittest.TestCase):
@@ -59,7 +59,8 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(1000, r.wait(12, 6546))
 
     def test_incrementing_sleep(self):
-        r = Retrying(wait_incrementing_start=500, wait_incrementing_increment=100)
+        r = Retrying(wait_incrementing_start=500,
+                     wait_incrementing_increment=100)
         self.assertEqual(500, r.wait(1, 6546))
         self.assertEqual(600, r.wait(2, 6546))
         self.assertEqual(700, r.wait(3, 6546))
@@ -113,7 +114,8 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(50, 0), 40)
 
     def test_exponential_with_max_wait_and_multiplier(self):
-        r = Retrying(wait_exponential_max=50000, wait_exponential_multiplier=1000)
+        r = Retrying(wait_exponential_max=50000,
+                     wait_exponential_multiplier=1000)
         self.assertEqual(r.wait(1, 0), 2000)
         self.assertEqual(r.wait(2, 0), 4000)
         self.assertEqual(r.wait(3, 0), 8000)
@@ -133,18 +135,17 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(10, 100), 1000)
 
 
-class NoneReturnUntilAfterCount:
-    """
-    This class holds counter state for invoking a method several times in a row.
-    """
+class NoneReturnUntilAfterCount(object):
+    "Holds counter state for invoking a method several times in a row."
 
     def __init__(self, count):
         self.counter = 0
         self.count = count
 
     def go(self):
-        """
-        Return None until after count threshold has been crossed, then return True.
+        """Return None until after count threshold has been crossed.
+
+        Then return True.
         """
         if self.counter < self.count:
             self.counter += 1
@@ -152,18 +153,17 @@ class NoneReturnUntilAfterCount:
         return True
 
 
-class NoIOErrorAfterCount:
-    """
-    This class holds counter state for invoking a method several times in a row.
-    """
+class NoIOErrorAfterCount(object):
+    "Holds counter state for invoking a method several times in a row."
 
     def __init__(self, count):
         self.counter = 0
         self.count = count
 
     def go(self):
-        """
-        Raise an IOError until after count threshold has been crossed, then return True.
+        """Raise an IOError until after count threshold has been crossed.
+
+        Then return True.
         """
         if self.counter < self.count:
             self.counter += 1
@@ -171,18 +171,17 @@ class NoIOErrorAfterCount:
         return True
 
 
-class NoNameErrorAfterCount:
-    """
-    This class holds counter state for invoking a method several times in a row.
-    """
+class NoNameErrorAfterCount(object):
+    "Holds counter state for invoking a method several times in a row."
 
     def __init__(self, count):
         self.counter = 0
         self.count = count
 
     def go(self):
-        """
-        Raise a NameError until after count threshold has been crossed, then return True.
+        """Raise a NameError until after count threshold has been crossed.
+
+        Tthen return True.
         """
         if self.counter < self.count:
             self.counter += 1
@@ -191,13 +190,14 @@ class NoNameErrorAfterCount:
 
 
 class CustomError(Exception):
-    """
-    This is a custom exception class. Note that For Python 2.x, we don't
-    strictly need to extend BaseException, however, Python 3.x will complain.
-    While this test suite won't run correctly under Python 3.x without
-    extending from the Python exception hierarchy, the actual module code is
-    backwards compatible Python 2.x and will allow for cases where exception
-    classes don't extend from the hierarchy.
+    """This is a custom exception class.
+
+    Note that For Python 2.x, we don't strictly need to extend BaseException,
+    however, Python 3.x will complain. While this test suite won't run
+    correctly under Python 3.x without extending from the Python exception
+    hierarchy, the actual module code is backwards compatible Python 2.x and
+    will allow for cases where exception classes don't extend from the
+    hierarchy.
     """
 
     def __init__(self, value):
@@ -207,18 +207,17 @@ class CustomError(Exception):
         return repr(self.value)
 
 
-class NoCustomErrorAfterCount:
-    """
-    This class holds counter state for invoking a method several times in a row.
-    """
+class NoCustomErrorAfterCount(object):
+    "Holds counter state for invoking a method several times in a row."
 
     def __init__(self, count):
         self.counter = 0
         self.count = count
 
     def go(self):
-        """
-        Raise a CustomError until after count threshold has been crossed, then return True.
+        """Raise a CustomError until after count threshold has been crossed
+
+        Then return True.
         """
         if self.counter < self.count:
             self.counter += 1
@@ -257,7 +256,8 @@ def _retryable_test_with_exception_type_io(thing):
     return thing.go()
 
 
-@retry(retry_on_exception=retry_if_exception_of_type(IOError), wrap_exception=True)
+@retry(retry_on_exception=retry_if_exception_of_type(IOError),
+       wrap_exception=True)
 def _retryable_test_with_exception_type_io_wrap(thing):
     return thing.go()
 
@@ -292,7 +292,8 @@ def _retryable_test_with_exception_type_custom(thing):
     return thing.go()
 
 
-@retry(retry_on_exception=retry_if_exception_of_type(CustomError), wrap_exception=True)
+@retry(retry_on_exception=retry_if_exception_of_type(CustomError),
+       wrap_exception=True)
 def _retryable_test_with_exception_type_custom_wrap(thing):
     return thing.go()
 
@@ -340,7 +341,8 @@ class TestDecoratorWrapper(unittest.TestCase):
             print(re)
 
     def test_retry_if_exception_of_type(self):
-        self.assertTrue(_retryable_test_with_exception_type_io(NoIOErrorAfterCount(5)))
+        self.assertTrue(_retryable_test_with_exception_type_io(
+            NoIOErrorAfterCount(5)))
 
         try:
             _retryable_test_with_exception_type_io(NoNameErrorAfterCount(5))
@@ -350,7 +352,8 @@ class TestDecoratorWrapper(unittest.TestCase):
             print(n)
 
         try:
-            _retryable_test_with_exception_type_io_attempt_limit_wrap(NoIOErrorAfterCount(5))
+            _retryable_test_with_exception_type_io_attempt_limit_wrap(
+                NoIOErrorAfterCount(5))
             self.fail("Expected RetryError")
         except RetryError as re:
             self.assertEqual(3, re.last_attempt.attempt_number)
@@ -360,17 +363,20 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.assertTrue(re.last_attempt.value[2] is not None)
             print(re)
 
-        self.assertTrue(_retryable_test_with_exception_type_custom(NoCustomErrorAfterCount(5)))
+        self.assertTrue(_retryable_test_with_exception_type_custom(
+            NoCustomErrorAfterCount(5)))
 
         try:
-            _retryable_test_with_exception_type_custom(NoNameErrorAfterCount(5))
+            _retryable_test_with_exception_type_custom(
+                NoNameErrorAfterCount(5))
             self.fail("Expected NameError")
         except NameError as n:
             self.assertTrue(isinstance(n, NameError))
             print(n)
 
         try:
-            _retryable_test_with_exception_type_custom_attempt_limit_wrap(NoCustomErrorAfterCount(5))
+            _retryable_test_with_exception_type_custom_attempt_limit_wrap(
+                NoCustomErrorAfterCount(5))
             self.fail("Expected RetryError")
         except RetryError as re:
             self.assertEqual(3, re.last_attempt.attempt_number)
@@ -383,17 +389,20 @@ class TestDecoratorWrapper(unittest.TestCase):
     def test_wrapped_exception(self):
 
         # base exception cases
-        self.assertTrue(_retryable_test_with_exception_type_io_wrap(NoIOErrorAfterCount(5)))
+        self.assertTrue(_retryable_test_with_exception_type_io_wrap(
+            NoIOErrorAfterCount(5)))
 
         try:
-            _retryable_test_with_exception_type_io_wrap(NoNameErrorAfterCount(5))
+            _retryable_test_with_exception_type_io_wrap(
+                NoNameErrorAfterCount(5))
             self.fail("Expected RetryError")
         except RetryError as re:
             self.assertTrue(isinstance(re.last_attempt.value[1], NameError))
             print(re)
 
         try:
-            _retryable_test_with_exception_type_io_attempt_limit_wrap(NoIOErrorAfterCount(5))
+            _retryable_test_with_exception_type_io_attempt_limit_wrap(
+                NoIOErrorAfterCount(5))
             self.fail("Expected RetryError")
         except RetryError as re:
             self.assertEqual(3, re.last_attempt.attempt_number)
@@ -404,10 +413,12 @@ class TestDecoratorWrapper(unittest.TestCase):
             print(re)
 
         # custom error cases
-        self.assertTrue(_retryable_test_with_exception_type_custom_wrap(NoCustomErrorAfterCount(5)))
+        self.assertTrue(_retryable_test_with_exception_type_custom_wrap(
+            NoCustomErrorAfterCount(5)))
 
         try:
-            _retryable_test_with_exception_type_custom_wrap(NoNameErrorAfterCount(5))
+            _retryable_test_with_exception_type_custom_wrap(
+                NoNameErrorAfterCount(5))
             self.fail("Expected RetryError")
         except RetryError as re:
             self.assertTrue(re.last_attempt.value[0] is not None)
@@ -416,7 +427,8 @@ class TestDecoratorWrapper(unittest.TestCase):
             print(re)
 
         try:
-            _retryable_test_with_exception_type_custom_attempt_limit_wrap(NoCustomErrorAfterCount(5))
+            _retryable_test_with_exception_type_custom_attempt_limit_wrap(
+                NoCustomErrorAfterCount(5))
             self.fail("Expected RetryError")
         except RetryError as re:
             self.assertEqual(3, re.last_attempt.attempt_number)
@@ -425,7 +437,8 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.assertTrue(isinstance(re.last_attempt.value[1], CustomError))
             self.assertTrue(re.last_attempt.value[2] is not None)
 
-            self.assertTrue("This is a Custom exception class" in str(re.last_attempt.value[1]))
+            self.assertIn("This is a Custom exception class",
+                          str(re.last_attempt.value[1]))
             print(re)
 
     def test_defaults(self):
@@ -433,6 +446,7 @@ class TestDecoratorWrapper(unittest.TestCase):
         self.assertTrue(_retryable_default_f(NoNameErrorAfterCount(5)))
         self.assertTrue(_retryable_default(NoCustomErrorAfterCount(5)))
         self.assertTrue(_retryable_default_f(NoCustomErrorAfterCount(5)))
+
 
 class TestBeforeAfterAttempts(unittest.TestCase):
     _attempt_number = 0
@@ -443,10 +457,11 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         def _before(attempt_number):
             TestBeforeAfterAttempts._attempt_number = attempt_number
 
-        @retry(wait_fixed = 1000, stop_max_attempt_number = 1, before_attempts = _before)
+        @retry(wait_fixed=1000, stop_max_attempt_number=1,
+               before_attempts=_before)
         def _test_before():
             pass
-        
+
         _test_before()
 
         self.assertTrue(TestBeforeAfterAttempts._attempt_number is 1)
@@ -457,13 +472,14 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         def _after(attempt_number):
             TestBeforeAfterAttempts._attempt_number = attempt_number
 
-        @retry(wait_fixed = 100, stop_max_attempt_number = 3, after_attempts = _after)
+        @retry(wait_fixed=100, stop_max_attempt_number=3,
+               after_attempts=_after)
         def _test_after():
             if TestBeforeAfterAttempts._attempt_number < 2:
                 raise Exception("testing after_attempts handler")
             else:
                 pass
-        
+
         _test_after()
 
         self.assertTrue(TestBeforeAfterAttempts._attempt_number is 2)
