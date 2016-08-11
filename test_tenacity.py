@@ -1,3 +1,5 @@
+# Copyright 2016 Julien Danjou
+# Copyright 2016 Joshua Harlow
 # Copyright 2013 Ray Holder
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
