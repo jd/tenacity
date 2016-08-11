@@ -1,25 +1,27 @@
-Retrying
-=========================
-.. image:: https://img.shields.io/pypi/v/retrying.svg
-    :target: https://pypi.python.org/pypi/retrying
+Tenacity
+========
+.. image:: https://img.shields.io/pypi/v/tenacity.svg
+    :target: https://pypi.python.org/pypi/tenacity
 
-.. image:: https://img.shields.io/travis/rholder/retrying.svg
-    :target: https://travis-ci.org/rholder/retrying
+.. image:: https://img.shields.io/travis/jd/tenacity.svg
+    :target: https://travis-ci.org/jd/tenacity
 
-.. image:: https://img.shields.io/pypi/dm/retrying.svg
-    :target: https://pypi.python.org/pypi/retrying
+.. image:: https://img.shields.io/pypi/dm/tenacity.svg
+    :target: https://pypi.python.org/pypi/tenacity
 
-Retrying is an Apache 2.0 licensed general-purpose retrying library, written in
+Tenacity is an Apache 2.0 licensed general-purpose retrying library, written in
 Python, to simplify the task of adding retry behavior to just about anything.
+It originates from a fork of `Retrying`_
 
+.. _Retrying: https://github.com/rholder/retrying
 
-The simplest use case is retrying a flaky function whenever an Exception occurs
-until a value is returned.
+The simplest use case is retrying a flaky function whenever an `Exception`
+occurs until a value is returned.
 
 .. code-block:: python
 
     import random
-    from retrying import retry
+    from tenacity import retry
 
     @retry
     def do_something_unreliable():
@@ -44,19 +46,11 @@ Features
 Installation
 ------------
 
-To install retrying, simply:
+To install *tenacity*, simply:
 
 .. code-block:: bash
 
-    $ pip install retrying
-
-Or, if you absolutely must:
-
-.. code-block:: bash
-
-    $ easy_install retrying
-
-But, you might regret that later.
+    $ pip install tenacity
 
 
 Examples
@@ -69,7 +63,6 @@ As you saw above, the default behavior is to retry forever without waiting.
     @retry
     def never_give_up_never_surrender():
         print "Retry forever ignoring Exceptions, don't wait between retries"
-
 
 Let's be a little less persistent and set some boundaries, such as the number of attempts before giving up.
 
@@ -150,7 +143,5 @@ Contribute
 #. Check for open issues or open a fresh issue to start a discussion around a feature idea or a bug.
 #. Fork `the repository`_ on GitHub to start making your changes to the **master** branch (or branch off of it).
 #. Write a test which shows that the bug was fixed or that the feature works as expected.
-#. Send a pull request and bug the maintainer until it gets merged and published. :) Make sure to add yourself to AUTHORS_.
 
-.. _`the repository`: http://github.com/rholder/retrying
-.. _AUTHORS: https://github.com/rholder/retrying/blob/master/AUTHORS.rst
+.. _`the repository`: https://github.com/jd/tenacity
