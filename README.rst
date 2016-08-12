@@ -64,7 +64,8 @@ As you saw above, the default behavior is to retry forever without waiting.
     def never_give_up_never_surrender():
         print "Retry forever ignoring Exceptions, don't wait between retries"
 
-Let's be a little less persistent and set some boundaries, such as the number of attempts before giving up.
+Let's be a little less persistent and set some boundaries, such as the number
+of attempts before giving up.
 
 .. code-block:: python
 
@@ -72,7 +73,8 @@ Let's be a little less persistent and set some boundaries, such as the number of
     def stop_after_7_attempts():
         print "Stopping after 7 attempts"
 
-We don't have all day, so let's set a boundary for how long we should be retrying stuff.
+We don't have all day, so let's set a boundary for how long we should be
+retrying stuff.
 
 .. code-block:: python
 
@@ -80,7 +82,8 @@ We don't have all day, so let's set a boundary for how long we should be retryin
     def stop_after_10_s():
         print "Stopping after 10 seconds"
 
-Most things don't like to be polled as fast as possible, so let's just wait 2 seconds between retries.
+Most things don't like to be polled as fast as possible, so let's just wait 2
+seconds between retries.
 
 .. code-block:: python
 
@@ -97,7 +100,8 @@ Some things perform best with a bit of randomness injected.
     def wait_random_1_to_2_s():
         print "Randomly wait 1 to 2 seconds between retries"
 
-Then again, it's hard to beat exponential backoff when retrying distributed services and other remote endpoints.
+Then again, it's hard to beat exponential backoff when retrying distributed
+services and other remote endpoints.
 
 .. code-block:: python
 
@@ -106,16 +110,18 @@ Then again, it's hard to beat exponential backoff when retrying distributed serv
         print "Wait 2^x * 1000 milliseconds between each retry, up to 10 seconds, then 10 seconds afterwards"
 
 
-Then again, it's hard to beat exponential backoff when retrying distributed services and other remote endpoints.
+Then again, it's hard to beat exponential backoff when retrying distributed
+services and other remote endpoints.
 
 .. code-block:: python
 
     @retry(wait=wait_combine(wait_fixed(3), wait_jitter(2)))
     def wait_fixed_jitter():
-        print "Wait at least 3 seconds and add up to 2 seconds of random delay"
+        print "Wait at least 3 seconds, and add up to 2 seconds of random delay"
 
 
-We have a few options for dealing with retries that raise specific or general exceptions, as in the cases here.
+We have a few options for dealing with retries that raise specific or general
+exceptions, as in the cases here.
 
 .. code-block:: python
 
@@ -144,13 +150,17 @@ We can also use the result of the function to alter the behavior of retrying.
         print "Retry forever ignoring Exceptions with no wait if return value is None"
 
 
-Any combination of stop, wait, etc. is also supported to give you the freedom to mix and match.
+Any combination of stop, wait, etc. is also supported to give you the freedom
+to mix and match.
 
 Contribute
 ----------
 
-#. Check for open issues or open a fresh issue to start a discussion around a feature idea or a bug.
-#. Fork `the repository`_ on GitHub to start making your changes to the **master** branch (or branch off of it).
-#. Write a test which shows that the bug was fixed or that the feature works as expected.
+#. Check for open issues or open a fresh issue to start a discussion around a
+   feature idea or a bug.
+#. Fork `the repository`_ on GitHub to start making your changes to the
+   **master** branch (or branch off of it).
+#. Write a test which shows that the bug was fixed or that the feature works as
+   expected.
 
 .. _`the repository`: https://github.com/jd/tenacity
