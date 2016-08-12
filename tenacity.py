@@ -163,15 +163,13 @@ class wait_exponential(object):
     upper limit to some maximum value.
     """
 
-    #: Defaults to 2^n (where n is the prior attempt number/count).
-    EXP_BASE = 2
-
-    def __init__(self, multiplier=1, max=MAX_WAIT):
+    def __init__(self, multiplier=1, max=MAX_WAIT, exp_base=2):
         self.multiplier = multiplier
         self.max = max
+        self.exp_base = exp_base
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
-        exp = self.EXP_BASE ** previous_attempt_number
+        exp = self.exp_base ** previous_attempt_number
         result = self.multiplier * exp
         return max(0, min(result, self.max))
 
