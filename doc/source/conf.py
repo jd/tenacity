@@ -1,0 +1,1 @@
+master_doc = 'index'
