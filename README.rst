@@ -68,7 +68,7 @@ Let's be a little less persistent and set some boundaries, such as the number of
 
 .. code-block:: python
 
-    @retry(stop_max_attempt_number=7)
+    @retry(stop=stop_after_attempt(7))
     def stop_after_7_attempts():
         print "Stopping after 7 attempts"
 
@@ -76,7 +76,7 @@ We don't have all day, so let's set a boundary for how long we should be retryin
 
 .. code-block:: python
 
-    @retry(stop_max_delay=10000)
+    @retry(stop=stop_after_delay(10000))
     def stop_after_10_s():
         print "Stopping after 10 seconds"
 
