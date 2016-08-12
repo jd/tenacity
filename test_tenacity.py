@@ -17,6 +17,7 @@
 import time
 import unittest
 
+import tenacity
 from tenacity import retry
 from tenacity import RetryError
 from tenacity import Retrying
@@ -24,18 +25,14 @@ from tenacity import Retrying
 
 class TestStopConditions(unittest.TestCase):
 
-    def test_never_stop(self):
-        r = Retrying()
-        self.assertFalse(r.stop(3, 6546))
-
     def test_stop_after_attempt(self):
-        r = Retrying(stop_max_attempt_number=3)
+        r = Retrying(stop=tenacity.stop_after_attempt(3))
         self.assertFalse(r.stop(2, 6546))
         self.assertTrue(r.stop(3, 6546))
         self.assertTrue(r.stop(4, 6546))
 
     def test_stop_after_delay(self):
-        r = Retrying(stop_max_delay=1000)
+        r = Retrying(stop=tenacity.stop_after_delay(1000))
         self.assertFalse(r.stop(2, 999))
         self.assertTrue(r.stop(2, 1000))
         self.assertTrue(r.stop(2, 1001))
@@ -44,7 +41,7 @@ class TestStopConditions(unittest.TestCase):
         Retrying(stop="stop_after_attempt")
 
     def test_stop_func(self):
-        r = Retrying(stop_func=lambda attempt, delay: attempt == delay)
+        r = Retrying(stop=lambda attempt, delay: attempt == delay)
         self.assertFalse(r.stop(1, 3))
         self.assertFalse(r.stop(100, 99))
         self.assertTrue(r.stop(101, 101))
@@ -248,7 +245,8 @@ def _retryable_test_with_wait(thing):
     return thing.go()
 
 
-@retry(stop_max_attempt_number=3, retry_on_result=retry_if_result_none)
+@retry(stop=tenacity.stop_after_attempt(3),
+       retry_on_result=retry_if_result_none)
 def _retryable_test_with_stop(thing):
     return thing.go()
 
@@ -265,14 +263,14 @@ def _retryable_test_with_exception_type_io_wrap(thing):
 
 
 @retry(
-    stop_max_attempt_number=3,
+    stop=tenacity.stop_after_attempt(3),
     retry_on_exception=(IOError,))
 def _retryable_test_with_exception_type_io_attempt_limit(thing):
     return thing.go()
 
 
 @retry(
-    stop_max_attempt_number=3,
+    stop=tenacity.stop_after_attempt(3),
     retry_on_exception=(IOError,),
     wrap_exception=True)
 def _retryable_test_with_exception_type_io_attempt_limit_wrap(thing):
@@ -301,14 +299,14 @@ def _retryable_test_with_exception_type_custom_wrap(thing):
 
 
 @retry(
-    stop_max_attempt_number=3,
+    stop=tenacity.stop_after_attempt(3),
     retry_on_exception=retry_if_exception_of_type(CustomError))
 def _retryable_test_with_exception_type_custom_attempt_limit(thing):
     return thing.go()
 
 
 @retry(
-    stop_max_attempt_number=3,
+    stop=tenacity.stop_after_attempt(3),
     retry_on_exception=retry_if_exception_of_type(CustomError),
     wrap_exception=True)
 def _retryable_test_with_exception_type_custom_attempt_limit_wrap(thing):
@@ -459,7 +457,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         def _before(attempt_number):
             TestBeforeAfterAttempts._attempt_number = attempt_number
 
-        @retry(wait_fixed=1000, stop_max_attempt_number=1,
+        @retry(wait_fixed=1000, stop=tenacity.stop_after_attempt(1),
                before_attempts=_before)
         def _test_before():
             pass
@@ -474,7 +472,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         def _after(attempt_number):
             TestBeforeAfterAttempts._attempt_number = attempt_number
 
-        @retry(wait_fixed=100, stop_max_attempt_number=3,
+        @retry(wait_fixed=100, stop=tenacity.stop_after_attempt(3),
                after_attempts=_after)
         def _test_after():
             if TestBeforeAfterAttempts._attempt_number < 2:

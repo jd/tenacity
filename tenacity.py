@@ -70,24 +70,24 @@ def retry(*dargs, **dkw):
         return wrap
 
 
-class _stop_after_attempt(object):
+class stop_after_attempt(object):
     """Strategy that stops when the previous attempt >= max_attempt."""
 
-    def __init__(self, stop_max_attempt_number):
-        self.stop_max_attempt_number = stop_max_attempt_number
+    def __init__(self, max_attempt_number):
+        self.max_attempt_number = max_attempt_number
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
-        return previous_attempt_number >= self.stop_max_attempt_number
+        return previous_attempt_number >= self.max_attempt_number
 
 
-class _stop_after_delay(object):
+class stop_after_delay(object):
     """Strategy that stops when the time from the first attempt >= limit."""
 
-    def __init__(self, stop_max_delay):
-        self.stop_max_delay = stop_max_delay
+    def __init__(self, max_delay):
+        self.max_delay = max_delay
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
-        return delay_since_first_attempt_ms >= self.stop_max_delay
+        return delay_since_first_attempt_ms >= self.max_delay
 
 
 class _fixed_sleep(object):
@@ -200,8 +200,6 @@ class Retrying(object):
 
     def __init__(self,
                  stop=None, wait=None,
-                 stop_max_attempt_number=None,
-                 stop_max_delay=None,
                  wait_fixed=None,
                  wait_random_min=None, wait_random_max=None,
                  wait_incrementing_start=None,
@@ -211,15 +209,11 @@ class Retrying(object):
                  retry_on_exception=None,
                  retry_on_result=None,
                  wrap_exception=False,
-                 stop_func=None,
                  wait_func=None,
                  wait_jitter_max=None,
                  before_attempts=None,
                  after_attempts=None):
-        self.stop = self._select_stop_strategy(
-            stop=stop, stop_func=stop_func,
-            stop_max_attempt_number=stop_max_attempt_number,
-            stop_max_delay=stop_max_delay)
+        self.stop = stop
         self.wait = self._select_wait_strategy(
             wait_func=wait_func, wait=wait,
             wait_fixed=wait_fixed,
@@ -236,42 +230,6 @@ class Retrying(object):
         self._before_attempts = before_attempts
         self._after_attempts = after_attempts
         self._wait_jitter_max = wait_jitter_max
-
-    @staticmethod
-    def _select_stop_strategy(stop=None, stop_max_attempt_number=None,
-                              stop_max_delay=None, stop_func=None):
-        if stop_func is not None:
-            return stop_func
-
-        if stop is not None:
-            for s_name, s in [
-                    ('stop_after_attempt',
-                     _stop_after_attempt(_val_or(stop_max_attempt_number, 5))),
-                    ('stop_after_delay',
-                     _stop_after_delay(_val_or(stop_max_delay, 100))),
-            ]:
-                if s_name == stop:
-                    return s
-            # Match the original behavior if we didn't match to any
-            # known strategy
-            raise AttributeError("No stop strategy with name '%s'" % stop)
-
-        stop_strategies = []
-
-        if stop_max_attempt_number is not None:
-            stop_strategies.append(
-                _stop_after_attempt(stop_max_attempt_number))
-
-        if stop_max_delay is not None:
-            stop_strategies.append(_stop_after_delay(stop_max_delay))
-
-        def any_strategy(previous_attempt_number,
-                         delay_since_first_attempt_ms):
-            return any(s(previous_attempt_number,
-                         delay_since_first_attempt_ms)
-                       for s in stop_strategies)
-
-        return any_strategy
 
     @staticmethod
     def _select_reject_strategy(retry_on_exception=None, retry_on_result=None):
@@ -388,7 +346,8 @@ class Retrying(object):
             delay_since_first_attempt_ms = int(
                 round(time.time() * 1000)
             ) - start_time
-            if self.stop(attempt_number, delay_since_first_attempt_ms):
+            if self.stop and self.stop(
+                    attempt_number, delay_since_first_attempt_ms):
                 if not self._wrap_exception and attempt.has_exception:
                     # get() on an attempt with an exception should cause it
                     # to be raised, but raise just in case
