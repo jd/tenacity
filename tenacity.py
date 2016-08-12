@@ -153,11 +153,7 @@ class wait_incrementing(object):
         result = self.start + (
             self.increment * (previous_attempt_number - 1)
         )
-        if result > self.max:
-            result = self.max
-        if result < 0:
-            result = 0
-        return result
+        return max(0, min(result, self.max))
 
 
 class wait_exponential(object):
@@ -177,11 +173,7 @@ class wait_exponential(object):
     def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
         exp = self.EXP_BASE ** previous_attempt_number
         result = self.multiplier * exp
-        if result > self.max:
-            result = self.max
-        if result < 0:
-            result = 0
-        return result
+        return max(0, min(result, self.max))
 
 
 def retry_never(attempt):
