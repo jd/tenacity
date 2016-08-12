@@ -214,11 +214,13 @@ class Retrying(object):
 
     def __init__(self,
                  stop=None, wait=wait_none(),
+                 sleep=time.sleep,
                  retry_on_exception=None,
                  retry_on_result=None,
                  wrap_exception=False,
                  before_attempts=None,
                  after_attempts=None):
+        self.sleep = sleep
         self.stop = stop
         self.wait = wait
         self.should_reject = self._select_reject_strategy(
@@ -277,7 +279,7 @@ class Retrying(object):
                         attempt_number, delay_since_first_attempt_ms)
                 else:
                     sleep = 0
-                time.sleep(sleep / 1000.0)
+                self.sleep(sleep / 1000.0)
 
             attempt_number += 1
 
