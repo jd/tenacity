@@ -28,12 +28,6 @@ except AttributeError:
     MAX_WAIT = 1073741823
 
 
-def _val_or(val, default):
-    if val is None:
-        return default
-    return val
-
-
 def _retry_if_exception_of_type(retryable_types):
     def _retry_if_exception_these_types(exception):
         return isinstance(exception, retryable_types)
@@ -90,59 +84,58 @@ class stop_after_delay(object):
         return delay_since_first_attempt_ms >= self.max_delay
 
 
-class _fixed_sleep(object):
+class wait_fixed(object):
     """Wait strategy that waits a fixed amount of time between each retry."""
 
-    def __init__(self, wait_fixed):
-        self.wait_fixed = wait_fixed
+    def __init__(self, wait):
+        self.wait_fixed = wait
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
         return self.wait_fixed
 
 
-class _no_sleep(_fixed_sleep):
+class wait_none(wait_fixed):
     """Wait strategy that doesn't wait at all before retrying."""
 
     def __init__(self):
-        super(_no_sleep, self).__init__(0)
+        super(wait_none, self).__init__(0)
 
 
-class _random_sleep(object):
+class wait_random(object):
     """Wait strategy that waits a random amount of time between min/max."""
 
-    def __init__(self, wait_random_min, wait_random_max):
-        self.wait_random_min = wait_random_min
-        self.wait_random_max = wait_random_max
+    def __init__(self, min=0, max=1000):
+        self.wait_random_min = min
+        self.wait_random_max = max
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
         return random.randint(self.wait_random_min, self.wait_random_max)
 
 
-class _incrementing_sleep(object):
+class wait_incrementing(object):
     """Wait an incremental amount of time after each attempt.
 
     Starting at a starting value and incrementing by a value for each attempt
     (and restricting the upper limit to some maximum value).
     """
 
-    def __init__(self, wait_incrementing_start, wait_incrementing_increment,
-                 wait_incrementing_max):
-        self.wait_incrementing_start = wait_incrementing_start
-        self.wait_incrementing_increment = wait_incrementing_increment
-        self.wait_incrementing_max = wait_incrementing_max
+    def __init__(self, start=0, increment=100, max=MAX_WAIT):
+        self.start = start
+        self.increment = increment
+        self.max = max
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
-        result = self.wait_incrementing_start + (
-            self.wait_incrementing_increment * (previous_attempt_number - 1)
+        result = self.start + (
+            self.increment * (previous_attempt_number - 1)
         )
-        if result > self.wait_incrementing_max:
-            result = self.wait_incrementing_max
+        if result > self.max:
+            result = self.max
         if result < 0:
             result = 0
         return result
 
 
-class _exponential_sleep(object):
+class wait_exponential(object):
     """Wait strategy that applies exponential backoff.
 
     It allows for a customized multiplier and an ability to restrict the
@@ -152,15 +145,15 @@ class _exponential_sleep(object):
     #: Defaults to 2^n (where n is the prior attempt number/count).
     EXP_BASE = 2
 
-    def __init__(self, wait_exponential_multiplier, wait_exponential_max):
-        self.wait_exponential_multiplier = wait_exponential_multiplier
-        self.wait_exponential_max = wait_exponential_max
+    def __init__(self, multiplier=1, max=MAX_WAIT):
+        self.multiplier = multiplier
+        self.max = max
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
         exp = self.EXP_BASE ** previous_attempt_number
-        result = self.wait_exponential_multiplier * exp
-        if result > self.wait_exponential_max:
-            result = self.wait_exponential_max
+        result = self.multiplier * exp
+        if result > self.max:
+            result = self.max
         if result < 0:
             result = 0
         return result
@@ -199,30 +192,15 @@ class Retrying(object):
     """Retrying controller."""
 
     def __init__(self,
-                 stop=None, wait=None,
-                 wait_fixed=None,
-                 wait_random_min=None, wait_random_max=None,
-                 wait_incrementing_start=None,
-                 wait_incrementing_increment=None,
-                 wait_incrementing_max=None,
-                 wait_exponential_multiplier=None, wait_exponential_max=None,
+                 stop=None, wait=wait_none(),
                  retry_on_exception=None,
                  retry_on_result=None,
                  wrap_exception=False,
-                 wait_func=None,
                  wait_jitter_max=None,
                  before_attempts=None,
                  after_attempts=None):
         self.stop = stop
-        self.wait = self._select_wait_strategy(
-            wait_func=wait_func, wait=wait,
-            wait_fixed=wait_fixed,
-            wait_random_min=wait_random_min, wait_random_max=wait_random_max,
-            wait_incrementing_start=wait_incrementing_start,
-            wait_incrementing_increment=wait_incrementing_increment,
-            wait_incrementing_max=wait_incrementing_max,
-            wait_exponential_multiplier=wait_exponential_multiplier,
-            wait_exponential_max=wait_exponential_max)
+        self.wait = wait
         self.should_reject = self._select_reject_strategy(
             retry_on_exception=retry_on_exception,
             retry_on_result=retry_on_result)
@@ -243,86 +221,6 @@ class Retrying(object):
             retry_on_result = _never_reject
         return _MaybeReject(retry_on_result=retry_on_result,
                             retry_on_exception=retry_on_exception)
-
-    @staticmethod
-    def _select_wait_strategy(wait_func=None, wait=None,
-                              wait_fixed=None,
-                              wait_random_min=None, wait_random_max=None,
-                              wait_incrementing_start=None,
-                              wait_incrementing_increment=None,
-                              wait_incrementing_max=None,
-                              wait_exponential_multiplier=None,
-                              wait_exponential_max=None):
-        if wait_func is not None:
-            return wait_func
-
-        if wait is not None:
-            for w_name, w in [
-                    ('exponential_sleep',
-                     _exponential_sleep(
-                         _val_or(wait_exponential_multiplier, 1),
-                         _val_or(wait_exponential_max, MAX_WAIT))),
-                    ('incrementing_sleep',
-                     _incrementing_sleep(
-                         _val_or(wait_incrementing_start, 0),
-                         _val_or(wait_incrementing_increment, 100),
-                         _val_or(wait_incrementing_max, MAX_WAIT))),
-                    ('fixed_sleep',
-                     _fixed_sleep(
-                         _val_or(wait_fixed, 1000))),
-                    ('no_sleep', _no_sleep()),
-                    ('random_sleep',
-                     _random_sleep(
-                         _val_or(wait_random_min, 0),
-                         _val_or(wait_random_max, 1000))),
-            ]:
-                if w_name == wait:
-                    return w
-            # Match the original behavior if we didn't match to any
-            # known strategy
-            raise AttributeError("No wait strategy with name '%s'" % wait)
-
-        wait_strategies = []
-
-        if wait_fixed is not None:
-            wait_strategies.append(_fixed_sleep(wait_fixed))
-
-        if wait_random_min is not None or wait_random_max is not None:
-            wait_random_min = _val_or(wait_random_min, 0)
-            wait_random_max = _val_or(wait_random_max, 1000)
-            wait_strategies.append(_random_sleep(wait_random_min,
-                                                 wait_random_max))
-
-        if (wait_incrementing_start is not None or
-           wait_incrementing_increment is not None):
-            wait_incrementing_start = _val_or(wait_incrementing_start, 0)
-            wait_incrementing_increment = _val_or(
-                wait_incrementing_increment, 100)
-            wait_incrementing_max = _val_or(wait_incrementing_max, MAX_WAIT)
-            wait_strategies.append(
-                _incrementing_sleep(wait_incrementing_start,
-                                    wait_incrementing_increment,
-                                    wait_incrementing_max))
-
-        if (wait_exponential_multiplier is not None or
-           wait_exponential_max is not None):
-            wait_exponential_multiplier = _val_or(
-                wait_exponential_multiplier, 1)
-            wait_exponential_max = _val_or(wait_exponential_max, MAX_WAIT)
-            wait_strategies.append(
-                _exponential_sleep(wait_exponential_multiplier,
-                                   wait_exponential_max))
-
-        if not wait_strategies:
-            wait_strategies.append(_no_sleep())
-
-        def max_strategy(previous_attempt_number,
-                         delay_since_first_attempt_ms):
-            return max(s(previous_attempt_number,
-                         delay_since_first_attempt_ms)
-                       for s in wait_strategies)
-
-        return max_strategy
 
     def call(self, fn, *args, **kwargs):
         start_time = int(round(time.time() * 1000))
@@ -355,7 +253,11 @@ class Retrying(object):
                 else:
                     raise RetryError(attempt)
             else:
-                sleep = self.wait(attempt_number, delay_since_first_attempt_ms)
+                if self.wait:
+                    sleep = self.wait(
+                        attempt_number, delay_since_first_attempt_ms)
+                else:
+                    sleep = 0
                 if self._wait_jitter_max:
                     jitter = random.random() * self._wait_jitter_max
                     sleep = sleep + max(0, jitter)

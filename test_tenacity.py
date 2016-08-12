@@ -54,18 +54,18 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(0, r.wait(18, 9879))
 
     def test_fixed_sleep(self):
-        r = Retrying(wait_fixed=1000)
+        r = Retrying(wait=tenacity.wait_fixed(1000))
         self.assertEqual(1000, r.wait(12, 6546))
 
     def test_incrementing_sleep(self):
-        r = Retrying(wait_incrementing_start=500,
-                     wait_incrementing_increment=100)
+        r = Retrying(wait=tenacity.wait_incrementing(
+            start=500, increment=100))
         self.assertEqual(500, r.wait(1, 6546))
         self.assertEqual(600, r.wait(2, 6546))
         self.assertEqual(700, r.wait(3, 6546))
 
     def test_random_sleep(self):
-        r = Retrying(wait_random_min=1000, wait_random_max=2000)
+        r = Retrying(wait=tenacity.wait_random(min=1000, max=2000))
         times = set()
         times.add(r.wait(1, 6546))
         times.add(r.wait(1, 6546))
@@ -79,7 +79,7 @@ class TestWaitConditions(unittest.TestCase):
             self.assertTrue(t <= 2000)
 
     def test_random_sleep_without_min(self):
-        r = Retrying(wait_random_max=2000)
+        r = Retrying(wait=tenacity.wait_random(max=2000))
         times = set()
         times.add(r.wait(1, 6546))
         times.add(r.wait(1, 6546))
@@ -93,7 +93,7 @@ class TestWaitConditions(unittest.TestCase):
             self.assertTrue(t <= 2000)
 
     def test_exponential(self):
-        r = Retrying(wait_exponential_max=100000)
+        r = Retrying(wait=tenacity.wait_exponential(max=100000))
         self.assertEqual(r.wait(1, 0), 2)
         self.assertEqual(r.wait(2, 0), 4)
         self.assertEqual(r.wait(3, 0), 8)
@@ -102,7 +102,7 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(6, 0), 64)
 
     def test_exponential_with_max_wait(self):
-        r = Retrying(wait_exponential_max=40)
+        r = Retrying(wait=tenacity.wait_exponential(max=40))
         self.assertEqual(r.wait(1, 0), 2)
         self.assertEqual(r.wait(2, 0), 4)
         self.assertEqual(r.wait(3, 0), 8)
@@ -113,8 +113,8 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(50, 0), 40)
 
     def test_exponential_with_max_wait_and_multiplier(self):
-        r = Retrying(wait_exponential_max=50000,
-                     wait_exponential_multiplier=1000)
+        r = Retrying(wait=tenacity.wait_exponential(
+            max=50000, multiplier=1000))
         self.assertEqual(r.wait(1, 0), 2000)
         self.assertEqual(r.wait(2, 0), 4000)
         self.assertEqual(r.wait(3, 0), 8000)
@@ -128,7 +128,7 @@ class TestWaitConditions(unittest.TestCase):
         Retrying(wait="exponential_sleep")
 
     def test_wait_func(self):
-        r = Retrying(wait_func=lambda attempt, delay: attempt * delay)
+        r = Retrying(wait=lambda attempt, delay: attempt * delay)
         self.assertEqual(r.wait(1, 5), 5)
         self.assertEqual(r.wait(2, 11), 22)
         self.assertEqual(r.wait(10, 100), 1000)
@@ -240,7 +240,7 @@ def current_time_ms():
     return int(round(time.time() * 1000))
 
 
-@retry(wait_fixed=50, retry_on_result=retry_if_result_none)
+@retry(wait=tenacity.wait_fixed(50), retry_on_result=retry_if_result_none)
 def _retryable_test_with_wait(thing):
     return thing.go()
 
@@ -457,7 +457,8 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         def _before(attempt_number):
             TestBeforeAfterAttempts._attempt_number = attempt_number
 
-        @retry(wait_fixed=1000, stop=tenacity.stop_after_attempt(1),
+        @retry(wait=tenacity.wait_fixed(1000),
+               stop=tenacity.stop_after_attempt(1),
                before_attempts=_before)
         def _test_before():
             pass
@@ -472,7 +473,8 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         def _after(attempt_number):
             TestBeforeAfterAttempts._attempt_number = attempt_number
 
-        @retry(wait_fixed=100, stop=tenacity.stop_after_attempt(3),
+        @retry(wait=tenacity.wait_fixed(100),
+               stop=tenacity.stop_after_attempt(3),
                after_attempts=_after)
         def _test_after():
             if TestBeforeAfterAttempts._attempt_number < 2:

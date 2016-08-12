@@ -84,7 +84,7 @@ Most things don't like to be polled as fast as possible, so let's just wait 2 se
 
 .. code-block:: python
 
-    @retry(wait_fixed=2000)
+    @retry(wait=wait_fixed(2000))
     def wait_2_s():
         print "Wait 2 second between retries"
 
@@ -93,7 +93,7 @@ Some things perform best with a bit of randomness injected.
 
 .. code-block:: python
 
-    @retry(wait_random_min=1000, wait_random_max=2000)
+    @retry(wait=wait_random(min=1000, max=2000))
     def wait_random_1_to_2_s():
         print "Randomly wait 1 to 2 seconds between retries"
 
@@ -101,7 +101,7 @@ Then again, it's hard to beat exponential backoff when retrying distributed serv
 
 .. code-block:: python
 
-    @retry(wait_exponential_multiplier=1000, wait_exponential_max=10000)
+    @retry(wait=wait__exponential(multiplier=1000, max=10000))
     def wait_exponential_1000():
         print "Wait 2^x * 1000 milliseconds between each retry, up to 10 seconds, then 10 seconds afterwards"
 
