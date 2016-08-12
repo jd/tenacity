@@ -125,11 +125,7 @@ exceptions, as in the cases here.
 
 .. code-block:: python
 
-    def retry_if_io_error(exception):
-        """Return True if we should retry (in this case when it's an IOError), False otherwise"""
-        return isinstance(exception, IOError)
-
-    @retry(retry_on_exception=retry_if_io_error)
+    @retry(retry=retry_if_exception(IOError))
     def might_io_error():
         print "Retry forever with no wait if an IOError occurs, raise any other errors"
 
@@ -141,14 +137,25 @@ We can also use the result of the function to alter the behavior of retrying.
 
 .. code-block:: python
 
-    def retry_if_result_none(result):
-        """Return True if we should retry (in this case when result is None), False otherwise"""
-        return result is None
+    def is_none_p(value):
+        """Return True if value is None"""
+        return value is None
 
-    @retry(retry_on_result=retry_if_result_none)
+    @retry(retry=retry_if_result(is_none_p))
     def might_return_none():
         print "Retry forever ignoring Exceptions with no wait if return value is None"
 
+We can also combine several conditions:
+
+.. code-block:: python
+
+    def is_none_p(value):
+        """Return True if value is None"""
+        return value is None
+
+    @retry(retry=retry_any(retry_if_result(is_none_p), retry_if_exception()))
+    def might_return_none():
+        print "Retry forever ignoring Exceptions with no wait if return value is None"
 
 Any combination of stop, wait, etc. is also supported to give you the freedom
 to mix and match.

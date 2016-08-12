@@ -154,6 +154,18 @@ class TestWaitConditions(unittest.TestCase):
             self.assertGreaterEqual(w, 5)
 
 
+class TestRetryConditions(unittest.TestCase):
+
+    def test_retry_any(self):
+        r = tenacity.retry_any(
+            tenacity.retry_if_result(lambda x: x == 1),
+            tenacity.retry_if_result(lambda x: x == 2))
+        self.assertTrue(r(tenacity.Attempt(1, 1, False)))
+        self.assertTrue(r(tenacity.Attempt(2, 1, False)))
+        self.assertFalse(r(tenacity.Attempt(3, 1, False)))
+        self.assertFalse(r(tenacity.Attempt(1, 1, True)))
+
+
 class NoneReturnUntilAfterCount(object):
     "Holds counter state for invoking a method several times in a row."
 
@@ -245,38 +257,28 @@ class NoCustomErrorAfterCount(object):
         return True
 
 
-def retry_if_result_none(result):
-    return result is None
-
-
-def retry_if_exception_of_type(retryable_types):
-    def retry_if_exception_these_types(exception):
-        print("Detected Exception of type: {0}".format(str(type(exception))))
-        return isinstance(exception, retryable_types)
-    return retry_if_exception_these_types
-
-
 def current_time_ms():
     return int(round(time.time() * 1000))
 
 
-@retry(wait=tenacity.wait_fixed(50), retry_on_result=retry_if_result_none)
+@retry(wait=tenacity.wait_fixed(50),
+       retry=tenacity.retry_if_result(lambda result: result is None))
 def _retryable_test_with_wait(thing):
     return thing.go()
 
 
 @retry(stop=tenacity.stop_after_attempt(3),
-       retry_on_result=retry_if_result_none)
+       retry=tenacity.retry_if_result(lambda result: result is None))
 def _retryable_test_with_stop(thing):
     return thing.go()
 
 
-@retry(retry_on_exception=(IOError,))
+@retry(retry=tenacity.retry_if_exception(IOError))
 def _retryable_test_with_exception_type_io(thing):
     return thing.go()
 
 
-@retry(retry_on_exception=retry_if_exception_of_type(IOError),
+@retry(retry=tenacity.retry_if_exception(IOError),
        wrap_exception=True)
 def _retryable_test_with_exception_type_io_wrap(thing):
     return thing.go()
@@ -284,14 +286,14 @@ def _retryable_test_with_exception_type_io_wrap(thing):
 
 @retry(
     stop=tenacity.stop_after_attempt(3),
-    retry_on_exception=(IOError,))
+    retry=tenacity.retry_if_exception(IOError))
 def _retryable_test_with_exception_type_io_attempt_limit(thing):
     return thing.go()
 
 
 @retry(
     stop=tenacity.stop_after_attempt(3),
-    retry_on_exception=(IOError,),
+    retry=tenacity.retry_if_exception(IOError),
     wrap_exception=True)
 def _retryable_test_with_exception_type_io_attempt_limit_wrap(thing):
     return thing.go()
@@ -307,12 +309,12 @@ def _retryable_default_f(thing):
     return thing.go()
 
 
-@retry(retry_on_exception=retry_if_exception_of_type(CustomError))
+@retry(retry=tenacity.retry_if_exception(CustomError))
 def _retryable_test_with_exception_type_custom(thing):
     return thing.go()
 
 
-@retry(retry_on_exception=retry_if_exception_of_type(CustomError),
+@retry(retry=tenacity.retry_if_exception(CustomError),
        wrap_exception=True)
 def _retryable_test_with_exception_type_custom_wrap(thing):
     return thing.go()
@@ -320,14 +322,14 @@ def _retryable_test_with_exception_type_custom_wrap(thing):
 
 @retry(
     stop=tenacity.stop_after_attempt(3),
-    retry_on_exception=retry_if_exception_of_type(CustomError))
+    retry=tenacity.retry_if_exception(CustomError))
 def _retryable_test_with_exception_type_custom_attempt_limit(thing):
     return thing.go()
 
 
 @retry(
     stop=tenacity.stop_after_attempt(3),
-    retry_on_exception=retry_if_exception_of_type(CustomError),
+    retry=tenacity.retry_if_exception(CustomError),
     wrap_exception=True)
 def _retryable_test_with_exception_type_custom_attempt_limit_wrap(thing):
     return thing.go()

@@ -184,33 +184,46 @@ class wait_exponential(object):
         return result
 
 
-def _never_reject(result):
+def retry_never(attempt):
     """Rejection strategy that never rejects any result."""
     return False
 
 
-def _always_reject(result):
+def retry_always(attempt):
     """Rejection strategy that always rejects any result."""
     return True
 
 
-class _MaybeReject(object):
-    """Rejection strategy that proxies to 2 functions to reject (or not)."""
+class retry_if_exception(object):
+    """Retry if an exception has been raised of a certain type"""
 
-    def __init__(self, retry_on_exception=None,
-                 retry_on_result=None):
-        self.retry_on_exception = retry_on_exception
-        self.retry_on_result = retry_on_result
+    def __init__(self, exception_types=Exception):
+        self.exception_types = exception_types
 
     def __call__(self, attempt):
-        reject = False
         if attempt.has_exception:
-            if self.retry_on_exception is not None:
-                reject |= self.retry_on_exception(attempt.value[1])
-        else:
-            if self.retry_on_result is not None:
-                reject |= self.retry_on_result(attempt.value)
-        return reject
+            return isinstance(attempt.value[1], self.exception_types)
+
+
+class retry_if_result(object):
+    """Retry if the result verifies a predicate."""
+
+    def __init__(self, predicate):
+        self.predicate = predicate
+
+    def __call__(self, attempt):
+        if not attempt.has_exception:
+            return self.predicate(attempt.value)
+
+
+class retry_any(object):
+    """Retry if any of the retries condition is valid."""
+
+    def __init__(self, *retries):
+        self.retries = retries
+
+    def __call__(self, attempt):
+        return any(map(lambda x: x(attempt), self.retries))
 
 
 class Retrying(object):
@@ -219,33 +232,17 @@ class Retrying(object):
     def __init__(self,
                  stop=stop_never, wait=wait_none(),
                  sleep=time.sleep,
-                 retry_on_exception=None,
-                 retry_on_result=None,
+                 retry=retry_if_exception(),
                  wrap_exception=False,
                  before_attempts=None,
                  after_attempts=None):
         self.sleep = sleep
         self.stop = stop
         self.wait = wait
-        self.should_reject = self._select_reject_strategy(
-            retry_on_exception=retry_on_exception,
-            retry_on_result=retry_on_result)
+        self.retry = retry
         self._wrap_exception = wrap_exception
         self._before_attempts = before_attempts
         self._after_attempts = after_attempts
-
-    @staticmethod
-    def _select_reject_strategy(retry_on_exception=None, retry_on_result=None):
-        if retry_on_exception is None:
-            retry_on_exception = _always_reject
-        else:
-            if isinstance(retry_on_exception, (tuple)):
-                retry_on_exception = _retry_if_exception_of_type(
-                    retry_on_exception)
-        if retry_on_result is None:
-            retry_on_result = _never_reject
-        return _MaybeReject(retry_on_result=retry_on_result,
-                            retry_on_exception=retry_on_exception)
 
     def call(self, fn, *args, **kwargs):
         start_time = int(round(time.time() * 1000))
@@ -260,7 +257,7 @@ class Retrying(object):
                 tb = sys.exc_info()
                 attempt = Attempt(tb, attempt_number, True)
 
-            if not self.should_reject(attempt):
+            if not self.retry(attempt):
                 return attempt.get(self._wrap_exception)
 
             if self._after_attempts:
