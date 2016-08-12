@@ -304,9 +304,8 @@ class Attempt(object):
             return "Attempts: {0}, Error:\n{1}".format(
                 self.attempt_number,
                 "".join(traceback.format_tb(self.value[2])))
-        else:
-            return "Attempts: {0}, Value: {1}".format(
-                self.attempt_number, self.value)
+        return "Attempts: {0}, Value: {1}".format(
+            self.attempt_number, self.value)
 
 
 class RetryError(Exception):

@@ -401,5 +401,18 @@ class TestBeforeAfterAttempts(unittest.TestCase):
 
         self.assertTrue(TestBeforeAfterAttempts._attempt_number is 2)
 
+
+class TestRetryError(unittest.TestCase):
+    def test_str(self):
+        self.assertEqual(
+            "RetryError[Attempts: 2, Value: 4]",
+            str(tenacity.RetryError(
+                tenacity.Attempt(4, 2, False))))
+        self.assertEqual(
+            "RetryError[Attempts: 2, Error:\n]",
+            str(tenacity.RetryError(
+                tenacity.Attempt([Exception("boom"), None, None], 2, True))))
+
+
 if __name__ == '__main__':
     unittest.main()
