@@ -64,6 +64,10 @@ def retry(*dargs, **dkw):
         return wrap
 
 
+def stop_never(previous_attempt_number, delay_since_first_attempt_ms):
+    return False
+
+
 class stop_after_attempt(object):
     """Strategy that stops when the previous attempt >= max_attempt."""
 
@@ -213,7 +217,7 @@ class Retrying(object):
     """Retrying controller."""
 
     def __init__(self,
-                 stop=None, wait=wait_none(),
+                 stop=stop_never, wait=wait_none(),
                  sleep=time.sleep,
                  retry_on_exception=None,
                  retry_on_result=None,
@@ -265,7 +269,7 @@ class Retrying(object):
             delay_since_first_attempt_ms = int(
                 round(time.time() * 1000)
             ) - start_time
-            if self.stop and self.stop(
+            if self.stop(
                     attempt_number, delay_since_first_attempt_ms):
                 if not self._wrap_exception and attempt.has_exception:
                     # get() on an attempt with an exception should cause it

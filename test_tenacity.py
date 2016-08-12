@@ -26,6 +26,10 @@ from tenacity import Retrying
 
 class TestStopConditions(unittest.TestCase):
 
+    def test_never_stop(self):
+        r = Retrying()
+        self.assertFalse(r.stop(3, 6546))
+
     def test_stop_after_attempt(self):
         r = Retrying(stop=tenacity.stop_after_attempt(3))
         self.assertFalse(r.stop(2, 6546))
