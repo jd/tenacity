@@ -339,7 +339,7 @@ class TestDecoratorWrapper(unittest.TestCase):
         start = current_time_ms()
         result = _retryable_test_with_wait(NoneReturnUntilAfterCount(5))
         t = current_time_ms() - start
-        self.assertTrue(t >= 250)
+        self.assertGreaterEqual(t, 250)
         self.assertTrue(result)
 
     def test_with_stop_on_return_value(self):
