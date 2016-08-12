@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import six.moves
 import time
 import unittest
 
@@ -132,6 +133,21 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(1, 5), 5)
         self.assertEqual(r.wait(2, 11), 22)
         self.assertEqual(r.wait(10, 100), 1000)
+
+    def test_wait_jitter(self):
+        r = Retrying(wait=tenacity.wait_jitter(3))
+        # Test it a few time since it's random
+        for i in six.moves.range(1000):
+            self.assertLess(r.wait(1, 5), 3)
+
+    def test_wait_combine(self):
+        r = Retrying(wait=tenacity.wait_combine(tenacity.wait_jitter(3),
+                                                tenacity.wait_fixed(5)))
+        # Test it a few time since it's random
+        for i in six.moves.range(1000):
+            w = r.wait(1, 5)
+            self.assertLess(w, 8)
+            self.assertGreaterEqual(w, 5)
 
 
 class NoneReturnUntilAfterCount(object):

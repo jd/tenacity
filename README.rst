@@ -106,6 +106,15 @@ Then again, it's hard to beat exponential backoff when retrying distributed serv
         print "Wait 2^x * 1000 milliseconds between each retry, up to 10 seconds, then 10 seconds afterwards"
 
 
+Then again, it's hard to beat exponential backoff when retrying distributed services and other remote endpoints.
+
+.. code-block:: python
+
+    @retry(wait=wait_combine(wait_fixed(3), wait_jitter(2)))
+    def wait_fixed_jitter():
+        print "Wait at least 3 seconds and add up to 2 seconds of random delay"
+
+
 We have a few options for dealing with retries that raise specific or general exceptions, as in the cases here.
 
 .. code-block:: python

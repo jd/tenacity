@@ -84,6 +84,15 @@ class stop_after_delay(object):
         return delay_since_first_attempt_ms >= self.max_delay
 
 
+class wait_jitter(object):
+
+    def __init__(self, max):
+        self.max = max
+
+    def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
+        return random.random() * self.max
+
+
 class wait_fixed(object):
     """Wait strategy that waits a fixed amount of time between each retry."""
 
@@ -110,6 +119,18 @@ class wait_random(object):
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
         return random.randint(self.wait_random_min, self.wait_random_max)
+
+
+class wait_combine(object):
+    """Combine several waiting strategies."""
+
+    def __init__(self, *strategies):
+        self.wait_funcs = strategies
+
+    def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
+        return sum(map(
+            lambda x: x(previous_attempt_number, delay_since_first_attempt_ms),
+            self.wait_funcs))
 
 
 class wait_incrementing(object):
@@ -196,7 +217,6 @@ class Retrying(object):
                  retry_on_exception=None,
                  retry_on_result=None,
                  wrap_exception=False,
-                 wait_jitter_max=None,
                  before_attempts=None,
                  after_attempts=None):
         self.stop = stop
@@ -207,7 +227,6 @@ class Retrying(object):
         self._wrap_exception = wrap_exception
         self._before_attempts = before_attempts
         self._after_attempts = after_attempts
-        self._wait_jitter_max = wait_jitter_max
 
     @staticmethod
     def _select_reject_strategy(retry_on_exception=None, retry_on_result=None):
@@ -258,9 +277,6 @@ class Retrying(object):
                         attempt_number, delay_since_first_attempt_ms)
                 else:
                     sleep = 0
-                if self._wait_jitter_max:
-                    jitter = random.random() * self._wait_jitter_max
-                    sleep = sleep + max(0, jitter)
                 time.sleep(sleep / 1000.0)
 
             attempt_number += 1
