@@ -101,7 +101,7 @@ Then again, it's hard to beat exponential backoff when retrying distributed serv
 
 .. code-block:: python
 
-    @retry(wait=wait__exponential(multiplier=1000, max=10000))
+    @retry(wait=wait_exponential(multiplier=1000, max=10000))
     def wait_exponential_1000():
         print "Wait 2^x * 1000 milliseconds between each retry, up to 10 seconds, then 10 seconds afterwards"
 
