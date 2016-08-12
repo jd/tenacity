@@ -233,14 +233,12 @@ class Retrying(object):
                  stop=stop_never, wait=wait_none(),
                  sleep=time.sleep,
                  retry=retry_if_exception(),
-                 wrap_exception=False,
                  before_attempts=None,
                  after_attempts=None):
         self.sleep = sleep
         self.stop = stop
         self.wait = wait
         self.retry = retry
-        self._wrap_exception = wrap_exception
         self._before_attempts = before_attempts
         self._after_attempts = after_attempts
 
@@ -258,7 +256,7 @@ class Retrying(object):
                 attempt = Attempt(tb, attempt_number, True)
 
             if not self.retry(attempt):
-                return attempt.get(self._wrap_exception)
+                return attempt.get()
 
             if self._after_attempts:
                 self._after_attempts(attempt_number)
@@ -266,21 +264,14 @@ class Retrying(object):
             delay_since_first_attempt_ms = int(
                 round(time.time() * 1000)
             ) - start_time
-            if self.stop(
-                    attempt_number, delay_since_first_attempt_ms):
-                if not self._wrap_exception and attempt.has_exception:
-                    # get() on an attempt with an exception should cause it
-                    # to be raised, but raise just in case
-                    raise attempt.get()
-                else:
-                    raise RetryError(attempt)
+            if self.stop(attempt_number, delay_since_first_attempt_ms):
+                six.raise_from(RetryError(attempt), attempt.exception)
+
+            if self.wait:
+                sleep = self.wait(attempt_number, delay_since_first_attempt_ms)
             else:
-                if self.wait:
-                    sleep = self.wait(
-                        attempt_number, delay_since_first_attempt_ms)
-                else:
-                    sleep = 0
-                self.sleep(sleep / 1000.0)
+                sleep = 0
+            self.sleep(sleep / 1000.0)
 
             attempt_number += 1
 
@@ -297,19 +288,16 @@ class Attempt(object):
         self.attempt_number = attempt_number
         self.has_exception = has_exception
 
-    def get(self, wrap_exception=False):
-        """Return the return value of this Attempt instance or raise.
-
-        If wrap_exception is true, this Attempt is wrapped inside of a
-        RetryError before being raised.
-        """
+    @property
+    def exception(self):
         if self.has_exception:
-            if wrap_exception:
-                raise RetryError(self)
-            else:
-                six.reraise(self.value[0], self.value[1], self.value[2])
-        else:
-            return self.value
+            return self.value[0]
+
+    def get(self):
+        """Return the return value of this Attempt instance or raise."""
+        if self.has_exception:
+            six.reraise(self.value[0], self.value[1], self.value[2])
+        return self.value
 
     def __repr__(self):
         if self.has_exception:
