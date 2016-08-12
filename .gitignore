@@ -3,3 +3,4 @@ dist
 *.pyc
 *.egg-info
 build
+.tox/
