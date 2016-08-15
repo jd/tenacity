@@ -189,7 +189,7 @@ def retry_always(attempt):
     return True
 
 
-class retry_if_exception(object):
+class retry_if_exception_type(object):
     """Retry if an exception has been raised of a certain type"""
 
     def __init__(self, exception_types=Exception):
@@ -227,7 +227,7 @@ class Retrying(object):
     def __init__(self,
                  stop=stop_never, wait=wait_none(),
                  sleep=time.sleep,
-                 retry=retry_if_exception(),
+                 retry=retry_if_exception_type(),
                  before_attempts=None,
                  after_attempts=None):
         self.sleep = sleep

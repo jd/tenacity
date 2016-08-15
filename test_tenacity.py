@@ -273,14 +273,14 @@ def _retryable_test_with_stop(thing):
     return thing.go()
 
 
-@retry(retry=tenacity.retry_if_exception(IOError))
+@retry(retry=tenacity.retry_if_exception_type(IOError))
 def _retryable_test_with_exception_type_io(thing):
     return thing.go()
 
 
 @retry(
     stop=tenacity.stop_after_attempt(3),
-    retry=tenacity.retry_if_exception(IOError))
+    retry=tenacity.retry_if_exception_type(IOError))
 def _retryable_test_with_exception_type_io_attempt_limit(thing):
     return thing.go()
 
@@ -295,14 +295,14 @@ def _retryable_default_f(thing):
     return thing.go()
 
 
-@retry(retry=tenacity.retry_if_exception(CustomError))
+@retry(retry=tenacity.retry_if_exception_type(CustomError))
 def _retryable_test_with_exception_type_custom(thing):
     return thing.go()
 
 
 @retry(
     stop=tenacity.stop_after_attempt(3),
-    retry=tenacity.retry_if_exception(CustomError))
+    retry=tenacity.retry_if_exception_type(CustomError))
 def _retryable_test_with_exception_type_custom_attempt_limit(thing):
     return thing.go()
 
