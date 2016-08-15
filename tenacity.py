@@ -15,11 +15,12 @@
 # limitations under the License.
 
 import random
-import six
 import sys
 import time
 
 from concurrent import futures
+from monotonic import monotonic as now
+import six
 
 # sys.maxint / 2, since Python 3.2 doesn't have a sys.maxint...
 try:
@@ -247,7 +248,7 @@ class Retrying(object):
         self._after_attempts = after_attempts
 
     def call(self, fn, *args, **kwargs):
-        start_time = int(round(time.time() * 1000))
+        start_time = int(round(now() * 1000))
         attempt_number = 1
         while True:
             if self._before_attempts:
@@ -270,7 +271,7 @@ class Retrying(object):
                 self._after_attempts(attempt_number)
 
             delay_since_first_attempt_ms = int(
-                round(time.time() * 1000)
+                round(now() * 1000)
             ) - start_time
             if self.stop(attempt_number, delay_since_first_attempt_ms):
                 six.raise_from(RetryError(fut), fut.exception())
