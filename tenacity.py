@@ -189,15 +189,24 @@ def retry_always(attempt):
     return True
 
 
-class retry_if_exception_type(object):
+class retry_if_exception(object):
+    """Retry if an exception verifies a predicate."""
+
+    def __init__(self, predicate):
+        self.predicate = predicate
+
+    def __call__(self, attempt):
+        if attempt.failed:
+            return self.predicate(attempt.exception())
+
+
+class retry_if_exception_type(retry_if_exception):
     """Retry if an exception has been raised of a certain type"""
 
     def __init__(self, exception_types=Exception):
         self.exception_types = exception_types
-
-    def __call__(self, attempt):
-        if attempt.failed:
-            return isinstance(attempt.exception(), self.exception_types)
+        super(retry_if_exception_type, self).__init__(
+            lambda e: isinstance(e, exception_types))
 
 
 class retry_if_result(object):
