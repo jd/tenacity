@@ -89,6 +89,7 @@ class stop_after_delay(object):
 
 
 class wait_jitter(object):
+    """Wait strategy that waits a random amount of time (bounded by a max)."""
 
     def __init__(self, max):
         self.max = max
