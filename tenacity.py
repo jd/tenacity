@@ -38,12 +38,6 @@ else:
         fut.set_exception(tb[1])
 
 
-def _retry_if_exception_of_type(retryable_types):
-    def _retry_if_exception_these_types(exception):
-        return isinstance(exception, retryable_types)
-    return _retry_if_exception_these_types
-
-
 def retry(*dargs, **dkw):
     """Decorator function that instantiates the Retrying object.
 
