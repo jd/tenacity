@@ -18,14 +18,24 @@ import random
 import six
 import sys
 import time
-import traceback
 
+from concurrent import futures
 
 # sys.maxint / 2, since Python 3.2 doesn't have a sys.maxint...
 try:
     MAX_WAIT = sys.maxint / 2
 except AttributeError:
     MAX_WAIT = 1073741823
+
+
+if six.PY2:
+    def _capture(fut, tb):
+        # TODO(harlowja): delete this in future, since its
+        # has to repeatedly calculate this crap.
+        fut.set_exception_info(tb[1], tb[2])
+else:
+    def _capture(fut, tb):
+        fut.set_exception(tb[1])
 
 
 def _retry_if_exception_of_type(retryable_types):
@@ -191,8 +201,8 @@ class retry_if_exception(object):
         self.exception_types = exception_types
 
     def __call__(self, attempt):
-        if attempt.has_exception:
-            return isinstance(attempt.value[1], self.exception_types)
+        if attempt.failed:
+            return isinstance(attempt.exception(), self.exception_types)
 
 
 class retry_if_result(object):
@@ -202,8 +212,8 @@ class retry_if_result(object):
         self.predicate = predicate
 
     def __call__(self, attempt):
-        if not attempt.has_exception:
-            return self.predicate(attempt.value)
+        if not attempt.failed:
+            return self.predicate(attempt.result())
 
 
 class retry_any(object):
@@ -239,14 +249,18 @@ class Retrying(object):
             if self._before_attempts:
                 self._before_attempts(attempt_number)
 
+            fut = Future(attempt_number)
             try:
-                attempt = Attempt(fn(*args, **kwargs), attempt_number, False)
+                fut.set_result(fn(*args, **kwargs))
             except Exception:
                 tb = sys.exc_info()
-                attempt = Attempt(tb, attempt_number, True)
+                try:
+                    _capture(fut, tb)
+                finally:
+                    del tb
 
-            if not self.retry(attempt):
-                return attempt.get()
+            if not self.retry(fut):
+                return fut.result()
 
             if self._after_attempts:
                 self._after_attempts(attempt_number)
@@ -255,7 +269,7 @@ class Retrying(object):
                 round(time.time() * 1000)
             ) - start_time
             if self.stop(attempt_number, delay_since_first_attempt_ms):
-                six.raise_from(RetryError(attempt), attempt.exception)
+                six.raise_from(RetryError(fut), fut.exception())
 
             if self.wait:
                 sleep = self.wait(attempt_number, delay_since_first_attempt_ms)
@@ -266,40 +280,31 @@ class Retrying(object):
             attempt_number += 1
 
 
-class Attempt(object):
-    """Encapsulates a call to a target function.
+class Future(futures.Future):
+    """Encapsulates a (future or past) attempted call to a target function."""
 
-    That may end as a normal return value from the function or an Exception
-    depending on what occurred during the execution.
-    """
-
-    def __init__(self, value, attempt_number, has_exception):
-        self.value = value
+    def __init__(self, attempt_number):
+        super(Future, self).__init__()
         self.attempt_number = attempt_number
-        self.has_exception = has_exception
 
     @property
-    def exception(self):
-        if self.has_exception:
-            return self.value[0]
+    def failed(self):
+        """Return whether a exception is being held in this future."""
+        return self.exception() is not None
 
-    def get(self):
-        """Return the return value of this Attempt instance or raise."""
-        if self.has_exception:
-            six.reraise(self.value[0], self.value[1], self.value[2])
-        return self.value
-
-    def __repr__(self):
-        if self.has_exception:
-            return "Attempts: {0}, Error:\n{1}".format(
-                self.attempt_number,
-                "".join(traceback.format_tb(self.value[2])))
-        return "Attempts: {0}, Value: {1}".format(
-            self.attempt_number, self.value)
+    @classmethod
+    def construct(cls, attempt_number, value, has_exception):
+        """Helper (for testing) for making these objects easily."""
+        fut = cls(attempt_number)
+        if has_exception:
+            fut.set_exception(value)
+        else:
+            fut.set_result(value)
+        return fut
 
 
 class RetryError(Exception):
-    "Encapsulates the last Attempt instance right before giving up"
+    "Encapsulates the last attempt instance right before giving up"
 
     def __init__(self, last_attempt):
         self.last_attempt = last_attempt

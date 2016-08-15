@@ -160,10 +160,10 @@ class TestRetryConditions(unittest.TestCase):
         r = tenacity.retry_any(
             tenacity.retry_if_result(lambda x: x == 1),
             tenacity.retry_if_result(lambda x: x == 2))
-        self.assertTrue(r(tenacity.Attempt(1, 1, False)))
-        self.assertTrue(r(tenacity.Attempt(2, 1, False)))
-        self.assertFalse(r(tenacity.Attempt(3, 1, False)))
-        self.assertFalse(r(tenacity.Attempt(1, 1, True)))
+        self.assertTrue(r(tenacity.Future.construct(1, 1, False)))
+        self.assertTrue(r(tenacity.Future.construct(1, 2, False)))
+        self.assertFalse(r(tenacity.Future.construct(1, 3, False)))
+        self.assertFalse(r(tenacity.Future.construct(1, 1, True)))
 
 
 class NoneReturnUntilAfterCount(object):
@@ -321,9 +321,9 @@ class TestDecoratorWrapper(unittest.TestCase):
             _retryable_test_with_stop(NoneReturnUntilAfterCount(5))
             self.fail("Expected RetryError after 3 attempts")
         except RetryError as re:
-            self.assertFalse(re.last_attempt.has_exception)
+            self.assertFalse(re.last_attempt.failed)
             self.assertEqual(3, re.last_attempt.attempt_number)
-            self.assertTrue(re.last_attempt.value is None)
+            self.assertTrue(re.last_attempt.result() is None)
             print(re)
 
     def test_with_stop_on_exception(self):
@@ -400,18 +400,6 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         _test_after()
 
         self.assertTrue(TestBeforeAfterAttempts._attempt_number is 2)
-
-
-class TestRetryError(unittest.TestCase):
-    def test_str(self):
-        self.assertEqual(
-            "RetryError[Attempts: 2, Value: 4]",
-            str(tenacity.RetryError(
-                tenacity.Attempt(4, 2, False))))
-        self.assertEqual(
-            "RetryError[Attempts: 2, Error:\n]",
-            str(tenacity.RetryError(
-                tenacity.Attempt([Exception("boom"), None, None], 2, True))))
 
 
 if __name__ == '__main__':
