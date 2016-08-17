@@ -39,6 +39,10 @@ else:
         fut.set_exception(tb[1])
 
 
+class TryAgain(Exception):
+    "Retry the executed function when raised"
+
+
 def retry(*dargs, **dkw):
     """Decorator function that instantiates the Retrying object.
 
@@ -257,14 +261,19 @@ class Retrying(object):
             fut = Future(attempt_number)
             try:
                 fut.set_result(fn(*args, **kwargs))
+            except TryAgain:
+                retry = True
             except Exception:
                 tb = sys.exc_info()
                 try:
                     _capture(fut, tb)
                 finally:
                     del tb
+                retry = self.retry(fut)
+            else:
+                retry = self.retry(fut)
 
-            if not self.retry(fut):
+            if not retry:
                 return fut.result()
 
             if self._after_attempts:

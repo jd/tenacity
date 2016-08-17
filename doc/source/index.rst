@@ -160,6 +160,17 @@ We can also combine several conditions:
 Any combination of stop, wait, etc. is also supported to give you the freedom
 to mix and match.
 
+It's also possible to retry explicitely at any time by raising the `TryAgain`
+exception:
+
+.. code-block:: python
+
+   @retry
+   def do_something():
+       result = something_else()
+       if result == 23:
+          raise TryAgain
+
 Contribute
 ----------
 
