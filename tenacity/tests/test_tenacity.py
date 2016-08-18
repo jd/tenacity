@@ -172,9 +172,8 @@ class TestRetryConditions(unittest.TestCase):
 
     def test_retry_try_again(self):
         self._attempts = 0
-        r = Retrying(stop=tenacity.stop_after_attempt(5),
-                     retry=tenacity.retry_never).call(
-            self._raise_try_again)
+        Retrying(stop=tenacity.stop_after_attempt(5),
+                 retry=tenacity.retry_never).call(self._raise_try_again)
         self.assertEqual(3, self._attempts)
 
 
