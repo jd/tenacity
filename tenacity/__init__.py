@@ -22,12 +22,12 @@ from monotonic import monotonic as now
 import six
 
 # Import all built-in rejection strategies for easier usage.
-from .reject import retry_always  # noqa
-from .reject import retry_any  # noqa
-from .reject import retry_if_exception  # noqa
-from .reject import retry_if_exception_type  # noqa
-from .reject import retry_if_result  # noqa
-from .reject import retry_never  # noqa
+from .retry import retry_always  # noqa
+from .retry import retry_any  # noqa
+from .retry import retry_if_exception  # noqa
+from .retry import retry_if_exception_type  # noqa
+from .retry import retry_if_result  # noqa
+from .retry import retry_never  # noqa
 
 # Import all built-in stop strategies for easier usage.
 from .stop import stop_after_attempt  # noqa
