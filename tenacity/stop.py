@@ -21,7 +21,7 @@ def stop_never(previous_attempt_number, delay_since_first_attempt_ms):
 
 
 class stop_after_attempt(object):
-    """Stop strategy that stops when the previous attempt >= max_attempt."""
+    "Stop strategy that stops when the previous attempt >= max_attempt."
 
     def __init__(self, max_attempt_number):
         self.max_attempt_number = max_attempt_number
@@ -31,8 +31,7 @@ class stop_after_attempt(object):
 
 
 class stop_after_delay(object):
-    """Stop strategy that stops when the time from the
-       first attempt >= limit."""
+    "Stop strategy that stops when the time from the first attempt >= limit."
 
     def __init__(self, max_delay):
         self.max_delay = max_delay

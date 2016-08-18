@@ -37,8 +37,7 @@ class retry_if_exception(object):
 
 
 class retry_if_exception_type(retry_if_exception):
-    """Rejection strategy that retries if an exception has
-       been raised of a certain type."""
+    """Retries if an exception has been raised of a certain type."""
 
     def __init__(self, exception_types=Exception):
         self.exception_types = exception_types
@@ -47,7 +46,7 @@ class retry_if_exception_type(retry_if_exception):
 
 
 class retry_if_result(object):
-    """Rejection strategy that retries if the result verifies a predicate."""
+    """Retries if the result verifies a predicate."""
 
     def __init__(self, predicate):
         self.predicate = predicate
@@ -58,8 +57,7 @@ class retry_if_result(object):
 
 
 class retry_any(object):
-    """Rejection strategy that retries if any of the
-       retries condition is valid."""
+    """Retries if any of the retries condition is valid."""
 
     def __init__(self, *retries):
         self.retries = retries

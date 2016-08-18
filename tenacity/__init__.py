@@ -18,8 +18,8 @@ from concurrent import futures
 import sys
 import time
 
-import six
 from monotonic import monotonic as now
+import six
 
 # Import all built-in rejection strategies for easier usage.
 from .reject import retry_always  # noqa
