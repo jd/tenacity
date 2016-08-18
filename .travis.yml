@@ -6,4 +6,8 @@ python:
   - 3.5
   - pypy
 
-script: python setup.py test
+install: pip install tox nose
+
+script:
+  - tox -e pep8
+  - python setup.py nosetests
