@@ -69,6 +69,32 @@ class wait_combine(object):
             self.wait_funcs))
 
 
+class wait_chain(object):
+    """Chain two or more waiting strategies.
+
+    If all strategies are exhausted, the very last strategy is used
+    thereafter.
+
+    For example::
+
+        @retry(wait=wait_chain(*[wait_fixed(1000) for i in range(3)] +
+                               [wait_fixed(2000) for j in range(5)] +
+                               [wait_fixed(5000) for k in range(4)))
+        def wait_chained():
+            print("Wait 1s for 3 attempts, 2s for 5 attempts and 5s
+                   thereafter.")
+    """
+
+    def __init__(self, *strategies):
+        self.strategies = list(strategies)
+
+    def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
+        wait_func = self.strategies[0]
+        if len(self.strategies) > 1:
+            self.strategies.pop(0)
+        return wait_func(previous_attempt_number, delay_since_first_attempt_ms)
+
+
 class wait_incrementing(object):
     """Wait an incremental amount of time after each attempt.
 
