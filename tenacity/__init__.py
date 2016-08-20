@@ -21,7 +21,7 @@ import time
 from monotonic import monotonic as now
 import six
 
-# Import all built-in rejection strategies for easier usage.
+# Import all built-in retry strategies for easier usage.
 from .retry import retry_always  # noqa
 from .retry import retry_any  # noqa
 from .retry import retry_if_exception  # noqa
