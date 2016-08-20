@@ -16,17 +16,17 @@
 
 
 def retry_never(attempt):
-    """Rejection strategy that never rejects any result."""
+    """Retry strategy that never rejects any result."""
     return False
 
 
 def retry_always(attempt):
-    """Rejection strategy that always rejects any result."""
+    """Retry strategy that always rejects any result."""
     return True
 
 
 class retry_if_exception(object):
-    """Rejection strategy that retries if an exception verifies a predicate."""
+    """Retry strategy that retries if an exception verifies a predicate."""
 
     def __init__(self, predicate):
         self.predicate = predicate
