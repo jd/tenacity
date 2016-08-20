@@ -95,10 +95,32 @@ class Retrying(object):
         self.retry = retry
         self._before_attempts = before_attempts
         self._after_attempts = after_attempts
+        self._statistics = {}
+
+    @property
+    def statistics(self):
+        """A dictionary of runtime statistics this controller has gathered.
+
+        This dictionary will be empty when the controller has never been
+        ran. When it is running or has ran previously it should have (but
+        may not) have useful and/or informational keys and values when
+        running is underway and/or completed.
+
+        .. warning:: The keys in this dictionary **should** be some what
+                     stable (not changing), but there existence **may**
+                     change between major releases as new statistics are
+                     gathered or removed so before accessing keys ensure that
+                     they actually exist and handle when they do not.
+        """
+        return self._statistics
 
     def call(self, fn, *args, **kwargs):
+        self._statistics.clear()
         start_time = int(round(now() * 1000))
+        self._statistics['start_time'] = start_time
         attempt_number = 1
+        self._statistics['attempt_number'] = attempt_number
+        self._statistics['idle_for'] = 0
         while True:
             if self._before_attempts:
                 self._before_attempts(attempt_number)
@@ -127,6 +149,8 @@ class Retrying(object):
             delay_since_first_attempt_ms = int(
                 round(now() * 1000)
             ) - start_time
+            self._statistics['delay_since_first_attempt'] = \
+                delay_since_first_attempt_ms
             if self.stop(attempt_number, delay_since_first_attempt_ms):
                 six.raise_from(RetryError(fut), fut.exception())
 
@@ -134,9 +158,11 @@ class Retrying(object):
                 sleep = self.wait(attempt_number, delay_since_first_attempt_ms)
             else:
                 sleep = 0
+            self._statistics['idle_for'] += sleep
             self.sleep(sleep / 1000.0)
 
             attempt_number += 1
+            self._statistics['attempt_number'] = attempt_number
 
 
 class Future(futures.Future):
