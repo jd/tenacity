@@ -43,6 +43,14 @@ from .wait import wait_jitter  # noqa
 from .wait import wait_none  # noqa
 from .wait import wait_random  # noqa
 
+# Import all built-in before strategies for easier usage.
+from .before import before_log  # noqa
+from .before import before_nothing  # noqa
+
+# Import all built-in after strategies for easier usage.
+from .after import after_log  # noqa
+from .after import after_nothing  # noqa
+
 from tenacity import _utils
 
 
@@ -87,14 +95,14 @@ class Retrying(object):
                  stop=stop_never, wait=wait_none(),
                  sleep=time.sleep,
                  retry=retry_if_exception_type(),
-                 before_attempts=None,
-                 after_attempts=None):
+                 before=before_nothing,
+                 after=after_nothing):
         self.sleep = sleep
         self.stop = stop
         self.wait = wait
         self.retry = retry
-        self._before_attempts = before_attempts
-        self._after_attempts = after_attempts
+        self.before = before
+        self.after = after
         self._statistics = {}
 
     @property
@@ -122,15 +130,18 @@ class Retrying(object):
         self._statistics['attempt_number'] = attempt_number
         self._statistics['idle_for'] = 0
         while True:
-            if self._before_attempts:
-                self._before_attempts(attempt_number)
+            trial_start_time = now()
+            if self.before is not None:
+                self.before(fn, attempt_number)
 
             fut = Future(attempt_number)
             try:
-                fut.set_result(fn(*args, **kwargs))
+                result = fn(*args, **kwargs)
             except TryAgain:
+                trial_end_time = now()
                 retry = True
             except Exception:
+                trial_end_time = now()
                 tb = sys.exc_info()
                 try:
                     _utils.capture(fut, tb)
@@ -138,13 +149,17 @@ class Retrying(object):
                     del tb
                 retry = self.retry(fut)
             else:
+                trial_end_time = now()
+                fut.set_result(result)
                 retry = self.retry(fut)
 
             if not retry:
                 return fut.result()
 
-            if self._after_attempts:
-                self._after_attempts(attempt_number)
+            if self.after is not None:
+                trial_time_taken_ms = round(
+                    (trial_end_time - trial_start_time) * 1000)
+                self.after(fn, attempt_number, trial_time_taken_ms)
 
             delay_since_first_attempt_ms = int(
                 round(now() * 1000)

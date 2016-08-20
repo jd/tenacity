@@ -380,12 +380,12 @@ class TestBeforeAfterAttempts(unittest.TestCase):
     def test_before_attempts(self):
         TestBeforeAfterAttempts._attempt_number = 0
 
-        def _before(attempt_number):
+        def _before(fn, attempt_number):
             TestBeforeAfterAttempts._attempt_number = attempt_number
 
         @retry(wait=tenacity.wait_fixed(1000),
                stop=tenacity.stop_after_attempt(1),
-               before_attempts=_before)
+               before=_before)
         def _test_before():
             pass
 
@@ -396,12 +396,12 @@ class TestBeforeAfterAttempts(unittest.TestCase):
     def test_after_attempts(self):
         TestBeforeAfterAttempts._attempt_number = 0
 
-        def _after(attempt_number):
+        def _after(fn, attempt_number, trial_time_taken_ms):
             TestBeforeAfterAttempts._attempt_number = attempt_number
 
         @retry(wait=tenacity.wait_fixed(100),
                stop=tenacity.stop_after_attempt(3),
-               after_attempts=_after)
+               after=_after)
         def _test_after():
             if TestBeforeAfterAttempts._attempt_number < 2:
                 raise Exception("testing after_attempts handler")
