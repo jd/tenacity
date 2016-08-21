@@ -27,8 +27,8 @@ def after_log(logger, log_level):
     def log_it(func, trial_number, trial_time_taken_ms):
         logger.log(log_level,
                    "Finished call to '%s' after %i(ms), "
-                   "this was the %i time calling it.",
+                   "this was the %s time calling it.",
                    _utils.get_callback_name(func), trial_time_taken_ms,
-                   trial_number)
+                   _utils.to_ordinal(trial_number))
 
     return log_it

@@ -36,6 +36,26 @@ else:
         fut.set_exception(tb[1])
 
 
+def find_ordinal(pos_num):
+    # See: https://en.wikipedia.org/wiki/English_numerals#Ordinal_numbers
+    if pos_num == 0:
+        return "th"
+    elif pos_num == 1:
+        return 'st'
+    elif pos_num == 2:
+        return 'nd'
+    elif pos_num == 3:
+        return 'rd'
+    elif pos_num >= 4 and pos_num <= 20:
+        return 'th'
+    else:
+        return find_ordinal(pos_num % 10)
+
+
+def to_ordinal(pos_num):
+    return "%i%s" % (pos_num, find_ordinal(pos_num))
+
+
 def get_callback_name(cb):
     """Tries to get a callbacks fully-qualified name.
 
