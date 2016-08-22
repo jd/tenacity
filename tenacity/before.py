@@ -26,7 +26,8 @@ def before_log(logger, log_level):
 
     def log_it(func, trial_number):
         logger.log(log_level,
-                   "Starting call to '%s', this is the %i time calling it.",
-                   _utils.get_callback_name(func), trial_number)
+                   "Starting call to '%s', this is the %s time calling it.",
+                   _utils.get_callback_name(func),
+                   _utils.to_ordinal(trial_number))
 
     return log_it
