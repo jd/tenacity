@@ -35,6 +35,7 @@ from .stop import stop_after_delay  # noqa
 from .stop import stop_never  # noqa
 
 # Import all built-in wait strategies for easier usage.
+from .wait import wait_chain  # noqa
 from .wait import wait_combine  # noqa
 from .wait import wait_exponential  # noqa
 from .wait import wait_fixed  # noqa

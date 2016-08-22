@@ -153,6 +153,25 @@ class TestWaitConditions(unittest.TestCase):
             self.assertLess(w, 8)
             self.assertGreaterEqual(w, 5)
 
+    def _assert_range(self, wait, min, max):
+        self.assertLess(wait, max)
+        self.assertGreaterEqual(wait, min)
+
+    def test_wait_chain(self):
+        r = Retrying(wait=tenacity.wait_chain(
+            *[tenacity.wait_fixed(1) for i in six.moves.range(2)] +
+            [tenacity.wait_fixed(4) for i in six.moves.range(2)] +
+            [tenacity.wait_fixed(8) for i in six.moves.range(1)]))
+
+        for i in six.moves.range(10):
+            w = r.wait(i, 1)
+            if i < 2:
+                self._assert_range(w, 1, 2)
+            elif i < 4:
+                self._assert_range(w, 4, 5)
+            else:
+                self._assert_range(w, 8, 9)
+
 
 class TestRetryConditions(unittest.TestCase):
 

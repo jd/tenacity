@@ -120,6 +120,17 @@ services and other remote endpoints.
         print "Wait at least 3 seconds, and add up to 2 seconds of random delay"
 
 
+Sometimes it's necessary to build a chain of backoffs.
+
+.. code-block:: python
+
+    @retry(wait=wait_chain(*[wait_fixed(3000) for i in range(3)] +
+                           [wait_fixed(7000) for i in range(2)] +
+                           [wait_fixed(9000)]))
+    def wait_fixed_chained():
+        print "Wait 3s for 3 attempts, 7s for the next 2 attempts and 9s for all attempts thereafter"
+
+
 We have a few options for dealing with retries that raise specific or general
 exceptions, as in the cases here.
 
