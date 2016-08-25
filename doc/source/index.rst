@@ -136,7 +136,7 @@ exceptions, as in the cases here.
 
 .. code-block:: python
 
-    @retry(retry=retry_if_exception(IOError))
+    @retry(retry=retry_if_exception_type(IOError))
     def might_io_error():
         print "Retry forever with no wait if an IOError occurs, raise any other errors"
 
