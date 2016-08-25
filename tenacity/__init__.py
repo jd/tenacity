@@ -175,7 +175,7 @@ class Retrying(object):
             else:
                 sleep = 0
             self._statistics['idle_for'] += sleep
-            self.sleep(sleep / 1000.0)
+            self.sleep(sleep)
 
             attempt_number += 1
             self._statistics['attempt_number'] = attempt_number

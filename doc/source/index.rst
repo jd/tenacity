@@ -78,7 +78,7 @@ retrying stuff.
 
 .. code-block:: python
 
-    @retry(stop=stop_after_delay(10000))
+    @retry(stop=stop_after_delay(10))
     def stop_after_10_s():
         print "Stopping after 10 seconds"
 
@@ -87,7 +87,7 @@ seconds between retries.
 
 .. code-block:: python
 
-    @retry(wait=wait_fixed(2000))
+    @retry(wait=wait_fixed(2))
     def wait_2_s():
         print "Wait 2 second between retries"
 
@@ -96,7 +96,7 @@ Some things perform best with a bit of randomness injected.
 
 .. code-block:: python
 
-    @retry(wait=wait_random(min=1000, max=2000))
+    @retry(wait=wait_random(min=1, max=2))
     def wait_random_1_to_2_s():
         print "Randomly wait 1 to 2 seconds between retries"
 
@@ -105,9 +105,9 @@ services and other remote endpoints.
 
 .. code-block:: python
 
-    @retry(wait=wait_exponential(multiplier=1000, max=10000))
-    def wait_exponential_1000():
-        print "Wait 2^x * 1000 milliseconds between each retry, up to 10 seconds, then 10 seconds afterwards"
+    @retry(wait=wait_exponential(multiplier=1, max=10))
+    def wait_exponential_1():
+        print "Wait 2^x * 1 second between each retry, up to 10 seconds, then 10 seconds afterwards"
 
 
 Then again, it's hard to beat exponential backoff when retrying distributed
@@ -124,9 +124,9 @@ Sometimes it's necessary to build a chain of backoffs.
 
 .. code-block:: python
 
-    @retry(wait=wait_chain(*[wait_fixed(3000) for i in range(3)] +
-                           [wait_fixed(7000) for i in range(2)] +
-                           [wait_fixed(9000)]))
+    @retry(wait=wait_chain(*[wait_fixed(3) for i in range(3)] +
+                           [wait_fixed(7) for i in range(2)] +
+                           [wait_fixed(9)]))
     def wait_fixed_chained():
         print "Wait 3s for 3 attempts, 7s for the next 2 attempts and 9s for all attempts thereafter"
 

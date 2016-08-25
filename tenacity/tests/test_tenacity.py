@@ -37,10 +37,10 @@ class TestStopConditions(unittest.TestCase):
         self.assertTrue(r.stop(4, 6546))
 
     def test_stop_after_delay(self):
-        r = Retrying(stop=tenacity.stop_after_delay(1000))
-        self.assertFalse(r.stop(2, 999))
-        self.assertTrue(r.stop(2, 1000))
-        self.assertTrue(r.stop(2, 1001))
+        r = Retrying(stop=tenacity.stop_after_delay(1))
+        self.assertFalse(r.stop(2, 0.999))
+        self.assertTrue(r.stop(2, 1))
+        self.assertTrue(r.stop(2, 1.001))
 
     def test_legacy_explicit_stop_type(self):
         Retrying(stop="stop_after_attempt")
@@ -59,8 +59,8 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(0, r.wait(18, 9879))
 
     def test_fixed_sleep(self):
-        r = Retrying(wait=tenacity.wait_fixed(1000))
-        self.assertEqual(1000, r.wait(12, 6546))
+        r = Retrying(wait=tenacity.wait_fixed(1))
+        self.assertEqual(1, r.wait(12, 6546))
 
     def test_incrementing_sleep(self):
         r = Retrying(wait=tenacity.wait_incrementing(
@@ -70,7 +70,7 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(700, r.wait(3, 6546))
 
     def test_random_sleep(self):
-        r = Retrying(wait=tenacity.wait_random(min=1000, max=2000))
+        r = Retrying(wait=tenacity.wait_random(min=1, max=2))
         times = set()
         times.add(r.wait(1, 6546))
         times.add(r.wait(1, 6546))
@@ -80,11 +80,11 @@ class TestWaitConditions(unittest.TestCase):
         # this is kind of non-deterministic...
         self.assertTrue(len(times) > 1)
         for t in times:
-            self.assertTrue(t >= 1000)
-            self.assertTrue(t <= 2000)
+            self.assertTrue(t >= 1)
+            self.assertTrue(t <= 2)
 
     def test_random_sleep_without_min(self):
-        r = Retrying(wait=tenacity.wait_random(max=2000))
+        r = Retrying(wait=tenacity.wait_random(max=2))
         times = set()
         times.add(r.wait(1, 6546))
         times.add(r.wait(1, 6546))
@@ -95,10 +95,10 @@ class TestWaitConditions(unittest.TestCase):
         self.assertTrue(len(times) > 1)
         for t in times:
             self.assertTrue(t >= 0)
-            self.assertTrue(t <= 2000)
+            self.assertTrue(t <= 2)
 
     def test_exponential(self):
-        r = Retrying(wait=tenacity.wait_exponential(max=100000))
+        r = Retrying(wait=tenacity.wait_exponential(max=100))
         self.assertEqual(r.wait(1, 0), 2)
         self.assertEqual(r.wait(2, 0), 4)
         self.assertEqual(r.wait(3, 0), 8)
@@ -119,15 +119,15 @@ class TestWaitConditions(unittest.TestCase):
 
     def test_exponential_with_max_wait_and_multiplier(self):
         r = Retrying(wait=tenacity.wait_exponential(
-            max=50000, multiplier=1000))
-        self.assertEqual(r.wait(1, 0), 2000)
-        self.assertEqual(r.wait(2, 0), 4000)
-        self.assertEqual(r.wait(3, 0), 8000)
-        self.assertEqual(r.wait(4, 0), 16000)
-        self.assertEqual(r.wait(5, 0), 32000)
-        self.assertEqual(r.wait(6, 0), 50000)
-        self.assertEqual(r.wait(7, 0), 50000)
-        self.assertEqual(r.wait(50, 0), 50000)
+            max=50, multiplier=1))
+        self.assertEqual(r.wait(1, 0), 2)
+        self.assertEqual(r.wait(2, 0), 4)
+        self.assertEqual(r.wait(3, 0), 8)
+        self.assertEqual(r.wait(4, 0), 16)
+        self.assertEqual(r.wait(5, 0), 32)
+        self.assertEqual(r.wait(6, 0), 50)
+        self.assertEqual(r.wait(7, 0), 50)
+        self.assertEqual(r.wait(50, 0), 50)
 
     def test_legacy_explicit_wait_type(self):
         Retrying(wait="exponential_sleep")
@@ -291,7 +291,7 @@ def current_time_ms():
     return int(round(time.time() * 1000))
 
 
-@retry(wait=tenacity.wait_fixed(50),
+@retry(wait=tenacity.wait_fixed(0.05),
        retry=tenacity.retry_if_result(lambda result: result is None))
 def _retryable_test_with_wait(thing):
     return thing.go()
@@ -402,7 +402,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         def _before(fn, attempt_number):
             TestBeforeAfterAttempts._attempt_number = attempt_number
 
-        @retry(wait=tenacity.wait_fixed(1000),
+        @retry(wait=tenacity.wait_fixed(1),
                stop=tenacity.stop_after_attempt(1),
                before=_before)
         def _test_before():
@@ -418,7 +418,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         def _after(fn, attempt_number, trial_time_taken_ms):
             TestBeforeAfterAttempts._attempt_number = attempt_number
 
-        @retry(wait=tenacity.wait_fixed(100),
+        @retry(wait=tenacity.wait_fixed(0.1),
                stop=tenacity.stop_after_attempt(3),
                after=_after)
         def _test_after():
