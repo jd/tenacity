@@ -125,7 +125,7 @@ class Retrying(object):
 
     def call(self, fn, *args, **kwargs):
         self._statistics.clear()
-        start_time = int(round(now() * 1000))
+        start_time = now()
         self._statistics['start_time'] = start_time
         attempt_number = 1
         self._statistics['attempt_number'] = attempt_number
@@ -158,20 +158,17 @@ class Retrying(object):
                 return fut.result()
 
             if self.after is not None:
-                trial_time_taken_ms = round(
-                    (trial_end_time - trial_start_time) * 1000)
-                self.after(fn, attempt_number, trial_time_taken_ms)
+                trial_time_taken = trial_end_time - trial_start_time
+                self.after(fn, attempt_number, trial_time_taken)
 
-            delay_since_first_attempt_ms = int(
-                round(now() * 1000)
-            ) - start_time
+            delay_since_first_attempt = now() - start_time
             self._statistics['delay_since_first_attempt'] = \
-                delay_since_first_attempt_ms
-            if self.stop(attempt_number, delay_since_first_attempt_ms):
+                delay_since_first_attempt
+            if self.stop(attempt_number, delay_since_first_attempt):
                 six.raise_from(RetryError(fut), fut.exception())
 
             if self.wait:
-                sleep = self.wait(attempt_number, delay_since_first_attempt_ms)
+                sleep = self.wait(attempt_number, delay_since_first_attempt)
             else:
                 sleep = 0
             self._statistics['idle_for'] += sleep
