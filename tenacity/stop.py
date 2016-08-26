@@ -15,7 +15,7 @@
 # limitations under the License.
 
 
-def stop_never(previous_attempt_number, delay_since_first_attempt_ms):
+def stop_never(previous_attempt_number, delay_since_first_attempt):
     """Stop strategy that never stops."""
     return False
 
@@ -26,7 +26,7 @@ class stop_after_attempt(object):
     def __init__(self, max_attempt_number):
         self.max_attempt_number = max_attempt_number
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
         return previous_attempt_number >= self.max_attempt_number
 
 
@@ -36,5 +36,5 @@ class stop_after_delay(object):
     def __init__(self, max_delay):
         self.max_delay = max_delay
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
-        return delay_since_first_attempt_ms >= self.max_delay
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+        return delay_since_first_attempt >= self.max_delay

@@ -25,7 +25,7 @@ class wait_jitter(object):
     def __init__(self, max):
         self.max = max
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
         return random.random() * self.max
 
 
@@ -35,7 +35,7 @@ class wait_fixed(object):
     def __init__(self, wait):
         self.wait_fixed = wait
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
         return self.wait_fixed
 
 
@@ -49,11 +49,11 @@ class wait_none(wait_fixed):
 class wait_random(object):
     """Wait strategy that waits a random amount of time between min/max."""
 
-    def __init__(self, min=0, max=1000):
+    def __init__(self, min=0, max=1):
         self.wait_random_min = min
         self.wait_random_max = max
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
         return random.randint(self.wait_random_min, self.wait_random_max)
 
 
@@ -63,9 +63,9 @@ class wait_combine(object):
     def __init__(self, *strategies):
         self.wait_funcs = strategies
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
         return sum(map(
-            lambda x: x(previous_attempt_number, delay_since_first_attempt_ms),
+            lambda x: x(previous_attempt_number, delay_since_first_attempt),
             self.wait_funcs))
 
 
@@ -77,9 +77,9 @@ class wait_chain(object):
 
     For example::
 
-        @retry(wait=wait_chain(*[wait_fixed(1000) for i in range(3)] +
-                               [wait_fixed(2000) for j in range(5)] +
-                               [wait_fixed(5000) for k in range(4)))
+        @retry(wait=wait_chain(*[wait_fixed(1) for i in range(3)] +
+                               [wait_fixed(2) for j in range(5)] +
+                               [wait_fixed(5) for k in range(4)))
         def wait_chained():
             print("Wait 1s for 3 attempts, 2s for 5 attempts and 5s
                    thereafter.")
@@ -88,11 +88,11 @@ class wait_chain(object):
     def __init__(self, *strategies):
         self.strategies = list(strategies)
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
         wait_func = self.strategies[0]
         if len(self.strategies) > 1:
             self.strategies.pop(0)
-        return wait_func(previous_attempt_number, delay_since_first_attempt_ms)
+        return wait_func(previous_attempt_number, delay_since_first_attempt)
 
 
 class wait_incrementing(object):
@@ -107,7 +107,7 @@ class wait_incrementing(object):
         self.increment = increment
         self.max = max
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
         result = self.start + (
             self.increment * (previous_attempt_number - 1)
         )
@@ -126,7 +126,7 @@ class wait_exponential(object):
         self.max = max
         self.exp_base = exp_base
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt_ms):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
         exp = self.exp_base ** previous_attempt_number
         result = self.multiplier * exp
         return max(0, min(result, self.max))
