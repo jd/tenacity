@@ -70,18 +70,16 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(700, r.wait(3, 6546))
 
     def test_random_sleep(self):
-        r = Retrying(wait=tenacity.wait_random(min=1, max=2))
+        r = Retrying(wait=tenacity.wait_random(min=1, max=20))
         times = set()
-        times.add(r.wait(1, 6546))
-        times.add(r.wait(1, 6546))
-        times.add(r.wait(1, 6546))
-        times.add(r.wait(1, 6546))
+        for x in six.moves.range(1000):
+            times.add(r.wait(1, 6546))
 
         # this is kind of non-deterministic...
         self.assertTrue(len(times) > 1)
         for t in times:
             self.assertTrue(t >= 1)
-            self.assertTrue(t <= 2)
+            self.assertTrue(t < 20)
 
     def test_random_sleep_without_min(self):
         r = Retrying(wait=tenacity.wait_random(max=2))

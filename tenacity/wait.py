@@ -54,7 +54,9 @@ class wait_random(object):
         self.wait_random_max = max
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt):
-        return random.randint(self.wait_random_min, self.wait_random_max)
+        return (self.wait_random_min
+                + (random.random()
+                   * (self.wait_random_max - self.wait_random_min)))
 
 
 class wait_combine(object):
