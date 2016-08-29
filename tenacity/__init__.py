@@ -106,6 +106,12 @@ class Retrying(object):
         self.after = after
         self._statistics = {}
 
+    def __repr__(self):
+        attrs = _utils.visible_attrs(self, attrs={'me': id(self)})
+        return ("<Retrying object at 0x%(me)x (stop=%(stop)s, "
+                "wait=%(wait)s, sleep=%(sleep)s, retry=%(retry)s, "
+                "before=%(before)s, after=%(after)s)>") % (attrs)
+
     @property
     def statistics(self):
         """A dictionary of runtime statistics this controller has gathered.

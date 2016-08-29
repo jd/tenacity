@@ -36,6 +36,16 @@ else:
         fut.set_exception(tb[1])
 
 
+def visible_attrs(obj, attrs=None):
+    if attrs is None:
+        attrs = {}
+    for attr_name, attr in inspect.getmembers(obj):
+        if attr_name.startswith("_"):
+            continue
+        attrs[attr_name] = attr
+    return attrs
+
+
 def find_ordinal(pos_num):
     # See: https://en.wikipedia.org/wiki/English_numerals#Ordinal_numbers
     if pos_num == 0:
