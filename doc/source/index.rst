@@ -154,7 +154,7 @@ We can also use the result of the function to alter the behavior of retrying.
 
     @retry(retry=retry_if_result(is_none_p))
     def might_return_none():
-        print "Retry forever ignoring Exceptions with no wait if return value is None"
+        print "Retry with no wait if return value is None"
 
 We can also combine several conditions:
 
