@@ -430,5 +430,56 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         self.assertTrue(TestBeforeAfterAttempts._attempt_number is 2)
 
 
+class TestReraiseExceptions(unittest.TestCase):
+
+    def test_reraise_by_default(self):
+        calls = []
+
+        @retry(wait=tenacity.wait_fixed(0.1),
+               stop=tenacity.stop_after_attempt(2),
+               reraise=True)
+        def _reraised_by_default():
+            calls.append('x')
+            raise KeyError("Bad key")
+
+        self.assertRaises(KeyError, _reraised_by_default)
+        self.assertEqual(2, len(calls))
+
+    def test_reraise_from_retry_error(self):
+        calls = []
+
+        @retry(wait=tenacity.wait_fixed(0.1),
+               stop=tenacity.stop_after_attempt(2))
+        def _raise_key_error():
+            calls.append('x')
+            raise KeyError("Bad key")
+
+        def _reraised_key_error():
+            try:
+                _raise_key_error()
+            except tenacity.RetryError as retry_err:
+                retry_err.reraise()
+
+        self.assertRaises(KeyError, _reraised_key_error)
+        self.assertEqual(2, len(calls))
+
+    def test_reraise_timeout_from_retry_error(self):
+        calls = []
+
+        @retry(wait=tenacity.wait_fixed(0.1),
+               stop=tenacity.stop_after_attempt(2),
+               retry=lambda x: True)
+        def _mock_fn():
+            calls.append('x')
+
+        def _reraised_mock_fn():
+            try:
+                _mock_fn()
+            except tenacity.RetryError as retry_err:
+                retry_err.reraise()
+
+        self.assertRaises(tenacity.RetryError, _reraised_mock_fn)
+        self.assertEqual(2, len(calls))
+
 if __name__ == '__main__':
     unittest.main()

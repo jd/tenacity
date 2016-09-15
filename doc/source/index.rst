@@ -182,6 +182,20 @@ exception:
        if result == 23:
           raise TryAgain
 
+While callables that "timeout" retrying raise a `RetryError` by default,
+we can reraise the last attempt's exception if needed:
+
+.. code-block:: python
+
+    @retry(reraise=True, stop=stop_after_attempts(3))
+    def raise_my_exception():
+        raise MyException("Fail")
+
+    try:
+        raise_my_exception()
+    except MyException:
+        # timed out retrying
+
 Contribute
 ----------
 
