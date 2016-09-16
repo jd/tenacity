@@ -97,7 +97,8 @@ class Retrying(object):
                  sleep=time.sleep,
                  retry=retry_if_exception_type(),
                  before=before_nothing,
-                 after=after_nothing):
+                 after=after_nothing,
+                 reraise=False):
         self.sleep = sleep
         self.stop = stop
         self.wait = wait
@@ -105,6 +106,7 @@ class Retrying(object):
         self.before = before
         self.after = after
         self._statistics = {}
+        self.reraise = reraise
 
     def __repr__(self):
         attrs = _utils.visible_attrs(self, attrs={'me': id(self)})
@@ -171,6 +173,8 @@ class Retrying(object):
             self._statistics['delay_since_first_attempt'] = \
                 delay_since_first_attempt
             if self.stop(attempt_number, delay_since_first_attempt):
+                if self.reraise:
+                    raise fut.result()
                 six.raise_from(RetryError(fut), fut.exception())
 
             if self.wait:
@@ -212,6 +216,11 @@ class RetryError(Exception):
 
     def __init__(self, last_attempt):
         self.last_attempt = last_attempt
+
+    def reraise(self):
+        if self.last_attempt.failed:
+            raise self.last_attempt.result()
+        raise self
 
     def __str__(self):
         return "RetryError[{0}]".format(self.last_attempt)
