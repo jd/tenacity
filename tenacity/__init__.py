@@ -174,7 +174,7 @@ class Retrying(object):
                 delay_since_first_attempt
             if self.stop(attempt_number, delay_since_first_attempt):
                 if self.reraise:
-                    raise fut.result()
+                    raise RetryError(fut).reraise()
                 six.raise_from(RetryError(fut), fut.exception())
 
             if self.wait:

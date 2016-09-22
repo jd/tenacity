@@ -481,5 +481,18 @@ class TestReraiseExceptions(unittest.TestCase):
         self.assertRaises(tenacity.RetryError, _reraised_mock_fn)
         self.assertEqual(2, len(calls))
 
+    def test_reraise_no_exception(self):
+        calls = []
+
+        @retry(wait=tenacity.wait_fixed(0.1),
+               stop=tenacity.stop_after_attempt(2),
+               retry=lambda x: True,
+               reraise=True)
+        def _mock_fn():
+            calls.append('x')
+
+        self.assertRaises(tenacity.RetryError, _mock_fn)
+        self.assertEqual(2, len(calls))
+
 if __name__ == '__main__':
     unittest.main()
