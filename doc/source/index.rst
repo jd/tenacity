@@ -196,6 +196,81 @@ we can reraise the last attempt's exception if needed:
     except MyException:
         # timed out retrying
 
+Porting from retrying to tenacity
+---------------------------------
+
+While tenacity is a fork of `Retrying`_, there are a few differences to be aware of:
+
+- While retrying uses milliseconds, tenacity uses seconds:
+
+.. code-block:: python
+
+
+    @retrying.retry(wait_fixed=2000)
+    def do_something_in_retrying():
+        print("Every 2 seconds with retrying")
+
+
+    @tenacity.retry(wait=tenacity.wait_fixed(2))
+    def do_something_in_tenacity():
+        print("Every 2 seconds with tenacity")
+
+- By default retrying raises the last exception raised by the retried callable (where applicable),
+  whereas tenacity raises a `RetryError`. To force tenacity to reraise the last exception
+  use the `reraise` kwarg.
+
+.. code-block:: python
+
+
+    @retrying.retry(wait_fixed=1000)
+    def do_something_in_retrying():
+        raise MyError("Retrying reraises MyError by default")
+
+    @tenacity.retry(wait=tenacity.wait_fixed(1))
+    def do_something_in_tenacity():
+        raise MyError("Tenacity raises RetryError by default")
+
+    @tenacity.retry(wait=tenacity.wait_fixed(1), reraise=True)
+    def do_something_in_tenacity_with_reraise():
+        raise MyError("Tenacity now reraises MyError")
+
+- When using wait predicates to check for a result, by default retrying retries the callable on
+  any exception whereas tenacity raises. To achieve the same behavior in tenacity
+  you can construct a simple `retry_any` condition:
+
+.. code-block:: python
+
+
+    @retrying.retry(retry_on_result=check_result)
+    def do_something_in_retrying():
+        raise MyError("Retrying retries by default")
+
+    @tenacity.retry(wait=tenacity.retry_if_result(check_result))
+    def do_something_in_tenacity():
+        raise MyError("Tenacity does not retry on exception")
+
+    @tenacity.retry(wait=tenacity.retry_any(
+        tenacity.retry_if_exception_type(Exception), # retry on exception
+        tenacity.retry_if_result(check_result)))
+    def do_something_in_tenacity_with_exception_retry():
+        raise MyError("Tenacity retries on any exception")
+
+- Tenacity uses `time.sleep` as a default in one of its kwargs. As a result consumers
+  needing to patch tenacity's `time.sleep` (for example in unit test mocking)
+  must do so before tenacity is imported. For example in `__init__.py` of your top-level
+  unit test package:
+
+.. code-block:: python
+
+
+    import mock
+
+    # before tenacity is imported
+    mocked_tenacity_sleep = mock.patch.object(time, 'sleep')
+    mocked_tenacity_sleep.start()
+    # consumers can access mocked_tenacity_sleep as needed
+
+
 Contribute
 ----------
 
