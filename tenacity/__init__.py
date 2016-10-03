@@ -16,6 +16,7 @@
 
 from concurrent import futures
 import sys
+import threading
 import time
 
 from monotonic import monotonic as now
@@ -105,8 +106,9 @@ class Retrying(object):
         self.retry = retry
         self.before = before
         self.after = after
-        self._statistics = {}
         self.reraise = reraise
+        self._local = threading.local()
+        self._local.statistics = {}
 
     def __repr__(self):
         attrs = _utils.visible_attrs(self, attrs={'me': id(self)})
@@ -129,15 +131,15 @@ class Retrying(object):
                      gathered or removed so before accessing keys ensure that
                      they actually exist and handle when they do not.
         """
-        return self._statistics
+        return self._local.statistics
 
     def call(self, fn, *args, **kwargs):
-        self._statistics.clear()
+        self.statistics.clear()
         start_time = now()
-        self._statistics['start_time'] = start_time
+        self.statistics['start_time'] = start_time
         attempt_number = 1
-        self._statistics['attempt_number'] = attempt_number
-        self._statistics['idle_for'] = 0
+        self.statistics['attempt_number'] = attempt_number
+        self.statistics['idle_for'] = 0
         while True:
             trial_start_time = now()
             if self.before is not None:
@@ -170,7 +172,7 @@ class Retrying(object):
                 self.after(fn, attempt_number, trial_time_taken)
 
             delay_since_first_attempt = now() - start_time
-            self._statistics['delay_since_first_attempt'] = \
+            self.statistics['delay_since_first_attempt'] = \
                 delay_since_first_attempt
             if self.stop(attempt_number, delay_since_first_attempt):
                 if self.reraise:
@@ -181,11 +183,11 @@ class Retrying(object):
                 sleep = self.wait(attempt_number, delay_since_first_attempt)
             else:
                 sleep = 0
-            self._statistics['idle_for'] += sleep
+            self.statistics['idle_for'] += sleep
             self.sleep(sleep)
 
             attempt_number += 1
-            self._statistics['attempt_number'] = attempt_number
+            self.statistics['attempt_number'] = attempt_number
 
 
 class Future(futures.Future):
