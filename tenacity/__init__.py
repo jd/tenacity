@@ -72,7 +72,7 @@ def retry(*dargs, **dkw):
             def wrapped_f(*args, **kw):
                 return r.call(f, *args, **kw)
 
-            wrapped_f._retrying = r
+            wrapped_f.retry = r
             return wrapped_f
 
         return wrap_simple(dargs[0])
@@ -86,7 +86,7 @@ def retry(*dargs, **dkw):
             def wrapped_f(*args, **kw):
                 return r.call(f, *args, **kw)
 
-            wrapped_f._retrying = r
+            wrapped_f.retry = r
             return wrapped_f
 
         return wrap

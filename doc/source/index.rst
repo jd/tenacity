@@ -196,6 +196,23 @@ we can reraise the last attempt's exception if needed:
     except MyException:
         # timed out retrying
 
+You can access the statistics about the retry made over a function by using the
+`retry` attribute attached to the function and its `statistics` attribute:
+
+.. code-block:: python
+
+    @retry(stop=stop_after_attempts(3))
+    def raise_my_exception():
+        raise MyException("Fail")
+
+    try:
+        raise_my_exception()
+    except Exception:
+        pass
+
+    print(raise_my_exception.retry.statistics)
+
+
 Contribute
 ----------
 

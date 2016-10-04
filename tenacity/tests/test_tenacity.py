@@ -502,21 +502,21 @@ class TestStatistics(unittest.TestCase):
         def _foobar():
             return 42
 
-        self.assertEqual({}, _foobar._retrying.statistics)
+        self.assertEqual({}, _foobar.retry.statistics)
         _foobar()
-        self.assertEqual(1, _foobar._retrying.statistics['attempt_number'])
+        self.assertEqual(1, _foobar.retry.statistics['attempt_number'])
 
     def test_stats_failing(self):
         @retry(stop=tenacity.stop_after_attempt(2))
         def _foobar():
             raise ValueError(42)
 
-        self.assertEqual({}, _foobar._retrying.statistics)
+        self.assertEqual({}, _foobar.retry.statistics)
         try:
             _foobar()
         except Exception:
             pass
-        self.assertEqual(2, _foobar._retrying.statistics['attempt_number'])
+        self.assertEqual(2, _foobar.retry.statistics['attempt_number'])
 
 
 if __name__ == '__main__':
