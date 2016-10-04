@@ -114,7 +114,6 @@ class Retrying(object):
         self.after = after
         self.reraise = reraise
         self._local = threading.local()
-        self._local.statistics = {}
 
     def __repr__(self):
         attrs = _utils.visible_attrs(self, attrs={'me': id(self)})
@@ -137,7 +136,11 @@ class Retrying(object):
                      gathered or removed so before accessing keys ensure that
                      they actually exist and handle when they do not.
         """
-        return self._local.statistics
+        try:
+            return self._local.statistics
+        except AttributeError:
+            self._local.statistics = {}
+            return self._local.statistics
 
     def call(self, fn, *args, **kwargs):
         self.statistics.clear()
