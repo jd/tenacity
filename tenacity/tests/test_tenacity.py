@@ -151,6 +151,32 @@ class TestWaitConditions(unittest.TestCase):
             self.assertLess(w, 8)
             self.assertGreaterEqual(w, 5)
 
+    def test_wait_double_sum(self):
+        r = Retrying(wait=tenacity.wait_jitter(3) + tenacity.wait_fixed(5))
+        # Test it a few time since it's random
+        for i in six.moves.range(1000):
+            w = r.wait(1, 5)
+            self.assertLess(w, 8)
+            self.assertGreaterEqual(w, 5)
+
+    def test_wait_triple_sum(self):
+        r = Retrying(wait=tenacity.wait_fixed(1) + tenacity.wait_jitter(3) +
+                     tenacity.wait_fixed(5))
+        # Test it a few time since it's random
+        for i in six.moves.range(1000):
+            w = r.wait(1, 5)
+            self.assertLess(w, 9)
+            self.assertGreaterEqual(w, 6)
+
+    def test_wait_arbitrary_sum(self):
+        r = Retrying(wait=sum([tenacity.wait_fixed(1), tenacity.wait_jitter(3),
+                               tenacity.wait_fixed(5), tenacity.wait_none()]))
+        # Test it a few time since it's random
+        for i in six.moves.range(1000):
+            w = r.wait(1, 5)
+            self.assertLess(w, 9)
+            self.assertGreaterEqual(w, 6)
+
     def _assert_range(self, wait, min, max):
         self.assertLess(wait, max)
         self.assertGreaterEqual(wait, min)

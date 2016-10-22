@@ -14,12 +14,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import abc
 import random
+
+import six
 
 from tenacity import _utils
 
 
-class wait_jitter(object):
+@six.add_metaclass(abc.ABCMeta)
+class wait_base(object):
+    """Abstract base class for wait strategies."""
+
+    @abc.abstractmethod
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+        pass
+
+    def __add__(self, other):
+        return wait_combine(self, other)
+
+    def __radd__(self, other):
+        # make it possible to use multiple waits with the built-in sum function
+        if other == 0:
+            return self
+        return self.__add__(other)
+
+
+class wait_jitter(wait_base):
     """Wait strategy that waits a random amount of time (bounded by a max)."""
 
     def __init__(self, max):
@@ -29,7 +50,7 @@ class wait_jitter(object):
         return random.random() * self.max
 
 
-class wait_fixed(object):
+class wait_fixed(wait_base):
     """Wait strategy that waits a fixed amount of time between each retry."""
 
     def __init__(self, wait):
@@ -46,7 +67,7 @@ class wait_none(wait_fixed):
         super(wait_none, self).__init__(0)
 
 
-class wait_random(object):
+class wait_random(wait_base):
     """Wait strategy that waits a random amount of time between min/max."""
 
     def __init__(self, min=0, max=1):
@@ -59,7 +80,7 @@ class wait_random(object):
                    * (self.wait_random_max - self.wait_random_min)))
 
 
-class wait_combine(object):
+class wait_combine(wait_base):
     """Combine several waiting strategies."""
 
     def __init__(self, *strategies):
@@ -71,7 +92,7 @@ class wait_combine(object):
             self.wait_funcs))
 
 
-class wait_chain(object):
+class wait_chain(wait_base):
     """Chain two or more waiting strategies.
 
     If all strategies are exhausted, the very last strategy is used
@@ -97,7 +118,7 @@ class wait_chain(object):
         return wait_func(previous_attempt_number, delay_since_first_attempt)
 
 
-class wait_incrementing(object):
+class wait_incrementing(wait_base):
     """Wait an incremental amount of time after each attempt.
 
     Starting at a starting value and incrementing by a value for each attempt
@@ -116,7 +137,7 @@ class wait_incrementing(object):
         return max(0, min(result, self.max))
 
 
-class wait_exponential(object):
+class wait_exponential(wait_base):
     """Wait strategy that applies exponential backoff.
 
     It allows for a customized multiplier and an ability to restrict the
