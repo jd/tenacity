@@ -140,7 +140,7 @@ exceptions, as in the cases here.
     def might_io_error():
         print "Retry forever with no wait if an IOError occurs, raise any other errors"
 
-    @retry(retry_on_exception=retry_if_io_error)
+    @retry(retry=retry_if_exception(retry_if_io_error))
     def only_raise_retry_error_when_not_io_error():
         print "Retry forever with no wait if an IOError occurs, raise any other errors wrapped in RetryError"
 
@@ -171,7 +171,7 @@ We can also combine several conditions:
 Any combination of stop, wait, etc. is also supported to give you the freedom
 to mix and match.
 
-It's also possible to retry explicitely at any time by raising the `TryAgain`
+It's also possible to retry explicitly at any time by raising the `TryAgain`
 exception:
 
 .. code-block:: python
