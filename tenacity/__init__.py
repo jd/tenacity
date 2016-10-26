@@ -135,6 +135,13 @@ class Retrying(object):
                      change between major releases as new statistics are
                      gathered or removed so before accessing keys ensure that
                      they actually exist and handle when they do not.
+
+        .. note:: The values in this dictionary are local to the thread
+                  running call (so if multiple threads share the same retrying
+                  object - either directly or indirectly) they will each have
+                  there own view of statistics they have collected (in the
+                  future we may provide a way to aggregate the various
+                  statistics from each thread).
         """
         try:
             return self._local.statistics
@@ -223,7 +230,7 @@ class Future(futures.Future):
 
 
 class RetryError(Exception):
-    "Encapsulates the last attempt instance right before giving up"
+    """Encapsulates the last attempt instance right before giving up."""
 
     def __init__(self, last_attempt):
         self.last_attempt = last_attempt
