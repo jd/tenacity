@@ -21,13 +21,13 @@ def after_nothing(func, trial_number, trial_time_taken):
     """After call strategy that does nothing."""
 
 
-def after_log(logger, log_level):
+def after_log(logger, log_level, sec_format="%0.3f"):
     """After call strategy that logs to some logger the finished attempt."""
+    log_tpl = ("Finished call to '%s' after " + str(sec_format) + "(s), "
+               "this was the %s time calling it.")
 
     def log_it(func, trial_number, trial_time_taken):
-        logger.log(log_level,
-                   "Finished call to '%s' after %i(ms), "
-                   "this was the %s time calling it.",
+        logger.log(log_level, log_tpl,
                    _utils.get_callback_name(func), trial_time_taken,
                    _utils.to_ordinal(trial_number))
 
