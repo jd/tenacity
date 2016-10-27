@@ -110,8 +110,9 @@ services and other remote endpoints.
         print("Wait 2^x * 1 second between each retry, up to 10 seconds, then 10 seconds afterwards")
 
 
-Then again, it's hard to beat exponential backoff when retrying distributed
-services and other remote endpoints.
+Then again, it's also hard to beat combining fixed waits and jitter (to
+help avoid thundering herds) when retrying distributed services and other
+remote endpoints.
 
 .. code-block:: python
 
@@ -222,5 +223,6 @@ Contribute
    **master** branch (or branch off of it).
 #. Write a test which shows that the bug was fixed or that the feature works as
    expected.
+#. Make the docs better (or more detailed, or more easier to read, or ...)
 
 .. _`the repository`: https://github.com/jd/tenacity
