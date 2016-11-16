@@ -188,7 +188,7 @@ we can reraise the last attempt's exception if needed:
 
 .. code-block:: python
 
-    @retry(reraise=True, stop=stop_after_attempts(3))
+    @retry(reraise=True, stop=stop_after_attempt(3))
     def raise_my_exception():
         raise MyException("Fail")
 
@@ -202,7 +202,7 @@ You can access the statistics about the retry made over a function by using the
 
 .. code-block:: python
 
-    @retry(stop=stop_after_attempts(3))
+    @retry(stop=stop_after_attempt(3)
     def raise_my_exception():
         raise MyException("Fail")
 
