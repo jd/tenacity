@@ -23,6 +23,7 @@ from monotonic import monotonic as now
 import six
 
 # Import all built-in retry strategies for easier usage.
+from .retry import retry_all  # noqa
 from .retry import retry_always  # noqa
 from .retry import retry_any  # noqa
 from .retry import retry_if_exception  # noqa

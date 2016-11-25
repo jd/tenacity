@@ -64,3 +64,13 @@ class retry_any(object):
 
     def __call__(self, attempt):
         return any(map(lambda x: x(attempt), self.retries))
+
+
+class retry_all(object):
+    """Retries if all the retries condition are valid."""
+
+    def __init__(self, *retries):
+        self.retries = retries
+
+    def __call__(self, attempt):
+        return all(map(lambda x: x(attempt), self.retries))
