@@ -17,6 +17,7 @@
 import abc
 import random
 
+from debtcollector import removals
 import six
 
 from tenacity import _utils
@@ -40,14 +41,10 @@ class wait_base(object):
         return self.__add__(other)
 
 
-class wait_jitter(wait_base):
-    """Wait strategy that waits a random amount of time (bounded by a max)."""
-
-    def __init__(self, max):
-        self.max = max
-
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
-        return random.random() * self.max
+@removals.remove(
+    message="wait_jitter is deprecated, use wait_random(0, max) instead")
+def wait_jitter(max):
+    return wait_random(0, max)
 
 
 class wait_fixed(wait_base):

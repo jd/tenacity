@@ -116,7 +116,7 @@ remote endpoints.
 
 .. code-block:: python
 
-    @retry(wait=wait_combine(wait_fixed(3), wait_jitter(2)))
+    @retry(wait=wait_fixed(3) + wait_random(0, 2))
     def wait_fixed_jitter():
         print("Wait at least 3 seconds, and add up to 2 seconds of random delay")
 
