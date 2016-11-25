@@ -217,6 +217,22 @@ class TestRetryConditions(unittest.TestCase):
         self.assertFalse(r(tenacity.Future.construct(1, 3, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 1, True)))
 
+    def test_retry_and(self):
+        r = (tenacity.retry_if_result(lambda x: x == 1) &
+             tenacity.retry_if_result(lambda x: isinstance(x, int)))
+        self.assertTrue(r(tenacity.Future.construct(1, 1, False)))
+        self.assertFalse(r(tenacity.Future.construct(1, 2, False)))
+        self.assertFalse(r(tenacity.Future.construct(1, 3, False)))
+        self.assertFalse(r(tenacity.Future.construct(1, 1, True)))
+
+    def test_retry_or(self):
+        r = (tenacity.retry_if_result(lambda x: x == "foo") |
+             tenacity.retry_if_result(lambda x: isinstance(x, int)))
+        self.assertTrue(r(tenacity.Future.construct(1, "foo", False)))
+        self.assertFalse(r(tenacity.Future.construct(1, "foobar", False)))
+        self.assertFalse(r(tenacity.Future.construct(1, 2.2, False)))
+        self.assertFalse(r(tenacity.Future.construct(1, 42, True)))
+
     def _raise_try_again(self):
         self._attempts += 1
         if self._attempts < 3:

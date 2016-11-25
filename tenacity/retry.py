@@ -14,18 +14,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import abc
 
-def retry_never(attempt):
+import six
+
+
+@six.add_metaclass(abc.ABCMeta)
+class retry_base(object):
+    """Abstract base class for retry strategies."""
+
+    @abc.abstractmethod
+    def __call__(self, attempt):
+        pass
+
+    def __and__(self, other):
+        return retry_all(self, other)
+
+    def __or__(self, other):
+        return retry_any(self, other)
+
+
+class _retry_never(retry_base):
     """Retry strategy that never rejects any result."""
-    return False
+    def __call__(self, attempt):
+        return False
 
 
-def retry_always(attempt):
+retry_never = _retry_never()
+
+
+class _retry_always(retry_base):
     """Retry strategy that always rejects any result."""
-    return True
+    def __call__(self, attempt):
+        return True
 
 
-class retry_if_exception(object):
+retry_always = _retry_always()
+
+
+class retry_if_exception(retry_base):
     """Retry strategy that retries if an exception verifies a predicate."""
 
     def __init__(self, predicate):
@@ -45,7 +72,7 @@ class retry_if_exception_type(retry_if_exception):
             lambda e: isinstance(e, exception_types))
 
 
-class retry_if_result(object):
+class retry_if_result(retry_base):
     """Retries if the result verifies a predicate."""
 
     def __init__(self, predicate):
@@ -56,7 +83,7 @@ class retry_if_result(object):
             return self.predicate(attempt.result())
 
 
-class retry_any(object):
+class retry_any(retry_base):
     """Retries if any of the retries condition is valid."""
 
     def __init__(self, *retries):
@@ -66,7 +93,7 @@ class retry_any(object):
         return any(map(lambda x: x(attempt), self.retries))
 
 
-class retry_all(object):
+class retry_all(retry_base):
     """Retries if all the retries condition are valid."""
 
     def __init__(self, *retries):

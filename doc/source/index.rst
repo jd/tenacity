@@ -165,7 +165,7 @@ We can also combine several conditions:
         """Return True if value is None"""
         return value is None
 
-    @retry(retry=retry_any(retry_if_result(is_none_p), retry_if_exception_type()))
+    @retry(retry=(retry_if_result(is_none_p) | retry_if_exception_type()))
     def might_return_none():
         print("Retry forever ignoring Exceptions with no wait if return value is None")
 
