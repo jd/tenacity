@@ -30,6 +30,46 @@ class TestStopConditions(unittest.TestCase):
         r = Retrying()
         self.assertFalse(r.stop(3, 6546))
 
+    def test_stop_any(self):
+        s = tenacity.stop_any(
+            tenacity.stop_after_delay(1),
+            tenacity.stop_after_attempt(4))
+        self.assertFalse(s(1, 0.1))
+        self.assertFalse(s(2, 0.2))
+        self.assertFalse(s(2, 0.8))
+        self.assertTrue(s(4, 0.8))
+        self.assertTrue(s(3, 1.8))
+        self.assertTrue(s(4, 1.8))
+
+    def test_stop_all(self):
+        s = tenacity.stop_all(
+            tenacity.stop_after_delay(1),
+            tenacity.stop_after_attempt(4))
+        self.assertFalse(s(1, 0.1))
+        self.assertFalse(s(2, 0.2))
+        self.assertFalse(s(2, 0.8))
+        self.assertFalse(s(4, 0.8))
+        self.assertFalse(s(3, 1.8))
+        self.assertTrue(s(4, 1.8))
+
+    def test_stop_or(self):
+        s = tenacity.stop_after_delay(1) | tenacity.stop_after_attempt(4)
+        self.assertFalse(s(1, 0.1))
+        self.assertFalse(s(2, 0.2))
+        self.assertFalse(s(2, 0.8))
+        self.assertTrue(s(4, 0.8))
+        self.assertTrue(s(3, 1.8))
+        self.assertTrue(s(4, 1.8))
+
+    def test_stop_and(self):
+        s = tenacity.stop_after_delay(1) & tenacity.stop_after_attempt(4)
+        self.assertFalse(s(1, 0.1))
+        self.assertFalse(s(2, 0.2))
+        self.assertFalse(s(2, 0.8))
+        self.assertFalse(s(4, 0.8))
+        self.assertFalse(s(3, 1.8))
+        self.assertTrue(s(4, 1.8))
+
     def test_stop_after_attempt(self):
         r = Retrying(stop=tenacity.stop_after_attempt(3))
         self.assertFalse(r.stop(2, 6546))

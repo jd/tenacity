@@ -13,14 +13,61 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import abc
+
+import six
 
 
-def stop_never(previous_attempt_number, delay_since_first_attempt):
+@six.add_metaclass(abc.ABCMeta)
+class stop_base(object):
+    """Abstract base class for stop strategies."""
+
+    @abc.abstractmethod
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+        pass
+
+    def __and__(self, other):
+        return stop_all(self, other)
+
+    def __or__(self, other):
+        return stop_any(self, other)
+
+
+class stop_any(stop_base):
+    """Stops if any of the stop condition is valid."""
+
+    def __init__(self, *stops):
+        self.stops = stops
+
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+        return any(map(
+            lambda x: x(previous_attempt_number, delay_since_first_attempt),
+            self.stops))
+
+
+class stop_all(stop_base):
+    """Stops if all the stop conditions are valid."""
+
+    def __init__(self, *stops):
+        self.stops = stops
+
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+        return all(map(
+            lambda x: x(previous_attempt_number, delay_since_first_attempt),
+            self.stops))
+
+
+class _stop_never(stop_base):
     """Stop strategy that never stops."""
-    return False
+
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+        return False
 
 
-class stop_after_attempt(object):
+stop_never = _stop_never()
+
+
+class stop_after_attempt(stop_base):
     "Stop strategy that stops when the previous attempt >= max_attempt."
 
     def __init__(self, max_attempt_number):
@@ -30,7 +77,7 @@ class stop_after_attempt(object):
         return previous_attempt_number >= self.max_attempt_number
 
 
-class stop_after_delay(object):
+class stop_after_delay(stop_base):
     "Stop strategy that stops when the time from the first attempt >= limit."
 
     def __init__(self, max_delay):
