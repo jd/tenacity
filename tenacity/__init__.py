@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from concurrent import futures
+import logging
 import sys
 import threading
 import time
@@ -57,6 +58,8 @@ from .after import after_log  # noqa
 from .after import after_nothing  # noqa
 
 from tenacity import _utils
+
+LOG = logging.getLogger(__name__)
 
 
 def retry(*dargs, **dkw):
@@ -102,13 +105,20 @@ class TryAgain(Exception):
 class Retrying(object):
     """Retrying controller."""
 
+    LOG = None
+    """
+    Class level logger (will be used if instance logger not provided) and
+    if none then module level logger is used instead (in that order).
+    """
+
     def __init__(self,
                  stop=stop_never, wait=wait_none(),
                  sleep=time.sleep,
                  retry=retry_if_exception_type(),
                  before=before_nothing,
                  after=after_nothing,
-                 reraise=False):
+                 reraise=False,
+                 logger=None):
         self.sleep = sleep
         self.stop = stop
         self.wait = wait
@@ -117,6 +127,12 @@ class Retrying(object):
         self.after = after
         self.reraise = reraise
         self._local = threading.local()
+        if logger is not None:
+            self._logger = logger
+        elif self.LOG is not None:
+            self._logger = self.LOG
+        else:
+            self._logger = LOG
 
     def __repr__(self):
         attrs = _utils.visible_attrs(self, attrs={'me': id(self)})
@@ -164,6 +180,11 @@ class Retrying(object):
             if self.before is not None:
                 self.before(fn, attempt_number)
 
+            if self._logger.isEnabledFor(logging.DEBUG):
+                self._logger.debug("Calling into '%s' for the %s time",
+                                   _utils.get_callback_name(fn),
+                                   _utils.to_ordinal(attempt_number))
+
             fut = Future(attempt_number)
             try:
                 result = fn(*args, **kwargs)
@@ -177,11 +198,24 @@ class Retrying(object):
                     _utils.capture(fut, tb)
                 finally:
                     del tb
+                if self._logger.isEnabledFor(logging.DEBUG):
+                    trial_time_taken = trial_end_time - trial_start_time
+                    self._logger.debug(
+                        "Failed calling into '%s' after %s seconds",
+                        _utils.get_callback_name(fn), trial_time_taken,
+                        exc_info=True)
                 retry = self.retry(fut)
             else:
                 trial_end_time = now()
                 fut.set_result(result)
                 retry = self.retry(fut)
+                if self._logger.isEnabledFor(logging.DEBUG):
+                    trial_time_taken = trial_end_time - trial_start_time
+                    self._logger.debug(
+                        "Successfully called into '%s' after"
+                        " %s seconds (retrying=%s)",
+                        _utils.get_callback_name(fn), trial_time_taken,
+                        retry)
 
             if not retry:
                 return fut.result()
