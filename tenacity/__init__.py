@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+# Copyright 2016 Étienne Bersac
 # Copyright 2016 Julien Danjou
 # Copyright 2016 Joshua Harlow
 # Copyright 2013-2014 Ray Holder
@@ -99,17 +101,25 @@ class TryAgain(Exception):
     """Always retry the executed function when raised."""
 
 
-class Retrying(object):
-    """Retrying controller."""
+NO_RESULT = object()
+
+
+class DoAttempt(object):
+    pass
+
+
+class DoSleep(float):
+    pass
+
+
+class BaseRetrying(object):
 
     def __init__(self,
                  stop=stop_never, wait=wait_none(),
-                 sleep=time.sleep,
                  retry=retry_if_exception_type(),
                  before=before_nothing,
                  after=after_nothing,
                  reraise=False):
-        self.sleep = sleep
         self.stop = stop
         self.wait = wait
         self.retry = retry
@@ -119,8 +129,11 @@ class Retrying(object):
         self._local = threading.local()
 
     def __repr__(self):
-        attrs = _utils.visible_attrs(self, attrs={'me': id(self)})
-        return ("<Retrying object at 0x%(me)x (stop=%(stop)s, "
+        attrs = dict(
+            _utils.visible_attrs(self, attrs={'me': id(self)}),
+            __class__=self.__class__.__name__,
+        )
+        return ("<%(__class__)s object at 0x%(me)x (stop=%(stop)s, "
                 "wait=%(wait)s, sleep=%(sleep)s, retry=%(retry)s, "
                 "before=%(before)s, after=%(after)s)>") % (attrs)
 
@@ -152,61 +165,96 @@ class Retrying(object):
             self._local.statistics = {}
             return self._local.statistics
 
-    def call(self, fn, *args, **kwargs):
+    def begin(self, fn):
+        self.fn = fn
         self.statistics.clear()
-        start_time = now()
-        self.statistics['start_time'] = start_time
-        attempt_number = 1
-        self.statistics['attempt_number'] = attempt_number
+        self.start_time = now()
+        self.statistics['start_time'] = self.start_time
+        self.attempt_number = 1
+        self.statistics['attempt_number'] = self.attempt_number
         self.statistics['idle_for'] = 0
-        while True:
-            trial_start_time = now()
-            if self.before is not None:
-                self.before(fn, attempt_number)
 
-            fut = Future(attempt_number)
-            try:
-                result = fn(*args, **kwargs)
-            except TryAgain:
+    def iter(self, result=NO_RESULT, exc_info=None):
+        fut = Future(self.attempt_number)
+        if result is not NO_RESULT:
+            trial_end_time = now()
+            fut.set_result(result)
+            retry = self.retry(fut)
+        elif exc_info:
+            t, e, tb = exc_info
+            if isinstance(e, TryAgain):
                 trial_end_time = now()
                 retry = True
-            except Exception:
+            else:
                 trial_end_time = now()
-                tb = sys.exc_info()
                 try:
-                    _utils.capture(fut, tb)
+                    _utils.capture(fut, exc_info)
                 finally:
                     del tb
-                retry = self.retry(fut)
+                    retry = self.retry(fut)
+        else:
+            if self.before is not None:
+                self.before(self.fn, self.attempt_number)
+
+            self.trial_start_time = now()
+            return DoAttempt()
+
+        if not retry:
+            return fut.result()
+
+        if self.after is not None:
+            trial_time_taken = trial_end_time - self.trial_start_time
+            self.after(self.fn, self.attempt_number, trial_time_taken)
+
+        delay_since_first_attempt = now() - self.start_time
+        self.statistics['delay_since_first_attempt'] = \
+            delay_since_first_attempt
+        if self.stop(self.attempt_number, delay_since_first_attempt):
+            if self.reraise:
+                raise RetryError(fut).reraise()
+            six.raise_from(RetryError(fut), fut.exception())
+
+        if self.wait:
+            sleep = self.wait(self.attempt_number, delay_since_first_attempt)
+        else:
+            sleep = 0
+        self.statistics['idle_for'] += sleep
+        self.attempt_number += 1
+        self.statistics['attempt_number'] = self.attempt_number
+
+        return DoSleep(sleep)
+
+
+class Retrying(BaseRetrying):
+    """Retrying controller."""
+
+    def __init__(self,
+                 sleep=time.sleep,
+                 **kwargs):
+        super(Retrying, self).__init__(**kwargs)
+        self.sleep = sleep
+
+    def call(self, fn, *args, **kwargs):
+        self.begin(fn)
+
+        result = NO_RESULT
+        exc_info = None
+
+        while True:
+            do = self.iter(result=result, exc_info=exc_info)
+            if isinstance(do, DoAttempt):
+                try:
+                    result = fn(*args, **kwargs)
+                    continue
+                except Exception:
+                    exc_info = sys.exc_info()
+                    continue
+            elif isinstance(do, DoSleep):
+                result = NO_RESULT
+                exc_info = None
+                self.sleep(do)
             else:
-                trial_end_time = now()
-                fut.set_result(result)
-                retry = self.retry(fut)
-
-            if not retry:
-                return fut.result()
-
-            if self.after is not None:
-                trial_time_taken = trial_end_time - trial_start_time
-                self.after(fn, attempt_number, trial_time_taken)
-
-            delay_since_first_attempt = now() - start_time
-            self.statistics['delay_since_first_attempt'] = \
-                delay_since_first_attempt
-            if self.stop(attempt_number, delay_since_first_attempt):
-                if self.reraise:
-                    raise RetryError(fut).reraise()
-                six.raise_from(RetryError(fut), fut.exception())
-
-            if self.wait:
-                sleep = self.wait(attempt_number, delay_since_first_attempt)
-            else:
-                sleep = 0
-            self.statistics['idle_for'] += sleep
-            self.sleep(sleep)
-
-            attempt_number += 1
-            self.statistics['attempt_number'] = attempt_number
+                return do
 
 
 class Future(futures.Future):
