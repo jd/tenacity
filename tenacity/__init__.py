@@ -16,6 +16,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+try:
+    import asyncio
+except ImportError:
+    asyncio = None
+
 from concurrent import futures
 import sys
 import threading
@@ -71,9 +76,11 @@ def retry(*dargs, **dkw):
     if len(dargs) == 1 and callable(dargs[0]):
         return retry()(dargs[0])
     else:
-        r = Retrying(*dargs, **dkw)
-
         def wrap(f):
+            if asyncio and asyncio.iscoroutinefunction(f):
+                r = AsyncRetrying(*dargs, **dkw)
+            else:
+                r = Retrying(*dargs, **dkw)
 
             @six.wraps(f)
             def wrapped_f(*args, **kw):
@@ -281,3 +288,7 @@ class RetryError(Exception):
 
     def __str__(self):
         return "RetryError[{0}]".format(self.last_attempt)
+
+
+if asyncio:
+    from tenacity.async import AsyncRetrying

@@ -44,6 +44,7 @@ Features
 - Specify wait condition (i.e. exponential backoff sleeping between attempts)
 - Customize retrying on Exceptions
 - Customize retrying on expected returned result
+- Retry on coroutines
 
 
 Installation
@@ -215,6 +216,16 @@ You can access the statistics about the retry made over a function by using the
         pass
 
     print(raise_my_exception.retry.statistics)
+
+
+Finally, ``retry`` works also on asyncio coroutines. Sleeps are done
+asynchronously too.
+
+.. code-block:: python
+
+    @retry
+    async def my_async_function(loop):
+        await loop.getaddrinfo('8.8.8.8', 53)
 
 
 Contribute
