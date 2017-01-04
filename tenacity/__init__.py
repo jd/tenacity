@@ -176,17 +176,13 @@ class BaseRetrying(object):
             fut.set_result(result)
             retry = self.retry(fut)
         elif exc_info:
+            trial_end_time = now()
             t, e, tb = exc_info
+            _utils.capture(fut, exc_info)
             if isinstance(e, TryAgain):
-                trial_end_time = now()
                 retry = True
             else:
-                trial_end_time = now()
-                try:
-                    _utils.capture(fut, exc_info)
-                finally:
-                    del tb
-                    retry = self.retry(fut)
+                retry = self.retry(fut)
         else:
             if self.before is not None:
                 self.before(self.fn, self.attempt_number)

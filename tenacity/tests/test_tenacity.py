@@ -284,6 +284,24 @@ class TestRetryConditions(unittest.TestCase):
                  retry=tenacity.retry_never).call(self._raise_try_again)
         self.assertEqual(3, self._attempts)
 
+    def test_retry_try_again_forever(self):
+        def _r(): raise tenacity.TryAgain
+        r = Retrying(stop=tenacity.stop_after_attempt(5),
+                     retry=tenacity.retry_never)
+        self.assertRaises(tenacity.RetryError,
+                          r.call,
+                          _r)
+        self.assertEqual(5, r.statistics['attempt_number'])
+
+    def test_retry_try_again_forever_reraise(self):
+        def _r(): raise tenacity.TryAgain
+        r = Retrying(stop=tenacity.stop_after_attempt(5),
+                     retry=tenacity.retry_never,
+                     reraise=True)
+        self.assertRaises(tenacity.TryAgain,
+                          r.call,
+                          _r)
+        self.assertEqual(5, r.statistics['attempt_number'])
 
 class NoneReturnUntilAfterCount(object):
     "Holds counter state for invoking a method several times in a row."
