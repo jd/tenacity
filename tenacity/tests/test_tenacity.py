@@ -176,14 +176,8 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(2, 11), 22)
         self.assertEqual(r.wait(10, 100), 1000)
 
-    def test_wait_jitter(self):
-        r = Retrying(wait=tenacity.wait_jitter(3))
-        # Test it a few time since it's random
-        for i in six.moves.range(1000):
-            self.assertLess(r.wait(1, 5), 3)
-
     def test_wait_combine(self):
-        r = Retrying(wait=tenacity.wait_combine(tenacity.wait_jitter(3),
+        r = Retrying(wait=tenacity.wait_combine(tenacity.wait_random(0, 3),
                                                 tenacity.wait_fixed(5)))
         # Test it a few time since it's random
         for i in six.moves.range(1000):
@@ -192,7 +186,7 @@ class TestWaitConditions(unittest.TestCase):
             self.assertGreaterEqual(w, 5)
 
     def test_wait_double_sum(self):
-        r = Retrying(wait=tenacity.wait_jitter(3) + tenacity.wait_fixed(5))
+        r = Retrying(wait=tenacity.wait_random(0, 3) + tenacity.wait_fixed(5))
         # Test it a few time since it's random
         for i in six.moves.range(1000):
             w = r.wait(1, 5)
@@ -200,7 +194,7 @@ class TestWaitConditions(unittest.TestCase):
             self.assertGreaterEqual(w, 5)
 
     def test_wait_triple_sum(self):
-        r = Retrying(wait=tenacity.wait_fixed(1) + tenacity.wait_jitter(3) +
+        r = Retrying(wait=tenacity.wait_fixed(1) + tenacity.wait_random(0, 3) +
                      tenacity.wait_fixed(5))
         # Test it a few time since it's random
         for i in six.moves.range(1000):
@@ -209,8 +203,10 @@ class TestWaitConditions(unittest.TestCase):
             self.assertGreaterEqual(w, 6)
 
     def test_wait_arbitrary_sum(self):
-        r = Retrying(wait=sum([tenacity.wait_fixed(1), tenacity.wait_jitter(3),
-                               tenacity.wait_fixed(5), tenacity.wait_none()]))
+        r = Retrying(wait=sum([tenacity.wait_fixed(1),
+                               tenacity.wait_random(0, 3),
+                               tenacity.wait_fixed(5),
+                               tenacity.wait_none()]))
         # Test it a few time since it's random
         for i in six.moves.range(1000):
             w = r.wait(1, 5)

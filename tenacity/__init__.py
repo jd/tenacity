@@ -51,7 +51,6 @@ from .wait import wait_combine  # noqa
 from .wait import wait_exponential  # noqa
 from .wait import wait_fixed  # noqa
 from .wait import wait_incrementing  # noqa
-from .wait import wait_jitter  # noqa
 from .wait import wait_none  # noqa
 from .wait import wait_random  # noqa
 

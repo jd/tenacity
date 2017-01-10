@@ -17,7 +17,6 @@
 import abc
 import random
 
-from debtcollector import removals
 import six
 
 from tenacity import _utils
@@ -39,12 +38,6 @@ class wait_base(object):
         if other == 0:
             return self
         return self.__add__(other)
-
-
-@removals.remove(
-    message="wait_jitter is deprecated, use wait_random(0, max) instead")
-def wait_jitter(max):
-    return wait_random(0, max)
 
 
 class wait_fixed(wait_base):
