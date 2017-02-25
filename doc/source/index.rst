@@ -6,9 +6,6 @@ Tenacity
 .. image:: https://img.shields.io/travis/jd/tenacity.svg
     :target: https://travis-ci.org/jd/tenacity
 
-.. image:: https://img.shields.io/pypi/dm/tenacity.svg
-    :target: https://pypi.python.org/pypi/tenacity
-
 .. image:: https://img.shields.io/badge/SayThanks.io-%E2%98%BC-1EAEDB.svg
     :target: https://saythanks.io/to/jd
 
