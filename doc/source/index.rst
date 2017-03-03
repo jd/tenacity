@@ -198,6 +198,27 @@ we can reraise the last attempt's exception if needed:
     except MyException:
         # timed out retrying
 
+It's possible to execute any action before any retry attempt by using the
+before callback function:
+
+.. code-block:: python
+
+    logger = logging.getLogger(__name__)
+
+    @retry(stop=stop_after_attempt(3), before=before_log(logger, logging.DEBUG))
+    def raise_my_exception():
+        raise MyException("Fail")
+
+In the same spirit, It's possible to execute after a call that failed:
+
+.. code-block:: python
+
+    logger = logging.getLogger(__name__)
+
+    @retry(stop=stop_after_attempt(3), after=after_log(logger, logging.DEBUG))
+    def raise_my_exception():
+        raise MyException("Fail")
+
 You can access the statistics about the retry made over a function by using the
 `retry` attribute attached to the function and its `statistics` attribute:
 
