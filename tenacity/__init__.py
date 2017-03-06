@@ -246,6 +246,8 @@ class Retrying(BaseRetrying):
             else:
                 return do
 
+    __call__ = call
+
 
 class Future(futures.Future):
     """Encapsulates a (future or past) attempted call to a target function."""

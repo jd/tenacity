@@ -299,7 +299,7 @@ class TestRetryConditions(unittest.TestCase):
                      retry=tenacity.retry_never,
                      reraise=True)
         self.assertRaises(tenacity.TryAgain,
-                          r.call,
+                          r,
                           _r)
         self.assertEqual(5, r.statistics['attempt_number'])
 
