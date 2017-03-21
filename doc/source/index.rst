@@ -198,8 +198,8 @@ we can reraise the last attempt's exception if needed:
     except MyException:
         # timed out retrying
 
-It's possible to execute any action before any retry attempt by using the
-before callback function:
+It's possible to execute an action before any attempt of calling the function
+by using the before callback function:
 
 .. code-block:: python
 
