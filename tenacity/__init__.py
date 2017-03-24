@@ -37,7 +37,6 @@ from .retry import retry_if_exception  # noqa
 from .retry import retry_if_exception_type  # noqa
 from .retry import retry_if_not_result  # noqa
 from .retry import retry_if_result  # noqa
-from .retry import retry_if_not_result  # noqa
 from .retry import retry_never  # noqa
 
 # Import all built-in stop strategies for easier usage.
