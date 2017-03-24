@@ -83,6 +83,17 @@ class retry_if_result(retry_base):
             return self.predicate(attempt.result())
 
 
+class retry_if_not_result(retry_base):
+    """Retries if the result refutes a predicate."""
+
+    def __init__(self, predicate):
+        self.predicate = predicate
+
+    def __call__(self, attempt):
+        if not attempt.failed:
+            return not self.predicate(attempt.result())
+
+
 class retry_any(retry_base):
     """Retries if any of the retries condition is valid."""
 
