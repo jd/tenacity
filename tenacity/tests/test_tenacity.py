@@ -235,6 +235,16 @@ class TestWaitConditions(unittest.TestCase):
 
 class TestRetryConditions(unittest.TestCase):
 
+    def test_retry_if_result(self):
+        r = (tenacity.retry_if_result(lambda x: x == 1))
+        self.assertTrue(r(tenacity.Future.construct(1, 1, False)))
+        self.assertFalse(r(tenacity.Future.construct(1, 2, False)))
+
+    def test_retry_if_not_result(self):
+        r = (tenacity.retry_if_not_result(lambda x: x == 1))
+        self.assertTrue(r(tenacity.Future.construct(1, 2, False)))
+        self.assertFalse(r(tenacity.Future.construct(1, 1, False)))
+
     def test_retry_any(self):
         r = tenacity.retry_any(
             tenacity.retry_if_result(lambda x: x == 1),
