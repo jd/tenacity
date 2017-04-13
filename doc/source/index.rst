@@ -57,13 +57,15 @@ To install *tenacity*, simply:
 Examples
 ----------
 
-As you saw above, the default behavior is to retry forever without waiting.
+As you saw above, the default behavior is to retry forever without waiting when
+an exception is raised.
 
 .. code-block:: python
 
     @retry
     def never_give_up_never_surrender():
         print("Retry forever ignoring Exceptions, don't wait between retries")
+        raise Exception
 
 Let's be a little less persistent and set some boundaries, such as the number
 of attempts before giving up.
@@ -73,6 +75,7 @@ of attempts before giving up.
     @retry(stop=stop_after_attempt(7))
     def stop_after_7_attempts():
         print("Stopping after 7 attempts")
+        raise Exception
 
 We don't have all day, so let's set a boundary for how long we should be
 retrying stuff.
@@ -82,6 +85,7 @@ retrying stuff.
     @retry(stop=stop_after_delay(10))
     def stop_after_10_s():
         print("Stopping after 10 seconds")
+        raise Exception
 
 Most things don't like to be polled as fast as possible, so let's just wait 2
 seconds between retries.
@@ -91,7 +95,7 @@ seconds between retries.
     @retry(wait=wait_fixed(2))
     def wait_2_s():
         print("Wait 2 second between retries")
-
+        raise Exception
 
 Some things perform best with a bit of randomness injected.
 
@@ -100,6 +104,7 @@ Some things perform best with a bit of randomness injected.
     @retry(wait=wait_random(min=1, max=2))
     def wait_random_1_to_2_s():
         print("Randomly wait 1 to 2 seconds between retries")
+        raise Exception
 
 Then again, it's hard to beat exponential backoff when retrying distributed
 services and other remote endpoints.
@@ -109,6 +114,7 @@ services and other remote endpoints.
     @retry(wait=wait_exponential(multiplier=1, max=10))
     def wait_exponential_1():
         print("Wait 2^x * 1 second between each retry, up to 10 seconds, then 10 seconds afterwards")
+        raise Exception
 
 
 Then again, it's also hard to beat combining fixed waits and jitter (to
@@ -120,6 +126,7 @@ remote endpoints.
     @retry(wait=wait_fixed(3) + wait_random(0, 2))
     def wait_fixed_jitter():
         print("Wait at least 3 seconds, and add up to 2 seconds of random delay")
+        raise Exception
 
 
 Sometimes it's necessary to build a chain of backoffs.
@@ -131,7 +138,7 @@ Sometimes it's necessary to build a chain of backoffs.
                            [wait_fixed(9)]))
     def wait_fixed_chained():
         print("Wait 3s for 3 attempts, 7s for the next 2 attempts and 9s for all attempts thereafter")
-
+        raise Exception
 
 We have a few options for dealing with retries that raise specific or general
 exceptions, as in the cases here.
@@ -141,6 +148,7 @@ exceptions, as in the cases here.
     @retry(retry=retry_if_exception_type(IOError))
     def might_io_error():
         print("Retry forever with no wait if an IOError occurs, raise any other errors")
+        retry Exception
 
 We can also use the result of the function to alter the behavior of retrying.
 
