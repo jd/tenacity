@@ -264,6 +264,7 @@ class RetryingContext(object):
     else:
       r = Retrying(*self.args, **self.kwargs)
 
+    @six.wraps(f)
     def wrapped_fn(*args, **kw):
       return r.call(f, *args, **kw)
 
@@ -271,7 +272,8 @@ class RetryingContext(object):
     return wrapped_f
 
   def __exit__(self, exc_type, exc_val, exc_tb):
-    # If we returned True here, any exception inside the with block would be suppressed!   
+    # If we returned True here, any exception inside the with block would be suppressed!
+    return False
 
 
 class Future(futures.Future):
