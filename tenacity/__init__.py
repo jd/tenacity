@@ -269,6 +269,7 @@ class RetryingContext(Retrying):
 
   def __exit__(self, exc_type, exc_val, exc_tb):
     # If we returned True here, any exception inside the with block would be suppressed!
+    return False
 
 class Future(futures.Future):
     """Encapsulates a (future or past) attempted call to a target function."""
