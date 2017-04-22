@@ -19,6 +19,9 @@
 import asyncio
 import sys
 
+import six
+from contextlib
+
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
 from tenacity import DoSleep
@@ -50,3 +53,59 @@ class AsyncRetrying(BaseRetrying):
                 yield from asyncio.sleep(do)
             else:
                 return do
+          
+class AsyncRetryingContext(AsyncRetrying):
+    """A classic context manager is NOT able to suspend execution in its enter and exit methods."""
+
+    def __init__(self, f, **kwargs):
+        super(AsyncRetryingContext, self).__init__(**kwargs)
+        self.f = f if asyncio.iscoroutinefunction(f) else asyncio.coroutine(f)
+
+    def __enter__(self):
+        r = self
+        f = self.f
+
+        @six.wraps(f)
+        def wrapped_f(*args, **kw):
+            return _AsyncContextManager(r.call, ((f,) + args), kw)
+
+        wrapped_f.retry = r
+        return wrapped_f
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # If we returned True here, any exception inside the with block would be suppressed!
+        return False
+
+    
+class _AsyncContextManager(contextlib._GeneratorContextManager):
+    async def __aenter__(self):
+        try:
+            return await self.gen.__anext__()
+        except StopAsyncIteration as e:
+            raise RuntimeError("async generator didn't yield") from None
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            try:
+                await self.gen.__anext__()
+            except StopAsyncIteration:
+                return
+            else:
+                raise RuntimeError("async generator didn't stop")
+        else:
+            if exc_val is None:
+                exc_val = exc_type()
+            try:
+                await self.gen.athrow(exc_type, exc_val, exc_tb)
+                raise RuntimeError("async generator didn't stop after throw()")
+            except StopAsyncIteration as exc:
+                return exc is not exc_val
+            except RuntimeError as exc:
+                if exc is exc_val:
+                    return False
+                if exc.__cause__ is exc_val:
+                    return False
+                raise
+            except:
+                if sys.exc_info()[1] is not exc_val:
+                    raise
