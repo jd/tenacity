@@ -50,3 +50,41 @@ class AsyncRetrying(BaseRetrying):
                 yield from asyncio.sleep(do)
             else:
                 return do
+
+class AsyncRetryingContext(AsyncRetrying):
+  """An asynchronous context manager is a context manager that is able to suspend execution in its enter and exit methods."""
+
+  def __init__(self, f, **kwargs):
+    super(AsyncRetryingContext, self).__init__(**kwargs)
+    self.fn = f if asyncio.iscoroutinefunction(f) else asyncio.coroutine(f)
+    self.args = None
+    self.kwargs = None
+    self.inner_context = None
+
+  def __call__(self, *args, **kwargs):
+    self.args = args
+    self.kwargs = kwargs
+    return self
+
+  @asyncio.coroutine
+  def __aenter__(self):
+    result = yield from self.call(self.fn, *self.args, **self.kwargs)
+
+    # Check if result object is a context manager (e.g. with open(filename) as f)
+    if getattr(result, '__aenter__', None):
+      self.inner_context = result
+      return (yield from result.__aenter__())
+    elif getattr(result, '__enter__', None):
+      self.inner_context = result
+      return result.__enter__()
+    else:
+      return result
+
+  @asyncio.coroutine
+  def __aexit__(self, exc_type, exc_val, exc_tb):
+    # If we returned True here, any exception inside the with block would be suppressed!
+    if self.inner_context:
+      if getattr(self.inner_context, '__aexit__', None):
+        self.inner_context.__aexit__(exc_type, exc_val, exc_tb)
+      elif getattr(self.inner_context, '__exit__', None):
+        self.inner_context.__exit__(exc_type, exc_val, exc_tb)
