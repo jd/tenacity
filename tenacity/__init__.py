@@ -220,7 +220,7 @@ class Retrying(BaseRetrying):
     """Retrying controller."""
 
     def __init__(self,
-                 fn=None
+                 fn=None,
                  sleep=time.sleep,
                  **kwargs):
         super(Retrying, self).__init__(**kwargs)
@@ -253,6 +253,7 @@ class Retrying(BaseRetrying):
 
     def context(self, fn):
         self.fn = fn
+        return self
     
     def __enter__(self):
         # Note: A synchronous context manager is NOT able to suspend execution in its enter and exit methods.
