@@ -251,6 +251,9 @@ class Retrying(BaseRetrying):
 
     __call__ = call
 
+    def context(self, fn):
+        self.fn = fn
+    
     def __enter__(self):
         # Note: A synchronous context manager is NOT able to suspend execution in its enter and exit methods.
         if not self.fn:
