@@ -60,6 +60,7 @@ class AsyncRetrying(BaseRetrying):
 
     def context(self, fn):
         self.fn = fn if asyncio.iscoroutinefunction(fn) else asyncio.coroutine(fn)
+        return self
 
     def __enter__(self):
         # Note: A synchronous context manager is NOT able to suspend execution in its enter and exit methods.
