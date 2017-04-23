@@ -32,8 +32,7 @@ class AsyncRetrying(BaseRetrying):
                  **kwargs):
         super(AsyncRetrying, self).__init__(**kwargs)
         self.fn = (fn if asyncio.iscoroutinefunction(fn)
-                      else asyncio.coroutine(fn)
-                  )
+                   else asyncio.coroutine(fn))
 
     @asyncio.coroutine
     def call(self, fn, *args, **kwargs):
@@ -62,8 +61,7 @@ class AsyncRetrying(BaseRetrying):
 
     def context(self, fn):
         self.fn = (fn if asyncio.iscoroutinefunction(fn)
-                      else asyncio.coroutine(fn)
-                  )
+                   else asyncio.coroutine(fn))
         return self
 
     def __enter__(self):
