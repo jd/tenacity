@@ -254,24 +254,24 @@ class Retrying(BaseRetrying):
     def context(self, fn):
         self.fn = fn
         return self
-    
+
     def __enter__(self):
-        # Note: A synchronous context manager is NOT able to suspend execution in its enter and exit methods.
+        # A synchronous context manager is NOT able to suspend
+        # execution in its enter and exit methods.
         if not self.fn:
             return
-        
+
         r = self
         f = self.fn
 
         @six.wraps(f)
         def wrapped_f(*args, **kw):
-          return r.call(f, *args, **kw)
+            return r.call(f, *args, **kw)
 
         wrapped_f.retry = r
         return wrapped_f
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # Note: If we returned True here, any exception inside the with block would be suppressed!
         return
 
 
