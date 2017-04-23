@@ -30,7 +30,7 @@ class AsyncRetrying(BaseRetrying):
     def __init__(self,
                  fn=None,
                  **kwargs):
-        super(Retrying, self).__init__(**kwargs)
+        super(AsyncRetrying, self).__init__(**kwargs)
         self.fn = fn if asyncio.iscoroutinefunction(fn) else asyncio.coroutine(fn)
 
     @asyncio.coroutine
