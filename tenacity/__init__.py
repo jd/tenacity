@@ -220,10 +220,12 @@ class Retrying(BaseRetrying):
     """Retrying controller."""
 
     def __init__(self,
+                 fn=None
                  sleep=time.sleep,
                  **kwargs):
         super(Retrying, self).__init__(**kwargs)
         self.sleep = sleep
+        self.fn = fn
 
     def call(self, fn, *args, **kwargs):
         self.begin(fn)
@@ -248,6 +250,25 @@ class Retrying(BaseRetrying):
                 return do
 
     __call__ = call
+
+    def __enter__(self):
+        # Note: A synchronous context manager is NOT able to suspend execution in its enter and exit methods.
+        if not self.fn:
+            return
+        
+        r = self
+        f = self.fn
+
+        @six.wraps(f)
+        def wrapped_f(*args, **kw):
+          return r.call(f, *args, **kw)
+
+        wrapped_f.retry = r
+        return wrapped_f
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Note: If we returned True here, any exception inside the with block would be suppressed!
+        return
 
 
 class Future(futures.Future):
