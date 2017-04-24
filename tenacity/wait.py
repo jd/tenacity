@@ -140,6 +140,9 @@ class wait_exponential(wait_base):
         self.exp_base = exp_base
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt):
-        exp = self.exp_base ** previous_attempt_number
-        result = self.multiplier * exp
+        try:
+            exp = self.exp_base ** previous_attempt_number
+            result = self.multiplier * exp
+        except OverflowError:
+            return self.max
         return max(0, min(result, self.max))
