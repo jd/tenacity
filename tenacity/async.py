@@ -28,6 +28,8 @@ from tenacity import NO_RESULT
 class AsyncRetrying(BaseRetrying):
     @asyncio.coroutine
     def call(self, fn, *args, **kwargs):
+        fn = (fn if asyncio.iscoroutinefunction(fn)
+                      else asyncio.coroutine(fn))
         self.begin(fn)
 
         result = NO_RESULT
