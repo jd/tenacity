@@ -82,12 +82,7 @@ def retry(*dargs, **dkw):
             else:
                 r = Retrying(*dargs, **dkw)
 
-            @six.wraps(f)
-            def wrapped_f(*args, **kw):
-                return r.call(f, *args, **kw)
-
-            wrapped_f.retry = r
-            return wrapped_f
+            return r.wraps(f)
 
         return wrap
 
@@ -159,6 +154,17 @@ class BaseRetrying(object):
         except AttributeError:
             self._local.statistics = {}
             return self._local.statistics
+
+    def wraps(self, f):
+        """Wrap a function for retrying.
+
+        :param f: A function to wraps for retrying.
+        """
+        @six.wraps(f)
+        def wrapped_f(*args, **kw):
+            return self.call(f, *args, **kw)
+        wrapped_f.retry = self
+        return wrapped_f
 
     def begin(self, fn):
         self.fn = fn
