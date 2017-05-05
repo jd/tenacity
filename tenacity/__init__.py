@@ -255,6 +255,27 @@ class Retrying(BaseRetrying):
 
     __call__ = call
 
+class RetryingContext(Retrying):
+  """A classic context manager is NOT able to suspend execution in its enter and exit methods."""
+
+  def __init__(self, f, **kwargs):
+    super(RetryingContext, self).__init__(**kwargs)
+    self.f = f
+
+  def __enter__(self):
+    r = self
+    f = self.f
+
+    @six.wraps(f)
+    def wrapped_f(*args, **kw):
+      return r.call(f, *args, **kw)
+
+    wrapped_f.retry = r
+    return wrapped_f
+
+  def __exit__(self, exc_type, exc_val, exc_tb):
+    # If we returned True here, any exception inside the with block would be suppressed!
+    return False
 
 class Future(futures.Future):
     """Encapsulates a (future or past) attempted call to a target function."""
