@@ -21,6 +21,12 @@ import six
 
 from tenacity import _utils
 
+def fn(x): 
+    """Creates a thunk"""
+    if callable(x):
+        return x
+    else:
+        return lambda atmpt_ct, delay: x    
 
 @six.add_metaclass(abc.ABCMeta)
 class wait_base(object):
@@ -44,10 +50,10 @@ class wait_fixed(wait_base):
     """Wait strategy that waits a fixed amount of time between each retry."""
 
     def __init__(self, wait):
-        self.wait_fixed = wait
+        self.wait_fixed = fn(wait)
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt):
-        return self.wait_fixed
+        return self.wait_fixed(previous_attempt_number, delay_since_first_attempt)
 
 
 class wait_none(wait_fixed):
@@ -61,14 +67,13 @@ class wait_random(wait_base):
     """Wait strategy that waits a random amount of time between min/max."""
 
     def __init__(self, min=0, max=1):
-        self.wait_random_min = min
-        self.wait_random_max = max
+        self.wait_random_min = fn(min)
+        self.wait_random_max = fn(max)
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt):
-        return (self.wait_random_min
-                + (random.random()
-                   * (self.wait_random_max - self.wait_random_min)))
-
+        wait_min = self.wait_random_min(previous_attempt_number, delay_since_first_attempt)
+        wait_max = self.wait_random_max(previous_attempt_number, delay_since_first_attempt)
+        return random.uniform(wait_min, wait_max)
 
 class wait_combine(wait_base):
     """Combine several waiting strategies."""
@@ -116,16 +121,19 @@ class wait_incrementing(wait_base):
     """
 
     def __init__(self, start=0, increment=100, max=_utils.MAX_WAIT):
-        self.start = start
-        self.increment = increment
-        self.max = max
+        self.start = fn(start)
+        self.increment = fn(increment)
+        self.max = fn(max)
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt):
-        result = self.start + (
-            self.increment * (previous_attempt_number - 1)
-        )
-        return max(0, min(result, self.max))
+        start = self.start(previous_attempt_number, delay_since_first_attempt)
+        incr = self.increment(previous_attempt_number, delay_since_first_attempt)
+        end = self.max(previous_attempt_number, delay_since_first_attempt)
 
+        result = start + (
+            incr * (previous_attempt_number - 1)
+        )
+        return max(0, min(result, end))
 
 class wait_exponential(wait_base):
     """Wait strategy that applies exponential backoff.
@@ -135,14 +143,22 @@ class wait_exponential(wait_base):
     """
 
     def __init__(self, multiplier=1, max=_utils.MAX_WAIT, exp_base=2):
-        self.multiplier = multiplier
-        self.max = max
-        self.exp_base = exp_base
+        self.multiplier = fn(multiplier)
+        self.max = fn(max)
+        self.exp_base = fn(exp_base)
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt):
+        exp_base = self.exp_base(previous_attempt_number, delay_since_first_attempt) 
+        multiplier = self.multiplier(previous_attempt_number, delay_since_first_attempt)
+        ceil = self.max(previous_attempt_number, delay_since_first_attempt)
         try:
-            exp = self.exp_base ** previous_attempt_number
-            result = self.multiplier * exp
+            exp = exp_base ** previous_attempt_number
+            result = multiplier * exp
         except OverflowError:
-            return self.max
-        return max(0, min(result, self.max))
+            return ceil
+        return max(0, min(result, ceil))
+
+def wait_full_jitter(base=0.5, cap=60):
+    assert base >= 0
+    assert cap >= 0
+    return wait_random(0, wait_exponential(base, cap))
