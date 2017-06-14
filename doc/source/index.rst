@@ -11,9 +11,8 @@ Tenacity
 
 Tenacity is an Apache 2.0 licensed general-purpose retrying library, written in
 Python, to simplify the task of adding retry behavior to just about anything.
-It originates from a fork of `Retrying`_
-
-.. _Retrying: https://github.com/rholder/retrying
+It originates from `a fork of retrying
+<https://github.com/rholder/retrying/issues/65>`_.
 
 The simplest use case is retrying a flaky function whenever an `Exception`
 occurs until a value is returned.
