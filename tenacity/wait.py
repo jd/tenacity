@@ -146,3 +146,40 @@ class wait_exponential(wait_base):
         except OverflowError:
             return self.max
         return max(0, min(result, self.max))
+
+
+class wait_full_jitter(wait_exponential):
+    """Random wait with exponentially widening window.
+
+    Wait strategy based on the results of this Amazon Architecture Blog:
+
+    https://www.awsarchitectureblog.com/2015/03/backoff.html
+
+    The Full Jitter strategy attempts to prevent synchronous clusters
+    from forming in distributed systems by combining exponential backoff
+    with random jitter. This differs from other strategies as jitter isn't
+    added to the exponentially increasing sleep time, rather the time is
+    computed is uniformly random between zero and the exponential point.
+
+    Excerpted from the above blog:
+        sleep = random_between(0, min(cap, base * 2 ** attempt))
+
+    A competing algorithm called "Decorrelated Jitter" is competitive
+    and in some circumstances may be better. c.f. the above blog for
+    details.
+
+    Example:
+        wait_full_jitter(0.5, 60) # initial window 0.5sec, max 60sec timeout
+
+    Optional:
+        base: (float) starting jitter window size in seconds.
+            Equals 'base' above.
+        max_timeout_sec: (float, default 60.0) Maximum time to wait.
+            Equals 'cap' above.
+
+    Returns: (float) time to sleep in seconds
+    """
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+        high = super(wait_full_jitter, self).__call__(
+            previous_attempt_number, delay_since_first_attempt)
+        return random.uniform(0, high)

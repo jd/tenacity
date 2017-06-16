@@ -217,6 +217,10 @@ class TestWaitConditions(unittest.TestCase):
         self.assertLess(wait, max)
         self.assertGreaterEqual(wait, min)
 
+    def _assert_inclusive_range(self, wait, low, high):
+        self.assertLessEqual(wait, high)
+        self.assertGreaterEqual(wait, low)
+
     def test_wait_chain(self):
         r = Retrying(wait=tenacity.wait_chain(
             *[tenacity.wait_fixed(1) for i in six.moves.range(2)] +
@@ -231,6 +235,51 @@ class TestWaitConditions(unittest.TestCase):
                 self._assert_range(w, 4, 5)
             else:
                 self._assert_range(w, 8, 9)
+
+    def test_wait_full_jitter(self):
+        fn = tenacity.wait_full_jitter(0.5, 60.0)
+
+        for _ in six.moves.range(1000):
+            self._assert_inclusive_range(fn(0, 0), 0, 0.5)
+            self._assert_inclusive_range(fn(1, 0), 0, 1.0)
+            self._assert_inclusive_range(fn(2, 0), 0, 2.0)
+            self._assert_inclusive_range(fn(3, 0), 0, 4.0)
+            self._assert_inclusive_range(fn(4, 0), 0, 8.0)
+            self._assert_inclusive_range(fn(5, 0), 0, 16.0)
+            self._assert_inclusive_range(fn(6, 0), 0, 32.0)
+            self._assert_inclusive_range(fn(7, 0), 0, 60.0)
+            self._assert_inclusive_range(fn(8, 0), 0, 60.0)
+            self._assert_inclusive_range(fn(9, 0), 0, 60.0)
+
+        fn = tenacity.wait_full_jitter(10, 5)
+        for _ in six.moves.range(1000):
+            self._assert_inclusive_range(fn(0, 0), 0.00, 5.00)
+
+        # Default arguments exist
+        fn = tenacity.wait_full_jitter()
+        fn(0, 0)
+
+    def test_wait_full_jitter_statistically(self):
+        fn = tenacity.wait_full_jitter(0.5, 60.0)
+
+        attempt = []
+        for i in six.moves.range(10):
+            attempt.append(
+                [fn(i, 0) for _ in six.moves.range(4000)]
+            )
+
+        mean = lambda lst: float(sum(lst)) / float(len(lst))
+
+        self._assert_inclusive_range(mean(attempt[0]),  0.20,  0.30)
+        self._assert_inclusive_range(mean(attempt[1]),  0.35,  0.65)
+        self._assert_inclusive_range(mean(attempt[2]),  0.75,  1.25)
+        self._assert_inclusive_range(mean(attempt[3]),  1.75,  3.25)
+        self._assert_inclusive_range(mean(attempt[4]),  3.50,  5.50)
+        self._assert_inclusive_range(mean(attempt[5]),  7.00,  9.00)
+        self._assert_inclusive_range(mean(attempt[6]), 14.00, 18.00)
+        self._assert_inclusive_range(mean(attempt[7]), 28.00, 34.00)
+        self._assert_inclusive_range(mean(attempt[8]), 28.00, 34.00)
+        self._assert_inclusive_range(mean(attempt[9]), 28.00, 34.00)
 
 
 class TestRetryConditions(unittest.TestCase):
