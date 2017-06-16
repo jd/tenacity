@@ -67,6 +67,16 @@ class _stop_never(stop_base):
 stop_never = _stop_never()
 
 
+class stop_when_event_set(stop_base):
+    "Stop strategy that stops when the given event is set."
+
+    def __init__(self, event):
+        self.event = event
+
+    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+        return self.event.is_set()
+
+
 class stop_after_attempt(stop_base):
     "Stop strategy that stops when the previous attempt >= max_attempt."
 

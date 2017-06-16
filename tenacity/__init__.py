@@ -24,7 +24,6 @@ except ImportError:
 from concurrent import futures
 import sys
 import threading
-import time
 
 from monotonic import monotonic as now
 import six
@@ -38,6 +37,10 @@ from .retry import retry_if_exception_type  # noqa
 from .retry import retry_if_not_result  # noqa
 from .retry import retry_if_result  # noqa
 from .retry import retry_never  # noqa
+
+# Import all nap strategies for easier usage.
+from .nap import sleep  # noqa
+from .nap import sleep_using_event  # noqa
 
 # Import all built-in stop strategies for easier usage.
 from .stop import stop_after_attempt  # noqa
@@ -227,7 +230,7 @@ class Retrying(BaseRetrying):
     """Retrying controller."""
 
     def __init__(self,
-                 sleep=time.sleep,
+                 sleep=sleep,
                  **kwargs):
         super(Retrying, self).__init__(**kwargs)
         self.sleep = sleep
