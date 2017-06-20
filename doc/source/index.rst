@@ -86,6 +86,15 @@ retrying stuff.
         print("Stopping after 10 seconds")
         raise Exception
 
+You can combine several stop conditions by using the `|` operator:
+
+.. code-block:: python
+
+    @retry(stop=(stop_after_delay(10) | stop_after_attempt(5)))
+    def stop_after_10_s_or_5_retries():
+        print("Stopping after 10 seconds or 5 retries")
+        raise Exception
+
 Most things don't like to be polled as fast as possible, so let's just wait 2
 seconds between retries.
 
