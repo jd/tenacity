@@ -179,7 +179,7 @@ class BaseRetrying(object):
         self.statistics['attempt_number'] = self.attempt_number
         self.statistics['idle_for'] = 0
 
-    def iter(self, result=NO_RESULT, exc_info=None):
+    def iter(self, result, exc_info, start_time):
         fut = Future(self.attempt_number)
         if result is not NO_RESULT:
             trial_end_time = now()
@@ -197,14 +197,13 @@ class BaseRetrying(object):
             if self.before is not None:
                 self.before(self.fn, self.attempt_number)
 
-            self.trial_start_time = now()
             return DoAttempt()
 
         if not retry:
             return fut.result()
 
         if self.after is not None:
-            trial_time_taken = trial_end_time - self.trial_start_time
+            trial_time_taken = trial_end_time - start_time
             self.after(self.fn, self.attempt_number, trial_time_taken)
 
         delay_since_first_attempt = now() - self.start_time
@@ -240,9 +239,11 @@ class Retrying(BaseRetrying):
 
         result = NO_RESULT
         exc_info = None
+        start_time = now()
 
         while True:
-            do = self.iter(result=result, exc_info=exc_info)
+            do = self.iter(result=result, exc_info=exc_info,
+                           start_time=start_time)
             if isinstance(do, DoAttempt):
                 try:
                     result = fn(*args, **kwargs)
