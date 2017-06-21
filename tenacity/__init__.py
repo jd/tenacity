@@ -173,14 +173,12 @@ class BaseRetrying(object):
     def begin(self, fn):
         self.fn = fn
         self.statistics.clear()
-        self.start_time = now()
-        self.statistics['start_time'] = self.start_time
-        self.attempt_number = 1
-        self.statistics['attempt_number'] = self.attempt_number
+        self.statistics['start_time'] = now()
+        self.statistics['attempt_number'] = 1
         self.statistics['idle_for'] = 0
 
     def iter(self, result, exc_info, start_time):
-        fut = Future(self.attempt_number)
+        fut = Future(self.statistics['attempt_number'])
         if result is not NO_RESULT:
             trial_end_time = now()
             fut.set_result(result)
@@ -195,7 +193,7 @@ class BaseRetrying(object):
                 retry = self.retry(fut)
         else:
             if self.before is not None:
-                self.before(self.fn, self.attempt_number)
+                self.before(self.fn, self.statistics['attempt_number'])
 
             return DoAttempt()
 
@@ -204,23 +202,25 @@ class BaseRetrying(object):
 
         if self.after is not None:
             trial_time_taken = trial_end_time - start_time
-            self.after(self.fn, self.attempt_number, trial_time_taken)
+            self.after(self.fn, self.statistics['attempt_number'],
+                       trial_time_taken)
 
-        delay_since_first_attempt = now() - self.start_time
+        delay_since_first_attempt = now() - self.statistics['start_time']
         self.statistics['delay_since_first_attempt'] = \
             delay_since_first_attempt
-        if self.stop(self.attempt_number, delay_since_first_attempt):
+        if self.stop(self.statistics['attempt_number'],
+                     delay_since_first_attempt):
             if self.reraise:
                 raise RetryError(fut).reraise()
             six.raise_from(RetryError(fut), fut.exception())
 
         if self.wait:
-            sleep = self.wait(self.attempt_number, delay_since_first_attempt)
+            sleep = self.wait(self.statistics['attempt_number'],
+                              delay_since_first_attempt)
         else:
             sleep = 0
         self.statistics['idle_for'] += sleep
-        self.attempt_number += 1
-        self.statistics['attempt_number'] = self.attempt_number
+        self.statistics['attempt_number'] += 1
 
         return DoSleep(sleep)
 
