@@ -382,7 +382,7 @@ class NoneReturnUntilAfterCount(object):
 
 
 class NoIOErrorAfterCount(object):
-    "Holds counter state for invoking a method several times in a row."
+    """Holds counter state for invoking a method several times in a row."""
 
     def __init__(self, count):
         self.counter = 0
@@ -400,7 +400,7 @@ class NoIOErrorAfterCount(object):
 
 
 class NoNameErrorAfterCount(object):
-    "Holds counter state for invoking a method several times in a row."
+    """Holds counter state for invoking a method several times in a row."""
 
     def __init__(self, count):
         self.counter = 0
@@ -409,12 +409,48 @@ class NoNameErrorAfterCount(object):
     def go(self):
         """Raise a NameError until after count threshold has been crossed.
 
-        Tthen return True.
+        Then return True.
         """
         if self.counter < self.count:
             self.counter += 1
             raise NameError("Hi there, I'm a NameError")
         return True
+
+
+class NameErrorUntilCount(object):
+    """Holds counter state for invoking a method several times in a row."""
+
+    def __init__(self, count):
+        self.counter = 0
+        self.count = count
+
+    def go(self):
+        """Return True until after count threshold has been crossed.
+
+        Then raise a NameError.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            return True
+        raise NameError("Hi there, I'm a NameError")
+
+
+class IOErrorUntilCount(object):
+    """Holds counter state for invoking a method several times in a row."""
+
+    def __init__(self, count):
+        self.counter = 0
+        self.count = count
+
+    def go(self):
+        """Return True until after count threshold has been crossed.
+
+        Then raise an IOError.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            return True
+        raise IOError("Hi there, I'm an IOError")
 
 
 class CustomError(Exception):
@@ -479,6 +515,18 @@ def _retryable_test_with_exception_type_io(thing):
     stop=tenacity.stop_after_attempt(3),
     retry=tenacity.retry_if_exception_type(IOError))
 def _retryable_test_with_exception_type_io_attempt_limit(thing):
+    return thing.go()
+
+
+@retry(retry=tenacity.retry_unless_exception_type(NameError))
+def _retryable_test_with_not_exception_type_name(thing):
+    return thing.go()
+
+
+@retry(
+    stop=tenacity.stop_after_attempt(3),
+    retry=tenacity.retry_unless_exception_type(NameError))
+def _retryable_test_with_not_exception_type_name_attempt_limit(thing):
     return thing.go()
 
 
@@ -552,6 +600,27 @@ class TestDecoratorWrapper(unittest.TestCase):
         except NameError as n:
             self.assertTrue(isinstance(n, NameError))
             print(n)
+
+    def test_retry_until_exception_of_type_attempt_number(self):
+        try:
+            self.assertTrue(_retryable_test_with_not_exception_type_name(
+                NameErrorUntilCount(5)))
+        except NameError as e:
+            s = _retryable_test_with_not_exception_type_name.retry.statistics
+            self.assertTrue(s['attempt_number'] == 6)
+            print(e)
+        else:
+            self.fail("Expected NameError")
+
+    def test_retry_until_exception_of_type_wrong_exception(self):
+        try:
+            # two iterations with IOError, one that returns True
+            _retryable_test_with_not_exception_type_name_attempt_limit(
+                IOErrorUntilCount(2))
+            self.fail("Expected RetryError")
+        except RetryError as e:
+            self.assertTrue(isinstance(e, RetryError))
+            print(e)
 
     def test_defaults(self):
         self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))
