@@ -148,7 +148,7 @@ class wait_exponential(wait_base):
         return max(0, min(result, self.max))
 
 
-class wait_full_jitter(wait_exponential):
+class wait_random_exponential(wait_exponential):
     """Random wait with exponentially widening window.
 
     Wait strategy based on the results of this Amazon Architecture Blog:
@@ -169,7 +169,8 @@ class wait_full_jitter(wait_exponential):
     details.
 
     Example:
-        wait_full_jitter(0.5, 60) # initial window 0.5sec, max 60sec timeout
+        wait_random_exponential(0.5, 60) # initial window 0.5sec,
+                                         # max 60sec timeout
 
     Optional:
         base: (float) starting jitter window size in seconds.
@@ -180,6 +181,6 @@ class wait_full_jitter(wait_exponential):
     Returns: (float) time to sleep in seconds
     """
     def __call__(self, previous_attempt_number, delay_since_first_attempt):
-        high = super(wait_full_jitter, self).__call__(
+        high = super(wait_random_exponential, self).__call__(
             previous_attempt_number, delay_since_first_attempt)
         return random.uniform(0, high)
