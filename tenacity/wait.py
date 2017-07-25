@@ -132,6 +132,12 @@ class wait_exponential(wait_base):
 
     It allows for a customized multiplier and an ability to restrict the
     upper limit to some maximum value.
+
+    The intervals are fixed (i.e. there is no jitter), so this strategy is
+    suitable for balancing retries against latency when a required resource is
+    unavailable for an unknown duration, but *not* suitable for resolving
+    contention between multiple processes for a shared resource. Use
+    wait_random_exponential for the latter case.
     """
 
     def __init__(self, multiplier=1, max=_utils.MAX_WAIT, exp_base=2):
@@ -151,34 +157,26 @@ class wait_exponential(wait_base):
 class wait_random_exponential(wait_exponential):
     """Random wait with exponentially widening window.
 
-    Wait strategy based on the results of this Amazon Architecture Blog:
+    An exponential backoff strategy used to mediate contention between multiple
+    unco-ordinated processes for a shared resource in distributed systems. This
+    is the sense in which "exponential backoff" is meant in e.g. Ethernet
+    networking, and corresponds to the "Full Jitter" algorithm described in
+    this blog post:
 
     https://www.awsarchitectureblog.com/2015/03/backoff.html
 
-    The Full Jitter strategy attempts to prevent synchronous clusters
-    from forming in distributed systems by combining exponential backoff
-    with random jitter. This differs from other strategies as jitter isn't
-    added to the exponentially increasing sleep time, rather the time is
-    computed is uniformly random between zero and the exponential point.
+    Each retry occurs at a random time in a geometrically expanding interval.
+    It allows for a custom multiplier and an ability to restrict the upper
+    limit of the random interval to some maximum value.
 
-    Excerpted from the above blog:
-        sleep = random_between(0, min(cap, base * 2 ** attempt))
+    Example::
 
-    A competing algorithm called "Decorrelated Jitter" is competitive
-    and in some circumstances may be better. c.f. the above blog for
-    details.
+        wait_random_exponential(multiplier=0.5,  # initial window 0.5s
+                                max=60)          # max 60s timeout
 
-    Example:
-        wait_random_exponential(0.5, 60) # initial window 0.5sec,
-                                         # max 60sec timeout
-
-    Optional:
-        base: (float) starting jitter window size in seconds.
-            Equals 'base' above.
-        max_timeout_sec: (float, default 60.0) Maximum time to wait.
-            Equals 'cap' above.
-
-    Returns: (float) time to sleep in seconds
+    When waiting for an unavailable resource to become available again, as
+    opposed to trying to resolve contention for a shared resource, the
+    wait_exponential strategy (which uses a fixed interval) may be preferable.
     """
     def __call__(self, previous_attempt_number, delay_since_first_attempt):
         high = super(wait_random_exponential, self).__call__(
