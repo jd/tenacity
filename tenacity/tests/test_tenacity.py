@@ -236,8 +236,8 @@ class TestWaitConditions(unittest.TestCase):
             else:
                 self._assert_range(w, 8, 9)
 
-    def test_wait_full_jitter(self):
-        fn = tenacity.wait_full_jitter(0.5, 60.0)
+    def test_wait_random_exponential(self):
+        fn = tenacity.wait_random_exponential(0.5, 60.0)
 
         for _ in six.moves.range(1000):
             self._assert_inclusive_range(fn(0, 0), 0, 0.5)
@@ -251,16 +251,16 @@ class TestWaitConditions(unittest.TestCase):
             self._assert_inclusive_range(fn(8, 0), 0, 60.0)
             self._assert_inclusive_range(fn(9, 0), 0, 60.0)
 
-        fn = tenacity.wait_full_jitter(10, 5)
+        fn = tenacity.wait_random_exponential(10, 5)
         for _ in six.moves.range(1000):
             self._assert_inclusive_range(fn(0, 0), 0.00, 5.00)
 
         # Default arguments exist
-        fn = tenacity.wait_full_jitter()
+        fn = tenacity.wait_random_exponential()
         fn(0, 0)
 
-    def test_wait_full_jitter_statistically(self):
-        fn = tenacity.wait_full_jitter(0.5, 60.0)
+    def test_wait_random_exponential_statistically(self):
+        fn = tenacity.wait_random_exponential(0.5, 60.0)
 
         attempt = []
         for i in six.moves.range(10):

@@ -136,6 +136,16 @@ remote endpoints.
         print("Wait at least 3 seconds, and add up to 2 seconds of random delay")
         raise Exception
 
+When multiple processes are in contention for a shared resource, exponentially
+increasing jitter helps minimise collisions.
+
+.. code-block:: python
+
+    @retry(wait=wait_random_exponential(multiplier=1, max=60))
+    def wait_exponential_jitter():
+        print("Randomly wait up to 2^x * 1 seconds between each retry until the range reaches 60 seconds, then randomly up to 60 seconds afterwards")
+        raise Exception
+
 
 Sometimes it's necessary to build a chain of backoffs.
 
