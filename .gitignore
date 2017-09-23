@@ -7,3 +7,4 @@ build
 AUTHORS
 ChangeLog
 .eggs/
+doc/_build
