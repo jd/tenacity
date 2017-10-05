@@ -13,7 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import shutil
+import sys
+
 import setuptools
+
+
+# Useful for very coarse version differentiation.
+PY2 = sys.version_info[0] == 2
+# files that can only be compiled with Python 3
+PY3_FILES_PATH = ['tenacity/async.py', 'tenacity/tests/test_async.py']
+if PY2:
+    for fn in PY3_FILES_PATH:
+        print(os.listdir(os.getcwd()))
+        if os.path.isfile(fn):
+            shutil.move(fn, '%s.null' % fn)
 
 setuptools.setup(
     setup_requires=['pbr'],
