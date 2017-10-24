@@ -18,8 +18,8 @@ import unittest
 
 import six
 
-from tenacity import retry
 from tenacity import async
+from tenacity import retry
 from tenacity.tests.test_tenacity import NoIOErrorAfterCount
 
 
