@@ -23,7 +23,6 @@ def before_nothing(func, trial_number):
 
 def before_log(logger, log_level):
     """Before call strategy that logs to some logger the attempt."""
-
     def log_it(func, trial_number):
         logger.log(log_level,
                    "Starting call to '%s', this is the %s time calling it.",

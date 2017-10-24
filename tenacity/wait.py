@@ -60,14 +60,14 @@ class wait_none(wait_fixed):
 class wait_random(wait_base):
     """Wait strategy that waits a random amount of time between min/max."""
 
-    def __init__(self, min=0, max=1):
+    def __init__(self, min=0, max=1):  # noqa
         self.wait_random_min = min
         self.wait_random_max = max
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt):
-        return (self.wait_random_min
-                + (random.random()
-                   * (self.wait_random_max - self.wait_random_min)))
+        return (self.wait_random_min +
+                (random.random() *
+                 (self.wait_random_max - self.wait_random_min)))
 
 
 class wait_combine(wait_base):
@@ -115,7 +115,7 @@ class wait_incrementing(wait_base):
     (and restricting the upper limit to some maximum value).
     """
 
-    def __init__(self, start=0, increment=100, max=_utils.MAX_WAIT):
+    def __init__(self, start=0, increment=100, max=_utils.MAX_WAIT):  # noqa
         self.start = start
         self.increment = increment
         self.max = max
@@ -140,7 +140,7 @@ class wait_exponential(wait_base):
     wait_random_exponential for the latter case.
     """
 
-    def __init__(self, multiplier=1, max=_utils.MAX_WAIT, exp_base=2):
+    def __init__(self, multiplier=1, max=_utils.MAX_WAIT, exp_base=2):  # noqa
         self.multiplier = multiplier
         self.max = max
         self.exp_base = exp_base
@@ -178,6 +178,7 @@ class wait_random_exponential(wait_exponential):
     opposed to trying to resolve contention for a shared resource, the
     wait_exponential strategy (which uses a fixed interval) may be preferable.
     """
+
     def __call__(self, previous_attempt_number, delay_since_first_attempt):
         high = super(wait_random_exponential, self).__call__(
             previous_attempt_number, delay_since_first_attempt)

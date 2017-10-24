@@ -21,10 +21,10 @@ try:
 except ImportError:
     asyncio = None
 
-from concurrent import futures
 import sys
 import threading
 
+from concurrent import futures
 from monotonic import monotonic as now
 import six
 
@@ -73,10 +73,10 @@ from tenacity import _utils
 
 
 def retry(*dargs, **dkw):
-    """Decorator function that wraps + instantiates a ``Retrying`` object.
+    """Wrap a function with a new `Retrying` object.
 
-    @param *dargs: positional arguments passed to Retrying object
-    @param **dkw: keyword arguments passed to the Retrying object
+    :param dargs: positional arguments passed to Retrying object
+    :param dkw: keyword arguments passed to the Retrying object
     """
     # support both @retry and @retry() as valid syntax
     if len(dargs) == 1 and callable(dargs[0]):
@@ -137,7 +137,7 @@ class BaseRetrying(object):
 
     @property
     def statistics(self):
-        """A dictionary of runtime statistics this controller has gathered.
+        """Return a dictionary of runtime statistics.
 
         This dictionary will be empty when the controller has never been
         ran. When it is running or has ran previously it should have (but
@@ -273,7 +273,7 @@ class Future(futures.Future):
 
     @classmethod
     def construct(cls, attempt_number, value, has_exception):
-        """Helper (for testing) for making these objects easily."""
+        """Construct a new Future object."""
         fut = cls(attempt_number)
         if has_exception:
             fut.set_exception(value)

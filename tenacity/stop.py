@@ -34,7 +34,7 @@ class stop_base(object):
 
 
 class stop_any(stop_base):
-    """Stops if any of the stop condition is valid."""
+    """Stop if any of the stop condition is valid."""
 
     def __init__(self, *stops):
         self.stops = stops
@@ -46,7 +46,7 @@ class stop_any(stop_base):
 
 
 class stop_all(stop_base):
-    """Stops if all the stop conditions are valid."""
+    """Stop if all the stop conditions are valid."""
 
     def __init__(self, *stops):
         self.stops = stops
@@ -58,7 +58,7 @@ class stop_all(stop_base):
 
 
 class _stop_never(stop_base):
-    """Stop strategy that never stops."""
+    """Never stop."""
 
     def __call__(self, previous_attempt_number, delay_since_first_attempt):
         return False
@@ -68,7 +68,7 @@ stop_never = _stop_never()
 
 
 class stop_when_event_set(stop_base):
-    "Stop strategy that stops when the given event is set."
+    """Stop when the given event is set."""
 
     def __init__(self, event):
         self.event = event
@@ -78,7 +78,7 @@ class stop_when_event_set(stop_base):
 
 
 class stop_after_attempt(stop_base):
-    "Stop strategy that stops when the previous attempt >= max_attempt."
+    """Stop when the previous attempt >= max_attempt."""
 
     def __init__(self, max_attempt_number):
         self.max_attempt_number = max_attempt_number
@@ -88,7 +88,7 @@ class stop_after_attempt(stop_base):
 
 
 class stop_after_delay(stop_base):
-    "Stop strategy that stops when the time from the first attempt >= limit."
+    """Stop when the time from the first attempt >= limit."""
 
     def __init__(self, max_delay):
         self.max_delay = max_delay

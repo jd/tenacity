@@ -23,7 +23,7 @@ sleep = time.sleep
 
 
 class sleep_using_event(object):
-    "Sleep strategy that waits on an event to be set."
+    """Sleep strategy that waits on an event to be set."""
 
     def __init__(self, event):
         self.event = event

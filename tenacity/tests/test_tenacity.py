@@ -13,15 +13,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import six.moves
 import time
 import unittest
 
+import six.moves
+
 import tenacity
-from tenacity import retry
 from tenacity import RetryError
 from tenacity import Retrying
+from tenacity import retry
 
 
 class TestBase(unittest.TestCase):
@@ -218,9 +218,9 @@ class TestWaitConditions(unittest.TestCase):
             self.assertLess(w, 9)
             self.assertGreaterEqual(w, 6)
 
-    def _assert_range(self, wait, min, max):
-        self.assertLess(wait, max)
-        self.assertGreaterEqual(wait, min)
+    def _assert_range(self, wait, min_, max_):
+        self.assertLess(wait, max_)
+        self.assertGreaterEqual(wait, min_)
 
     def _assert_inclusive_range(self, wait, low, high):
         self.assertLessEqual(wait, high)
@@ -273,14 +273,15 @@ class TestWaitConditions(unittest.TestCase):
                 [fn(i, 0) for _ in six.moves.range(4000)]
             )
 
-        mean = lambda lst: float(sum(lst)) / float(len(lst))
+        def mean(lst):
+            return float(sum(lst)) / float(len(lst))
 
-        self._assert_inclusive_range(mean(attempt[0]),  0.20,  0.30)
-        self._assert_inclusive_range(mean(attempt[1]),  0.35,  0.65)
-        self._assert_inclusive_range(mean(attempt[2]),  0.75,  1.25)
-        self._assert_inclusive_range(mean(attempt[3]),  1.75,  3.25)
-        self._assert_inclusive_range(mean(attempt[4]),  3.50,  5.50)
-        self._assert_inclusive_range(mean(attempt[5]),  7.00,  9.00)
+        self._assert_inclusive_range(mean(attempt[0]), 0.20, 0.30)
+        self._assert_inclusive_range(mean(attempt[1]), 0.35, 0.65)
+        self._assert_inclusive_range(mean(attempt[2]), 0.75, 1.25)
+        self._assert_inclusive_range(mean(attempt[3]), 1.75, 3.25)
+        self._assert_inclusive_range(mean(attempt[4]), 3.50, 5.50)
+        self._assert_inclusive_range(mean(attempt[5]), 7.00, 9.00)
         self._assert_inclusive_range(mean(attempt[6]), 14.00, 18.00)
         self._assert_inclusive_range(mean(attempt[7]), 28.00, 34.00)
         self._assert_inclusive_range(mean(attempt[8]), 28.00, 34.00)
@@ -369,7 +370,7 @@ class TestRetryConditions(unittest.TestCase):
 
 
 class NoneReturnUntilAfterCount(object):
-    "Holds counter state for invoking a method several times in a row."
+    """Holds counter state for invoking a method several times in a row."""
 
     def __init__(self, count):
         self.counter = 0
@@ -477,14 +478,14 @@ class CustomError(Exception):
 
 
 class NoCustomErrorAfterCount(object):
-    "Holds counter state for invoking a method several times in a row."
+    """Holds counter state for invoking a method several times in a row."""
 
     def __init__(self, count):
         self.counter = 0
         self.count = count
 
     def go(self):
-        """Raise a CustomError until after count threshold has been crossed
+        """Raise a CustomError until after count threshold has been crossed.
 
         Then return True.
         """
