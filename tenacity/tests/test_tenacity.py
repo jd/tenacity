@@ -24,6 +24,11 @@ from tenacity import RetryError
 from tenacity import Retrying
 
 
+class TestBase(unittest.TestCase):
+    def test_repr(self):
+        repr(tenacity.BaseRetrying())
+
+
 class TestStopConditions(unittest.TestCase):
 
     def test_never_stop(self):

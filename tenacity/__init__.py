@@ -111,11 +111,13 @@ class DoSleep(float):
 class BaseRetrying(object):
 
     def __init__(self,
+                 sleep=sleep,
                  stop=stop_never, wait=wait_none(),
                  retry=retry_if_exception_type(),
                  before=before_nothing,
                  after=after_nothing,
                  reraise=False):
+        self.sleep = sleep
         self.stop = stop
         self.wait = wait
         self.retry = retry
@@ -229,12 +231,6 @@ class BaseRetrying(object):
 
 class Retrying(BaseRetrying):
     """Retrying controller."""
-
-    def __init__(self,
-                 sleep=sleep,
-                 **kwargs):
-        super(Retrying, self).__init__(**kwargs)
-        self.sleep = sleep
 
     def call(self, fn, *args, **kwargs):
         self.begin(fn)
