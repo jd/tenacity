@@ -28,6 +28,13 @@ from tenacity import NO_RESULT
 
 
 class AsyncRetrying(BaseRetrying):
+
+    def __init__(self,
+                 sleep=asyncio.sleep,
+                 **kwargs):
+        super(AsyncRetrying, self).__init__(**kwargs)
+        self.sleep = sleep
+
     @asyncio.coroutine
     def call(self, fn, *args, **kwargs):
         self.begin(fn)
@@ -51,6 +58,6 @@ class AsyncRetrying(BaseRetrying):
             elif isinstance(do, DoSleep):
                 result = NO_RESULT
                 exc_info = None
-                yield from asyncio.sleep(do)
+                yield from self.sleep(do)
             else:
                 return do
