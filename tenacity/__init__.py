@@ -108,6 +108,9 @@ class DoSleep(float):
     pass
 
 
+_unset = object()
+
+
 class BaseRetrying(object):
 
     def __init__(self,
@@ -125,6 +128,19 @@ class BaseRetrying(object):
         self.after = after
         self.reraise = reraise
         self._local = threading.local()
+
+    def copy(self, sleep=_unset, stop=_unset, wait=_unset,
+             retry=_unset, before=_unset, after=_unset, reraise=_unset):
+        """Copy this object with some parameters changed if needed."""
+        return self.__class__(
+            sleep=self.sleep if sleep is _unset else sleep,
+            stop=self.stop if stop is _unset else stop,
+            wait=self.wait if wait is _unset else wait,
+            retry=self.retry if retry is _unset else retry,
+            before=self.before if before is _unset else before,
+            after=self.after if after is _unset else after,
+            reraise=self.reraise if after is _unset else reraise,
+        )
 
     def __repr__(self):
         attrs = dict(
@@ -171,7 +187,18 @@ class BaseRetrying(object):
         @six.wraps(f)
         def wrapped_f(*args, **kw):
             return self.call(f, *args, **kw)
+
+        def retry_with(*args, **kwargs):
+            retry = self.copy(*args, **kwargs)
+
+            @six.wraps(f)
+            def rewrapped_f(*args, **kw):
+                return retry.call(f, *args, **kw)
+            return rewrapped_f
+
         wrapped_f.retry = self
+        wrapped_f.retry_with = retry_with
+
         return wrapped_f
 
     def begin(self, fn):

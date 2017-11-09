@@ -567,6 +567,14 @@ class TestDecoratorWrapper(unittest.TestCase):
         self.assertGreaterEqual(t, 250)
         self.assertTrue(result)
 
+    def test_retry_with(self):
+        start = current_time_ms()
+        result = _retryable_test_with_wait.retry_with(
+            wait=tenacity.wait_fixed(0.1))(NoneReturnUntilAfterCount(5))
+        t = current_time_ms() - start
+        self.assertGreaterEqual(t, 500)
+        self.assertTrue(result)
+
     def test_with_stop_on_return_value(self):
         try:
             _retryable_test_with_stop(NoneReturnUntilAfterCount(5))

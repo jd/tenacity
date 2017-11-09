@@ -275,6 +275,27 @@ You can access the statistics about the retry made over a function by using the
 
    ...
 
+You can change the arguments of a retry decorator as needed when calling it by
+using the `retry_with` function attached to the wrapped function:
+
+.. testcode::
+
+    @retry(stop=stop_after_attempt(3))
+    def raise_my_exception():
+        raise MyException("Fail")
+
+    try:
+        raise_my_exception.retry_with(stop=stop_after_attempt(4))()
+    except Exception:
+        pass
+
+    print(raise_my_exception.retry.statistics)
+
+.. testoutput::
+   :hide:
+
+   ...
+
 Finally, ``retry`` works also on asyncio coroutines. Sleeps are done
 asynchronously too.
 
