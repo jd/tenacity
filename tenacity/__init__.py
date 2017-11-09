@@ -189,12 +189,7 @@ class BaseRetrying(object):
             return self.call(f, *args, **kw)
 
         def retry_with(*args, **kwargs):
-            retry = self.copy(*args, **kwargs)
-
-            @six.wraps(f)
-            def rewrapped_f(*args, **kw):
-                return retry.call(f, *args, **kw)
-            return rewrapped_f
+            return self.copy(*args, **kwargs).wraps(f)
 
         wrapped_f.retry = self
         wrapped_f.retry_with = retry_with
