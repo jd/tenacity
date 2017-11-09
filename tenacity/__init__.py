@@ -23,10 +23,13 @@ except ImportError:
 
 import sys
 import threading
-
 from concurrent import futures
+
 from monotonic import monotonic as now
+
 import six
+
+from tenacity import _utils
 
 # Import all built-in retry strategies for easier usage.
 from .retry import retry_all  # noqa
@@ -68,8 +71,6 @@ from .before import before_nothing  # noqa
 # Import all built-in after strategies for easier usage.
 from .after import after_log  # noqa
 from .after import after_nothing  # noqa
-
-from tenacity import _utils
 
 
 def retry(*dargs, **dkw):
