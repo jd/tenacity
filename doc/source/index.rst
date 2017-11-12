@@ -296,7 +296,7 @@ using the `retry_with` function attached to the wrapped function:
 
    ...
 
-Finally, ``retry`` works also on asyncio coroutines. Sleeps are done
+Finally, ``retry`` works also on asyncio and Tornado coroutines. Sleeps are done
 asynchronously too.
 
 .. code-block:: python
@@ -304,6 +304,13 @@ asynchronously too.
     @retry
     async def my_async_function(loop):
         await loop.getaddrinfo('8.8.8.8', 53)
+
+.. code-block:: python
+
+    @retry
+    @tornado.gen.coroutine
+    def my_async_function(http_client, url):
+        yield http_client.fetch(url)
 
 Contribute
 ----------

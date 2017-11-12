@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Copyright 2017 Elisey Zanko
 # Copyright 2016 Étienne Bersac
 # Copyright 2016 Julien Danjou
 # Copyright 2016 Joshua Harlow
@@ -20,6 +21,11 @@ try:
     import asyncio
 except ImportError:
     asyncio = None
+
+try:
+    import tornado
+except ImportError:
+    tornado = None
 
 import sys
 import threading
@@ -86,6 +92,8 @@ def retry(*dargs, **dkw):
         def wrap(f):
             if asyncio and asyncio.iscoroutinefunction(f):
                 r = AsyncRetrying(*dargs, **dkw)
+            elif tornado and tornado.gen.is_coroutine_function(f):
+                r = TornadoRetrying(*dargs, **dkw)
             else:
                 r = Retrying(*dargs, **dkw)
 
@@ -322,3 +330,6 @@ class RetryError(Exception):
 
 if asyncio:
     from tenacity.async import AsyncRetrying
+
+if tornado:
+    from tenacity.tornadoweb import TornadoRetrying
