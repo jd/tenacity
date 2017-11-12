@@ -525,14 +525,19 @@ def _retryable_test_with_exception_type_io_attempt_limit(thing):
 
 
 @retry(retry=tenacity.retry_unless_exception_type(NameError))
-def _retryable_test_with_not_exception_type_name(thing):
+def _retryable_test_with_unless_exception_type_name(thing):
     return thing.go()
 
 
 @retry(
     stop=tenacity.stop_after_attempt(3),
     retry=tenacity.retry_unless_exception_type(NameError))
-def _retryable_test_with_not_exception_type_name_attempt_limit(thing):
+def _retryable_test_with_unless_exception_type_name_attempt_limit(thing):
+    return thing.go()
+
+
+@retry(retry=tenacity.retry_unless_exception_type())
+def _retryable_test_with_unless_exception_type_no_input(thing):
     return thing.go()
 
 
@@ -617,10 +622,26 @@ class TestDecoratorWrapper(unittest.TestCase):
 
     def test_retry_until_exception_of_type_attempt_number(self):
         try:
-            self.assertTrue(_retryable_test_with_not_exception_type_name(
+            self.assertTrue(_retryable_test_with_unless_exception_type_name(
                 NameErrorUntilCount(5)))
         except NameError as e:
-            s = _retryable_test_with_not_exception_type_name.retry.statistics
+            s = _retryable_test_with_unless_exception_type_name.\
+                retry.statistics
+            self.assertTrue(s['attempt_number'] == 6)
+            print(e)
+        else:
+            self.fail("Expected NameError")
+
+    def test_retry_until_exception_of_type_no_type(self):
+        try:
+            # no input should catch all subclasses of Exception
+            self.assertTrue(
+                _retryable_test_with_unless_exception_type_no_input(
+                    NameErrorUntilCount(5))
+            )
+        except NameError as e:
+            s = _retryable_test_with_unless_exception_type_no_input.\
+                retry.statistics
             self.assertTrue(s['attempt_number'] == 6)
             print(e)
         else:
@@ -629,7 +650,7 @@ class TestDecoratorWrapper(unittest.TestCase):
     def test_retry_until_exception_of_type_wrong_exception(self):
         try:
             # two iterations with IOError, one that returns True
-            _retryable_test_with_not_exception_type_name_attempt_limit(
+            _retryable_test_with_unless_exception_type_name_attempt_limit(
                 IOErrorUntilCount(2))
             self.fail("Expected RetryError")
         except RetryError as e:
