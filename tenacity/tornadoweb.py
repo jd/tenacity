@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2016 Étienne Bersac
-# Copyright 2016 Julien Danjou
-# Copyright 2016 Joshua Harlow
-# Copyright 2013-2014 Ray Holder
+# Copyright 2017 Elisey Zanko
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import sys
 
 from monotonic import monotonic as now
@@ -26,16 +22,18 @@ from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import NO_RESULT
 
+from tornado import gen
 
-class AsyncRetrying(BaseRetrying):
+
+class TornadoRetrying(BaseRetrying):
 
     def __init__(self,
-                 sleep=asyncio.sleep,
+                 sleep=gen.sleep,
                  **kwargs):
-        super(AsyncRetrying, self).__init__(**kwargs)
+        super(TornadoRetrying, self).__init__(**kwargs)
         self.sleep = sleep
 
-    @asyncio.coroutine
+    @gen.coroutine
     def call(self, fn, *args, **kwargs):
         self.begin(fn)
 
@@ -48,7 +46,7 @@ class AsyncRetrying(BaseRetrying):
                            start_time=start_time)
             if isinstance(do, DoAttempt):
                 try:
-                    result = yield from fn(*args, **kwargs)
+                    result = yield fn(*args, **kwargs)
                     exc_info = None
                     continue
                 except Exception:
@@ -58,6 +56,6 @@ class AsyncRetrying(BaseRetrying):
             elif isinstance(do, DoSleep):
                 result = NO_RESULT
                 exc_info = None
-                yield from self.sleep(do)
+                yield self.sleep(do)
             else:
-                return do
+                raise gen.Return(do)

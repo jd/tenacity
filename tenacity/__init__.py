@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Copyright 2017 Elisey Zanko
 # Copyright 2016 Étienne Bersac
 # Copyright 2016 Julien Danjou
 # Copyright 2016 Joshua Harlow
@@ -21,12 +22,20 @@ try:
 except ImportError:
     asyncio = None
 
-from concurrent import futures
+try:
+    import tornado
+except ImportError:
+    tornado = None
+
 import sys
 import threading
+from concurrent import futures
 
 from monotonic import monotonic as now
+
 import six
+
+from tenacity import _utils
 
 # Import all built-in retry strategies for easier usage.
 from .retry import retry_all  # noqa
@@ -37,6 +46,7 @@ from .retry import retry_if_exception_type  # noqa
 from .retry import retry_if_not_result  # noqa
 from .retry import retry_if_result  # noqa
 from .retry import retry_never  # noqa
+from .retry import retry_unless_exception_type  # noqa
 
 # Import all nap strategies for easier usage.
 from .nap import sleep  # noqa
@@ -54,10 +64,11 @@ from .wait import wait_chain  # noqa
 from .wait import wait_combine  # noqa
 from .wait import wait_exponential  # noqa
 from .wait import wait_fixed  # noqa
-from .wait import wait_full_jitter  # noqa
 from .wait import wait_incrementing  # noqa
 from .wait import wait_none  # noqa
 from .wait import wait_random  # noqa
+from .wait import wait_random_exponential  # noqa
+from .wait import wait_random_exponential as wait_full_jitter  # noqa
 
 # Import all built-in before strategies for easier usage.
 from .before import before_log  # noqa
@@ -67,14 +78,12 @@ from .before import before_nothing  # noqa
 from .after import after_log  # noqa
 from .after import after_nothing  # noqa
 
-from tenacity import _utils
-
 
 def retry(*dargs, **dkw):
-    """Decorator function that wraps + instantiates a ``Retrying`` object.
+    """Wrap a function with a new `Retrying` object.
 
-    @param *dargs: positional arguments passed to Retrying object
-    @param **dkw: keyword arguments passed to the Retrying object
+    :param dargs: positional arguments passed to Retrying object
+    :param dkw: keyword arguments passed to the Retrying object
     """
     # support both @retry and @retry() as valid syntax
     if len(dargs) == 1 and callable(dargs[0]):
@@ -83,6 +92,8 @@ def retry(*dargs, **dkw):
         def wrap(f):
             if asyncio and asyncio.iscoroutinefunction(f):
                 r = AsyncRetrying(*dargs, **dkw)
+            elif tornado and tornado.gen.is_coroutine_function(f):
+                r = TornadoRetrying(*dargs, **dkw)
             else:
                 r = Retrying(*dargs, **dkw)
 
@@ -106,14 +117,19 @@ class DoSleep(float):
     pass
 
 
+_unset = object()
+
+
 class BaseRetrying(object):
 
     def __init__(self,
+                 sleep=sleep,
                  stop=stop_never, wait=wait_none(),
                  retry=retry_if_exception_type(),
                  before=before_nothing,
                  after=after_nothing,
                  reraise=False):
+        self.sleep = sleep
         self.stop = stop
         self.wait = wait
         self.retry = retry
@@ -121,6 +137,19 @@ class BaseRetrying(object):
         self.after = after
         self.reraise = reraise
         self._local = threading.local()
+
+    def copy(self, sleep=_unset, stop=_unset, wait=_unset,
+             retry=_unset, before=_unset, after=_unset, reraise=_unset):
+        """Copy this object with some parameters changed if needed."""
+        return self.__class__(
+            sleep=self.sleep if sleep is _unset else sleep,
+            stop=self.stop if stop is _unset else stop,
+            wait=self.wait if wait is _unset else wait,
+            retry=self.retry if retry is _unset else retry,
+            before=self.before if before is _unset else before,
+            after=self.after if after is _unset else after,
+            reraise=self.reraise if after is _unset else reraise,
+        )
 
     def __repr__(self):
         attrs = dict(
@@ -133,7 +162,7 @@ class BaseRetrying(object):
 
     @property
     def statistics(self):
-        """A dictionary of runtime statistics this controller has gathered.
+        """Return a dictionary of runtime statistics.
 
         This dictionary will be empty when the controller has never been
         ran. When it is running or has ran previously it should have (but
@@ -167,7 +196,13 @@ class BaseRetrying(object):
         @six.wraps(f)
         def wrapped_f(*args, **kw):
             return self.call(f, *args, **kw)
+
+        def retry_with(*args, **kwargs):
+            return self.copy(*args, **kwargs).wraps(f)
+
         wrapped_f.retry = self
+        wrapped_f.retry_with = retry_with
+
         return wrapped_f
 
     def begin(self, fn):
@@ -228,12 +263,6 @@ class BaseRetrying(object):
 class Retrying(BaseRetrying):
     """Retrying controller."""
 
-    def __init__(self,
-                 sleep=sleep,
-                 **kwargs):
-        super(Retrying, self).__init__(**kwargs)
-        self.sleep = sleep
-
     def call(self, fn, *args, **kwargs):
         self.begin(fn)
 
@@ -275,7 +304,7 @@ class Future(futures.Future):
 
     @classmethod
     def construct(cls, attempt_number, value, has_exception):
-        """Helper (for testing) for making these objects easily."""
+        """Construct a new Future object."""
         fut = cls(attempt_number)
         if has_exception:
             fut.set_exception(value)
@@ -301,3 +330,6 @@ class RetryError(Exception):
 
 if asyncio:
     from tenacity.async import AsyncRetrying
+
+if tornado:
+    from tenacity.tornadoweb import TornadoRetrying

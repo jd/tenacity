@@ -67,7 +67,7 @@ def to_ordinal(pos_num):
 
 
 def get_callback_name(cb):
-    """Tries to get a callbacks fully-qualified name.
+    """Get a callback fully-qualified name.
 
     If no name can be produced ``repr(cb)`` is called and returned.
     """

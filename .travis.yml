@@ -2,7 +2,6 @@ language: python
 
 python:
   - 2.7
-  - 3.4
   - 3.5
   - 3.6
   - pypy
@@ -10,3 +9,12 @@ python:
 install: pip install tox tox-travis nose
 
 script: tox
+
+deploy:
+  provider: pypi
+  user: jd
+  password:
+    secure: suzaymA+xzruyHuPiIcPIzWAZviuhe5L00nlHL0tN/zXkfYvxgXAAChI8BSO5bJBgHKXKrBazBUtPel36F62dESION6v6z7JoJEKQixSQCexejwz2eE8RJ3f+D2MB1fqK4IZcbI3HMyyyMJtF149E+iHN4RguLNpgxl24QHYlsZQdeSbmybjrj+su7MOH9BdJAtA1zdOKdljI5CraOlJsRV+MRzleMby2BDmjTJSoPuFFWB2/Z3BvnAo0YyLsWGCEeO0bKnTqPA8GX/Poi3u4I76FaFqHPOfbNxRw+oSFtS09hOkNqt+ePZV9n5gqrg9yp3E1YvJIOoNuvUGKtY4TVEhHHeDdQ1XC/eV4171NhYn+WkcGsvRWTMEgtp5ZL6GvMLwYuoM8DGmfkPHjwtMy1r5ihyHYQwVl2wrxKuUUUsPb2EqfHK7UiGFmS7A0go4yfsUXkEDk1yYGN4KHcYJcfSjTrgXU0dbT8glUe3sJOwX9jeBz3H7e3/zQ89nR1Xm1WMEWnt/47OmqGDvpcxtYipKXFmU3A85KBBFb8yjQvwFx2SrlAa/7Gp3u4niWIQfnl52qOqbh7cAgftDxKqU4w3t4+5sC3VbDbkDMAJAbDgeS+mLc68yX+Q7Yfk9+aLZVKOFJG1SPrQFXDFEeoZ3qej/gAtjsx3YqwCrinfJXNA=
+  on:
+    tags: true
+  distributions: "sdist bdist_wheel"

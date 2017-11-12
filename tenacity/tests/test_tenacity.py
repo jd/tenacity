@@ -13,15 +13,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import six.moves
 import time
 import unittest
 
+import six.moves
+
 import tenacity
-from tenacity import retry
 from tenacity import RetryError
 from tenacity import Retrying
+from tenacity import retry
+
+
+class TestBase(unittest.TestCase):
+    def test_repr(self):
+        repr(tenacity.BaseRetrying())
 
 
 class TestStopConditions(unittest.TestCase):
@@ -213,9 +218,9 @@ class TestWaitConditions(unittest.TestCase):
             self.assertLess(w, 9)
             self.assertGreaterEqual(w, 6)
 
-    def _assert_range(self, wait, min, max):
-        self.assertLess(wait, max)
-        self.assertGreaterEqual(wait, min)
+    def _assert_range(self, wait, min_, max_):
+        self.assertLess(wait, max_)
+        self.assertGreaterEqual(wait, min_)
 
     def _assert_inclusive_range(self, wait, low, high):
         self.assertLessEqual(wait, high)
@@ -236,8 +241,8 @@ class TestWaitConditions(unittest.TestCase):
             else:
                 self._assert_range(w, 8, 9)
 
-    def test_wait_full_jitter(self):
-        fn = tenacity.wait_full_jitter(0.5, 60.0)
+    def test_wait_random_exponential(self):
+        fn = tenacity.wait_random_exponential(0.5, 60.0)
 
         for _ in six.moves.range(1000):
             self._assert_inclusive_range(fn(0, 0), 0, 0.5)
@@ -251,16 +256,16 @@ class TestWaitConditions(unittest.TestCase):
             self._assert_inclusive_range(fn(8, 0), 0, 60.0)
             self._assert_inclusive_range(fn(9, 0), 0, 60.0)
 
-        fn = tenacity.wait_full_jitter(10, 5)
+        fn = tenacity.wait_random_exponential(10, 5)
         for _ in six.moves.range(1000):
             self._assert_inclusive_range(fn(0, 0), 0.00, 5.00)
 
         # Default arguments exist
-        fn = tenacity.wait_full_jitter()
+        fn = tenacity.wait_random_exponential()
         fn(0, 0)
 
-    def test_wait_full_jitter_statistically(self):
-        fn = tenacity.wait_full_jitter(0.5, 60.0)
+    def test_wait_random_exponential_statistically(self):
+        fn = tenacity.wait_random_exponential(0.5, 60.0)
 
         attempt = []
         for i in six.moves.range(10):
@@ -268,14 +273,15 @@ class TestWaitConditions(unittest.TestCase):
                 [fn(i, 0) for _ in six.moves.range(4000)]
             )
 
-        mean = lambda lst: float(sum(lst)) / float(len(lst))
+        def mean(lst):
+            return float(sum(lst)) / float(len(lst))
 
-        self._assert_inclusive_range(mean(attempt[0]),  0.20,  0.30)
-        self._assert_inclusive_range(mean(attempt[1]),  0.35,  0.65)
-        self._assert_inclusive_range(mean(attempt[2]),  0.75,  1.25)
-        self._assert_inclusive_range(mean(attempt[3]),  1.75,  3.25)
-        self._assert_inclusive_range(mean(attempt[4]),  3.50,  5.50)
-        self._assert_inclusive_range(mean(attempt[5]),  7.00,  9.00)
+        self._assert_inclusive_range(mean(attempt[0]), 0.20, 0.30)
+        self._assert_inclusive_range(mean(attempt[1]), 0.35, 0.65)
+        self._assert_inclusive_range(mean(attempt[2]), 0.75, 1.25)
+        self._assert_inclusive_range(mean(attempt[3]), 1.75, 3.25)
+        self._assert_inclusive_range(mean(attempt[4]), 3.50, 5.50)
+        self._assert_inclusive_range(mean(attempt[5]), 7.00, 9.00)
         self._assert_inclusive_range(mean(attempt[6]), 14.00, 18.00)
         self._assert_inclusive_range(mean(attempt[7]), 28.00, 34.00)
         self._assert_inclusive_range(mean(attempt[8]), 28.00, 34.00)
@@ -364,7 +370,7 @@ class TestRetryConditions(unittest.TestCase):
 
 
 class NoneReturnUntilAfterCount(object):
-    "Holds counter state for invoking a method several times in a row."
+    """Holds counter state for invoking a method several times in a row."""
 
     def __init__(self, count):
         self.counter = 0
@@ -382,7 +388,7 @@ class NoneReturnUntilAfterCount(object):
 
 
 class NoIOErrorAfterCount(object):
-    "Holds counter state for invoking a method several times in a row."
+    """Holds counter state for invoking a method several times in a row."""
 
     def __init__(self, count):
         self.counter = 0
@@ -400,7 +406,7 @@ class NoIOErrorAfterCount(object):
 
 
 class NoNameErrorAfterCount(object):
-    "Holds counter state for invoking a method several times in a row."
+    """Holds counter state for invoking a method several times in a row."""
 
     def __init__(self, count):
         self.counter = 0
@@ -409,12 +415,48 @@ class NoNameErrorAfterCount(object):
     def go(self):
         """Raise a NameError until after count threshold has been crossed.
 
-        Tthen return True.
+        Then return True.
         """
         if self.counter < self.count:
             self.counter += 1
             raise NameError("Hi there, I'm a NameError")
         return True
+
+
+class NameErrorUntilCount(object):
+    """Holds counter state for invoking a method several times in a row."""
+
+    def __init__(self, count):
+        self.counter = 0
+        self.count = count
+
+    def go(self):
+        """Return True until after count threshold has been crossed.
+
+        Then raise a NameError.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            return True
+        raise NameError("Hi there, I'm a NameError")
+
+
+class IOErrorUntilCount(object):
+    """Holds counter state for invoking a method several times in a row."""
+
+    def __init__(self, count):
+        self.counter = 0
+        self.count = count
+
+    def go(self):
+        """Return True until after count threshold has been crossed.
+
+        Then raise an IOError.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            return True
+        raise IOError("Hi there, I'm an IOError")
 
 
 class CustomError(Exception):
@@ -436,14 +478,14 @@ class CustomError(Exception):
 
 
 class NoCustomErrorAfterCount(object):
-    "Holds counter state for invoking a method several times in a row."
+    """Holds counter state for invoking a method several times in a row."""
 
     def __init__(self, count):
         self.counter = 0
         self.count = count
 
     def go(self):
-        """Raise a CustomError until after count threshold has been crossed
+        """Raise a CustomError until after count threshold has been crossed.
 
         Then return True.
         """
@@ -482,6 +524,18 @@ def _retryable_test_with_exception_type_io_attempt_limit(thing):
     return thing.go()
 
 
+@retry(retry=tenacity.retry_unless_exception_type(NameError))
+def _retryable_test_with_not_exception_type_name(thing):
+    return thing.go()
+
+
+@retry(
+    stop=tenacity.stop_after_attempt(3),
+    retry=tenacity.retry_unless_exception_type(NameError))
+def _retryable_test_with_not_exception_type_name_attempt_limit(thing):
+    return thing.go()
+
+
 @retry
 def _retryable_default(thing):
     return thing.go()
@@ -511,6 +565,14 @@ class TestDecoratorWrapper(unittest.TestCase):
         result = _retryable_test_with_wait(NoneReturnUntilAfterCount(5))
         t = current_time_ms() - start
         self.assertGreaterEqual(t, 250)
+        self.assertTrue(result)
+
+    def test_retry_with(self):
+        start = current_time_ms()
+        result = _retryable_test_with_wait.retry_with(
+            wait=tenacity.wait_fixed(0.1))(NoneReturnUntilAfterCount(5))
+        t = current_time_ms() - start
+        self.assertGreaterEqual(t, 500)
         self.assertTrue(result)
 
     def test_with_stop_on_return_value(self):
@@ -552,6 +614,27 @@ class TestDecoratorWrapper(unittest.TestCase):
         except NameError as n:
             self.assertTrue(isinstance(n, NameError))
             print(n)
+
+    def test_retry_until_exception_of_type_attempt_number(self):
+        try:
+            self.assertTrue(_retryable_test_with_not_exception_type_name(
+                NameErrorUntilCount(5)))
+        except NameError as e:
+            s = _retryable_test_with_not_exception_type_name.retry.statistics
+            self.assertTrue(s['attempt_number'] == 6)
+            print(e)
+        else:
+            self.fail("Expected NameError")
+
+    def test_retry_until_exception_of_type_wrong_exception(self):
+        try:
+            # two iterations with IOError, one that returns True
+            _retryable_test_with_not_exception_type_name_attempt_limit(
+                IOErrorUntilCount(2))
+            self.fail("Expected RetryError")
+        except RetryError as e:
+            self.assertTrue(isinstance(e, RetryError))
+            print(e)
 
     def test_defaults(self):
         self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))

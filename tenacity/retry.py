@@ -36,6 +36,7 @@ class retry_base(object):
 
 class _retry_never(retry_base):
     """Retry strategy that never rejects any result."""
+
     def __call__(self, attempt):
         return False
 
@@ -45,6 +46,7 @@ retry_never = _retry_never()
 
 class _retry_always(retry_base):
     """Retry strategy that always rejects any result."""
+
     def __call__(self, attempt):
         return True
 
@@ -64,12 +66,27 @@ class retry_if_exception(retry_base):
 
 
 class retry_if_exception_type(retry_if_exception):
-    """Retries if an exception has been raised of a certain type."""
+    """Retries if an exception has been raised of one or more types."""
 
     def __init__(self, exception_types=Exception):
         self.exception_types = exception_types
         super(retry_if_exception_type, self).__init__(
             lambda e: isinstance(e, exception_types))
+
+
+class retry_unless_exception_type(retry_if_exception):
+    """Retries until an exception is raised of one or more types."""
+
+    def __init__(self, exception_types=Exception):
+        self.exception_types = exception_types
+        super(retry_unless_exception_type, self).__init__(
+            lambda e: not isinstance(e, exception_types))
+
+    def __call__(self, attempt):
+        # always retry if no exception was raised
+        if not attempt.failed:
+            return True
+        return self.predicate(attempt.exception())
 
 
 class retry_if_result(retry_base):

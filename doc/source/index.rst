@@ -17,7 +17,7 @@ It originates from `a fork of retrying
 The simplest use case is retrying a flaky function whenever an `Exception`
 occurs until a value is returned.
 
-.. code-block:: python
+.. testcode::
 
     import random
     from tenacity import retry
@@ -31,6 +31,10 @@ occurs until a value is returned.
 
     print(do_something_unreliable())
 
+.. testoutput::
+   :hide:
+
+   Awesome sauce!
 
 Features
 --------
@@ -56,10 +60,18 @@ To install *tenacity*, simply:
 Examples
 ----------
 
+.. testsetup:: *
+
+    import logging
+    from tenacity import *
+
+    class MyException(Exception):
+        pass
+
 As you saw above, the default behavior is to retry forever without waiting when
 an exception is raised.
 
-.. code-block:: python
+.. testcode::
 
     @retry
     def never_give_up_never_surrender():
@@ -69,7 +81,7 @@ an exception is raised.
 Let's be a little less persistent and set some boundaries, such as the number
 of attempts before giving up.
 
-.. code-block:: python
+.. testcode::
 
     @retry(stop=stop_after_attempt(7))
     def stop_after_7_attempts():
@@ -79,7 +91,7 @@ of attempts before giving up.
 We don't have all day, so let's set a boundary for how long we should be
 retrying stuff.
 
-.. code-block:: python
+.. testcode::
 
     @retry(stop=stop_after_delay(10))
     def stop_after_10_s():
@@ -88,7 +100,7 @@ retrying stuff.
 
 You can combine several stop conditions by using the `|` operator:
 
-.. code-block:: python
+.. testcode::
 
     @retry(stop=(stop_after_delay(10) | stop_after_attempt(5)))
     def stop_after_10_s_or_5_retries():
@@ -98,7 +110,7 @@ You can combine several stop conditions by using the `|` operator:
 Most things don't like to be polled as fast as possible, so let's just wait 2
 seconds between retries.
 
-.. code-block:: python
+.. testcode::
 
     @retry(wait=wait_fixed(2))
     def wait_2_s():
@@ -107,7 +119,7 @@ seconds between retries.
 
 Some things perform best with a bit of randomness injected.
 
-.. code-block:: python
+.. testcode::
 
     @retry(wait=wait_random(min=1, max=2))
     def wait_random_1_to_2_s():
@@ -117,7 +129,7 @@ Some things perform best with a bit of randomness injected.
 Then again, it's hard to beat exponential backoff when retrying distributed
 services and other remote endpoints.
 
-.. code-block:: python
+.. testcode::
 
     @retry(wait=wait_exponential(multiplier=1, max=10))
     def wait_exponential_1():
@@ -129,17 +141,27 @@ Then again, it's also hard to beat combining fixed waits and jitter (to
 help avoid thundering herds) when retrying distributed services and other
 remote endpoints.
 
-.. code-block:: python
+.. testcode::
 
     @retry(wait=wait_fixed(3) + wait_random(0, 2))
     def wait_fixed_jitter():
         print("Wait at least 3 seconds, and add up to 2 seconds of random delay")
         raise Exception
 
+When multiple processes are in contention for a shared resource, exponentially
+increasing jitter helps minimise collisions.
+
+.. testcode::
+
+    @retry(wait=wait_random_exponential(multiplier=1, max=60))
+    def wait_exponential_jitter():
+        print("Randomly wait up to 2^x * 1 seconds between each retry until the range reaches 60 seconds, then randomly up to 60 seconds afterwards")
+        raise Exception
+
 
 Sometimes it's necessary to build a chain of backoffs.
 
-.. code-block:: python
+.. testcode::
 
     @retry(wait=wait_chain(*[wait_fixed(3) for i in range(3)] +
                            [wait_fixed(7) for i in range(2)] +
@@ -151,16 +173,16 @@ Sometimes it's necessary to build a chain of backoffs.
 We have a few options for dealing with retries that raise specific or general
 exceptions, as in the cases here.
 
-.. code-block:: python
+.. testcode::
 
     @retry(retry=retry_if_exception_type(IOError))
     def might_io_error():
         print("Retry forever with no wait if an IOError occurs, raise any other errors")
-        retry Exception
+        raise Exception
 
 We can also use the result of the function to alter the behavior of retrying.
 
-.. code-block:: python
+.. testcode::
 
     def is_none_p(value):
         """Return True if value is None"""
@@ -172,7 +194,7 @@ We can also use the result of the function to alter the behavior of retrying.
 
 We can also combine several conditions:
 
-.. code-block:: python
+.. testcode::
 
     def is_none_p(value):
         """Return True if value is None"""
@@ -188,7 +210,7 @@ to mix and match.
 It's also possible to retry explicitly at any time by raising the `TryAgain`
 exception:
 
-.. code-block:: python
+.. testcode::
 
    @retry
    def do_something():
@@ -199,7 +221,7 @@ exception:
 While callables that "timeout" retrying raise a `RetryError` by default,
 we can reraise the last attempt's exception if needed:
 
-.. code-block:: python
+.. testcode::
 
     @retry(reraise=True, stop=stop_after_attempt(3))
     def raise_my_exception():
@@ -209,11 +231,12 @@ we can reraise the last attempt's exception if needed:
         raise_my_exception()
     except MyException:
         # timed out retrying
+        pass
 
 It's possible to execute an action before any attempt of calling the function
 by using the before callback function:
 
-.. code-block:: python
+.. testcode::
 
     logger = logging.getLogger(__name__)
 
@@ -223,7 +246,7 @@ by using the before callback function:
 
 In the same spirit, It's possible to execute after a call that failed:
 
-.. code-block:: python
+.. testcode::
 
     logger = logging.getLogger(__name__)
 
@@ -234,9 +257,9 @@ In the same spirit, It's possible to execute after a call that failed:
 You can access the statistics about the retry made over a function by using the
 `retry` attribute attached to the function and its `statistics` attribute:
 
-.. code-block:: python
+.. testcode::
 
-    @retry(stop=stop_after_attempt(3)
+    @retry(stop=stop_after_attempt(3))
     def raise_my_exception():
         raise MyException("Fail")
 
@@ -247,8 +270,33 @@ You can access the statistics about the retry made over a function by using the
 
     print(raise_my_exception.retry.statistics)
 
+.. testoutput::
+   :hide:
 
-Finally, ``retry`` works also on asyncio coroutines. Sleeps are done
+   ...
+
+You can change the arguments of a retry decorator as needed when calling it by
+using the `retry_with` function attached to the wrapped function:
+
+.. testcode::
+
+    @retry(stop=stop_after_attempt(3))
+    def raise_my_exception():
+        raise MyException("Fail")
+
+    try:
+        raise_my_exception.retry_with(stop=stop_after_attempt(4))()
+    except Exception:
+        pass
+
+    print(raise_my_exception.retry.statistics)
+
+.. testoutput::
+   :hide:
+
+   ...
+
+Finally, ``retry`` works also on asyncio and Tornado coroutines. Sleeps are done
 asynchronously too.
 
 .. code-block:: python
@@ -257,6 +305,12 @@ asynchronously too.
     async def my_async_function(loop):
         await loop.getaddrinfo('8.8.8.8', 53)
 
+.. code-block:: python
+
+    @retry
+    @tornado.gen.coroutine
+    def my_async_function(http_client, url):
+        yield http_client.fetch(url)
 
 Contribute
 ----------
@@ -270,3 +324,4 @@ Contribute
 #. Make the docs better (or more detailed, or more easier to read, or ...)
 
 .. _`the repository`: https://github.com/jd/tenacity
+
