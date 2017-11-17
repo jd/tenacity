@@ -296,8 +296,8 @@ using the `retry_with` function attached to the wrapped function:
 
    ...
 
-Finally, ``retry`` works also on asyncio and Tornado coroutines. Sleeps are done
-asynchronously too.
+Finally, ``retry`` works also on asyncio and Tornado (>= 4.5) coroutines.
+Sleeps are done asynchronously too.
 
 .. code-block:: python
 
