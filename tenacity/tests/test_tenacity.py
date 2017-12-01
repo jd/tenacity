@@ -175,6 +175,24 @@ class TestWaitConditions(unittest.TestCase):
     def test_legacy_explicit_wait_type(self):
         Retrying(wait="exponential_sleep")
 
+    def test_wait_func_result(self):
+        captures = []
+
+        def wait_capture(attempt, delay, last_result=None):
+            captures.append(last_result)
+            return 1
+
+        def dying():
+            raise Exception("Broken")
+
+        r_attempts = 10
+        r = Retrying(wait=wait_capture, sleep=lambda secs: None,
+                     stop=tenacity.stop_after_attempt(r_attempts),
+                     reraise=True)
+        self.assertRaises(Exception, r.call, dying)
+        self.assertEqual(r_attempts - 1, len(captures))
+        self.assertTrue(all([r.failed for r in captures]))
+
     def test_wait_func(self):
         r = Retrying(wait=lambda attempt, delay: attempt * delay)
         self.assertEqual(r.wait(1, 5), 5)
