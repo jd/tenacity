@@ -27,6 +27,7 @@ try:
 except ImportError:
     tornado = None
 
+import inspect
 import sys
 import threading
 from concurrent import futures
@@ -36,6 +37,7 @@ from monotonic import monotonic as now
 import six
 
 from tenacity import _utils
+from tenacity import wait as _wait
 
 # Import all built-in retry strategies for easier usage.
 from .retry import retry_all  # noqa
@@ -138,6 +140,10 @@ class BaseRetrying(object):
         self.after = after
         self.reraise = reraise
         self._local = threading.local()
+        # This will allow for passing in the result and handling
+        # the older versions of these functions that do not take
+        # the prior result.
+        self._wait_takes_result = self._waiter_takes_last_result(wait)
 
     def copy(self, sleep=_unset, stop=_unset, wait=_unset,
              retry=_unset, before=_unset, after=_unset, reraise=_unset):
@@ -151,6 +157,15 @@ class BaseRetrying(object):
             after=self.after if after is _unset else after,
             reraise=self.reraise if after is _unset else reraise,
         )
+
+    @staticmethod
+    def _waiter_takes_last_result(waiter):
+        if not six.callable(waiter):
+            return False
+        if isinstance(waiter, _wait.wait_base):
+            waiter = waiter.__call__
+        waiter_spec = inspect.getargspec(waiter)
+        return 'last_result' in waiter_spec.args
 
     def __repr__(self):
         attrs = dict(
@@ -251,8 +266,12 @@ class BaseRetrying(object):
             six.raise_from(RetryError(fut), fut.exception())
 
         if self.wait:
-            sleep = self.wait(self.statistics['attempt_number'],
-                              delay_since_first_attempt)
+            if self._wait_takes_result:
+                sleep = self.wait(self.statistics['attempt_number'],
+                                  delay_since_first_attempt, last_result=fut)
+            else:
+                sleep = self.wait(self.statistics['attempt_number'],
+                                  delay_since_first_attempt)
         else:
             sleep = 0
         self.statistics['idle_for'] += sleep

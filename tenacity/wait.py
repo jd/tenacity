@@ -27,7 +27,8 @@ class wait_base(object):
     """Abstract base class for wait strategies."""
 
     @abc.abstractmethod
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt,
+                 last_result=None):
         pass
 
     def __add__(self, other):
@@ -46,7 +47,8 @@ class wait_fixed(wait_base):
     def __init__(self, wait):
         self.wait_fixed = wait
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt,
+                 last_result=None):
         return self.wait_fixed
 
 
@@ -64,7 +66,8 @@ class wait_random(wait_base):
         self.wait_random_min = min
         self.wait_random_max = max
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt,
+                 last_result=None):
         return (self.wait_random_min +
                 (random.random() *
                  (self.wait_random_max - self.wait_random_min)))
@@ -76,7 +79,8 @@ class wait_combine(wait_base):
     def __init__(self, *strategies):
         self.wait_funcs = strategies
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt,
+                 last_result=None):
         return sum(map(
             lambda x: x(previous_attempt_number, delay_since_first_attempt),
             self.wait_funcs))
@@ -101,7 +105,8 @@ class wait_chain(wait_base):
     def __init__(self, *strategies):
         self.strategies = list(strategies)
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt,
+                 last_result=None):
         wait_func = self.strategies[0]
         if len(self.strategies) > 1:
             self.strategies.pop(0)
@@ -120,7 +125,8 @@ class wait_incrementing(wait_base):
         self.increment = increment
         self.max = max
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt,
+                 last_result=None):
         result = self.start + (
             self.increment * (previous_attempt_number - 1)
         )
@@ -145,7 +151,8 @@ class wait_exponential(wait_base):
         self.max = max
         self.exp_base = exp_base
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt,
+                 last_result=None):
         try:
             exp = self.exp_base ** previous_attempt_number
             result = self.multiplier * exp
@@ -179,7 +186,8 @@ class wait_random_exponential(wait_exponential):
     wait_exponential strategy (which uses a fixed interval) may be preferable.
     """
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+    def __call__(self, previous_attempt_number, delay_since_first_attempt,
+                 last_result=None):
         high = super(wait_random_exponential, self).__call__(
             previous_attempt_number, delay_since_first_attempt)
         return random.uniform(0, high)
