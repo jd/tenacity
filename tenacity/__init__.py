@@ -123,6 +123,21 @@ class DoSleep(float):
 _unset = object()
 
 
+class RetryError(Exception):
+    """Encapsulates the last attempt instance right before giving up."""
+
+    def __init__(self, last_attempt):
+        self.last_attempt = last_attempt
+
+    def reraise(self):
+        if self.last_attempt.failed:
+            raise self.last_attempt.result()
+        raise self
+
+    def __str__(self):
+        return "{0}[{1}]".format(self.__class__.__name__, self.last_attempt)
+
+
 class BaseRetrying(object):
 
     def __init__(self,
@@ -131,7 +146,8 @@ class BaseRetrying(object):
                  retry=retry_if_exception_type(),
                  before=before_nothing,
                  after=after_nothing,
-                 reraise=False):
+                 reraise=False,
+                 retry_error_cls=RetryError):
         self.sleep = sleep
         self.stop = stop
         self.wait = wait
@@ -144,6 +160,7 @@ class BaseRetrying(object):
         # the older versions of these functions that do not take
         # the prior result.
         self._wait_takes_result = self._waiter_takes_last_result(wait)
+        self.retry_error_cls = retry_error_cls
 
     def copy(self, sleep=_unset, stop=_unset, wait=_unset,
              retry=_unset, before=_unset, after=_unset, reraise=_unset):
@@ -261,9 +278,10 @@ class BaseRetrying(object):
             delay_since_first_attempt
         if self.stop(self.statistics['attempt_number'],
                      delay_since_first_attempt):
+            retry_exc = self.retry_error_cls(fut)
             if self.reraise:
-                raise RetryError(fut).reraise()
-            six.raise_from(RetryError(fut), fut.exception())
+                raise retry_exc.reraise()
+            six.raise_from(retry_exc, fut.exception())
 
         if self.wait:
             if self._wait_takes_result:
@@ -331,21 +349,6 @@ class Future(futures.Future):
         else:
             fut.set_result(value)
         return fut
-
-
-class RetryError(Exception):
-    """Encapsulates the last attempt instance right before giving up."""
-
-    def __init__(self, last_attempt):
-        self.last_attempt = last_attempt
-
-    def reraise(self):
-        if self.last_attempt.failed:
-            raise self.last_attempt.result()
-        raise self
-
-    def __str__(self):
-        return "RetryError[{0}]".format(self.last_attempt)
 
 
 if asyncio:
