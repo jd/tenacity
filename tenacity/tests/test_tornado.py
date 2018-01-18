@@ -41,6 +41,19 @@ class TestTornado(testing.AsyncTestCase):
     def test_repr(self):
         repr(tornadoweb.TornadoRetrying())
 
+    def test_old_tornado(self):
+        old_attr = gen.is_coroutine_function
+        try:
+            del gen.is_coroutine_function
+
+            # is_coroutine_function was introduced in tornado 4.5;
+            # verify that we don't *completely* fall over on old versions
+            @retry
+            def retryable(thing):
+                pass
+        finally:
+            gen.is_coroutine_function = old_attr
+
 
 if __name__ == '__main__':
     unittest.main()
