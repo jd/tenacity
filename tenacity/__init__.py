@@ -95,7 +95,8 @@ def retry(*dargs, **dkw):
         def wrap(f):
             if asyncio and asyncio.iscoroutinefunction(f):
                 r = AsyncRetrying(*dargs, **dkw)
-            elif tornado and tornado.gen.is_coroutine_function(f):
+            elif tornado and hasattr(tornado.gen, 'is_coroutine_function') \
+                    and tornado.gen.is_coroutine_function(f):
                 r = TornadoRetrying(*dargs, **dkw)
             else:
                 r = Retrying(*dargs, **dkw)
