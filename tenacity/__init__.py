@@ -27,7 +27,6 @@ try:
 except ImportError:
     tornado = None
 
-import inspect
 import sys
 import threading
 from concurrent import futures
@@ -182,7 +181,7 @@ class BaseRetrying(object):
             return False
         if isinstance(waiter, _wait.wait_base):
             waiter = waiter.__call__
-        waiter_spec = inspect.getargspec(waiter)
+        waiter_spec = _utils.getargspec(waiter)
         return 'last_result' in waiter_spec.args
 
     def __repr__(self):
