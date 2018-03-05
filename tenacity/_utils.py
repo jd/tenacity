@@ -31,9 +31,16 @@ if six.PY2:
         # TODO(harlowja): delete this in future, since its
         # has to repeatedly calculate this crap.
         fut.set_exception_info(tb[1], tb[2])
+
+    def getargspec(func):
+        # This was deprecated in Python 3.
+        return inspect.getargspec(func)
 else:
     def capture(fut, tb):
         fut.set_exception(tb[1])
+
+    def getargspec(func):
+        return inspect.getfullargspec(func)
 
 
 def visible_attrs(obj, attrs=None):
