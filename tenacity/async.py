@@ -31,9 +31,11 @@ class AsyncRetrying(BaseRetrying):
 
     def __init__(self,
                  sleep=asyncio.sleep,
+                 loop=None,
                  **kwargs):
         super(AsyncRetrying, self).__init__(**kwargs)
         self.sleep = sleep
+        self.loop = loop
 
     @asyncio.coroutine
     def call(self, fn, *args, **kwargs):
@@ -58,6 +60,6 @@ class AsyncRetrying(BaseRetrying):
             elif isinstance(do, DoSleep):
                 result = NO_RESULT
                 exc_info = None
-                yield from self.sleep(do)
+                yield from self.sleep(do, loop=self.loop)
             else:
                 return do
