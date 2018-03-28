@@ -311,6 +311,12 @@ Sleeps are done asynchronously too.
     @tornado.gen.coroutine
     def my_async_function(http_client, url):
         yield http_client.fetch(url)
+        
+You can even use alternative event loops such as `curio` or `Trio` by passing the correct sleep function:
+
+    @retry(sleep=trio.sleep)
+    async def my_async_function(loop):
+        await asks.get('https://example.org')
 
 Contribute
 ----------
