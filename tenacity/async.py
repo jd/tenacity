@@ -50,7 +50,7 @@ class AsyncRetrying(BaseRetrying):
                     result = yield from fn(*args, **kwargs)
                     exc_info = None
                     continue
-                except Exception:
+                except BaseException:
                     result = NO_RESULT
                     exc_info = sys.exc_info()
                     continue

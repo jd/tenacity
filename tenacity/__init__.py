@@ -315,7 +315,7 @@ class Retrying(BaseRetrying):
                 try:
                     result = fn(*args, **kwargs)
                     continue
-                except Exception:
+                except BaseException:
                     exc_info = sys.exc_info()
                     continue
             elif isinstance(do, DoSleep):
