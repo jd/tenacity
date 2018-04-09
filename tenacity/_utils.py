@@ -108,6 +108,6 @@ def get_callback_name(cb):
 
 
 try:
-    now = time.monotonic
+    now = time.monotonic  # noqa
 except AttributeError:
-    from monotonic import monotonic as now
+    from monotonic import monotonic as now  # noqa

@@ -15,11 +15,11 @@
 
 import sys
 
-from tenacity import _utils
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import NO_RESULT
+from tenacity import _utils
 
 from tornado import gen
 

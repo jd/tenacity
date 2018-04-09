@@ -243,7 +243,7 @@ class BaseRetrying(object):
         self.statistics['attempt_number'] = 1
         self.statistics['idle_for'] = 0
 
-    def iter(self, result, exc_info, start_time):
+    def iter(self, result, exc_info, start_time):  # noqa
         fut = Future(self.statistics['attempt_number'])
         if result is not NO_RESULT:
             trial_end_time = _utils.now()
@@ -271,7 +271,9 @@ class BaseRetrying(object):
             self.after(self.fn, self.statistics['attempt_number'],
                        trial_time_taken)
 
-        delay_since_first_attempt = _utils.now() - self.statistics['start_time']
+        delay_since_first_attempt = (
+            _utils.now() - self.statistics['start_time']
+        )
         self.statistics['delay_since_first_attempt'] = \
             delay_since_first_attempt
         if self.stop(self.statistics['attempt_number'],
