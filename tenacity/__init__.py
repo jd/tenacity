@@ -31,8 +31,6 @@ import sys
 import threading
 from concurrent import futures
 
-from monotonic import monotonic as now
-
 import six
 
 from tenacity import _utils
@@ -241,18 +239,18 @@ class BaseRetrying(object):
     def begin(self, fn):
         self.fn = fn
         self.statistics.clear()
-        self.statistics['start_time'] = now()
+        self.statistics['start_time'] = _utils.now()
         self.statistics['attempt_number'] = 1
         self.statistics['idle_for'] = 0
 
     def iter(self, result, exc_info, start_time):
         fut = Future(self.statistics['attempt_number'])
         if result is not NO_RESULT:
-            trial_end_time = now()
+            trial_end_time = _utils.now()
             fut.set_result(result)
             retry = self.retry(fut)
         elif exc_info:
-            trial_end_time = now()
+            trial_end_time = _utils.now()
             t, e, tb = exc_info
             _utils.capture(fut, exc_info)
             if isinstance(e, TryAgain):
@@ -273,7 +271,7 @@ class BaseRetrying(object):
             self.after(self.fn, self.statistics['attempt_number'],
                        trial_time_taken)
 
-        delay_since_first_attempt = now() - self.statistics['start_time']
+        delay_since_first_attempt = _utils.now() - self.statistics['start_time']
         self.statistics['delay_since_first_attempt'] = \
             delay_since_first_attempt
         if self.stop(self.statistics['attempt_number'],
@@ -306,7 +304,7 @@ class Retrying(BaseRetrying):
 
         result = NO_RESULT
         exc_info = None
-        start_time = now()
+        start_time = _utils.now()
 
         while True:
             do = self.iter(result=result, exc_info=exc_info,

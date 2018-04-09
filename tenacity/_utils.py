@@ -16,6 +16,7 @@
 
 import inspect
 import sys
+import time
 
 import six
 
@@ -104,3 +105,9 @@ def get_callback_name(cb):
         except AttributeError:
             pass
         return ".".join(segments)
+
+
+try:
+    now = time.monotonic
+except AttributeError:
+    from monotonic import monotonic as now
