@@ -314,6 +314,8 @@ Sleeps are done asynchronously too.
         
 You can even use alternative event loops such as `curio` or `Trio` by passing the correct sleep function:
 
+.. code-block:: python
+
     @retry(sleep=trio.sleep)
     async def my_async_function(loop):
         await asks.get('https://example.org')
