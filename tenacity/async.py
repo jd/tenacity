@@ -19,12 +19,11 @@
 import asyncio
 import sys
 
-from monotonic import monotonic as now
-
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import NO_RESULT
+from tenacity import _utils
 
 
 class AsyncRetrying(BaseRetrying):
@@ -41,7 +40,7 @@ class AsyncRetrying(BaseRetrying):
 
         result = NO_RESULT
         exc_info = None
-        start_time = now()
+        start_time = _utils.now()
 
         while True:
             do = self.iter(result=result, exc_info=exc_info,
@@ -51,7 +50,7 @@ class AsyncRetrying(BaseRetrying):
                     result = yield from fn(*args, **kwargs)
                     exc_info = None
                     continue
-                except Exception:
+                except BaseException:
                     result = NO_RESULT
                     exc_info = sys.exc_info()
                     continue
