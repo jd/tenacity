@@ -18,7 +18,7 @@ import unittest
 
 import six
 
-from tenacity import async
+from tenacity import _asyncio as tasyncio
 from tenacity import retry
 from tenacity.tests.test_tenacity import NoIOErrorAfterCount
 
@@ -50,7 +50,7 @@ class TestAsync(unittest.TestCase):
         assert thing.counter == thing.count
 
     def test_repr(self):
-        repr(async.AsyncRetrying())
+        repr(tasyncio.AsyncRetrying())
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+# Copyright 2016-2018 Julien Danjou
 # Copyright 2017 Elisey Zanko
 # Copyright 2016 Étienne Bersac
-# Copyright 2016 Julien Danjou
 # Copyright 2016 Joshua Harlow
 # Copyright 2013-2014 Ray Holder
 #
@@ -352,7 +352,7 @@ class Future(futures.Future):
 
 
 if asyncio:
-    from tenacity.async import AsyncRetrying
+    from tenacity._asyncio import AsyncRetrying
 
 if tornado:
     from tenacity.tornadoweb import TornadoRetrying
