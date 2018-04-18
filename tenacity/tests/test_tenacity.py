@@ -720,6 +720,27 @@ class TestBeforeAfterAttempts(unittest.TestCase):
 
         self.assertTrue(TestBeforeAfterAttempts._attempt_number is 2)
 
+    def test_before_sleep(self):
+        TestBeforeAfterAttempts._attempt_number = 0
+
+        def _before_sleep(retry_obj, sleep, last_result):
+            self.assertGreater(sleep, 0)
+            TestBeforeAfterAttempts._attempt_number = \
+                retry_obj.statistics['attempt_number']
+
+        @retry(wait=tenacity.wait_fixed(0.1),
+               stop=tenacity.stop_after_attempt(3),
+               before_sleep=_before_sleep)
+        def _test_before_sleep():
+            if TestBeforeAfterAttempts._attempt_number < 2:
+                raise Exception("testing before_sleep_attempts handler")
+            else:
+                pass
+
+        _test_before_sleep()
+
+        self.assertTrue(TestBeforeAfterAttempts._attempt_number is 2)
+
 
 class TestReraiseExceptions(unittest.TestCase):
 

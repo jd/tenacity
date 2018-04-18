@@ -78,6 +78,10 @@ from .before import before_nothing  # noqa
 from .after import after_log  # noqa
 from .after import after_nothing  # noqa
 
+# Import all built-in after strategies for easier usage.
+from .before_sleep import before_sleep_log  # noqa
+from .before_sleep import before_sleep_nothing  # noqa
+
 
 def retry(*dargs, **dkw):
     """Wrap a function with a new `Retrying` object.
@@ -144,6 +148,7 @@ class BaseRetrying(object):
                  retry=retry_if_exception_type(),
                  before=before_nothing,
                  after=after_nothing,
+                 before_sleep=before_sleep_nothing,
                  reraise=False,
                  retry_error_cls=RetryError):
         self.sleep = sleep
@@ -152,6 +157,7 @@ class BaseRetrying(object):
         self.retry = retry
         self.before = before
         self.after = after
+        self.before_sleep = before_sleep
         self.reraise = reraise
         self._local = threading.local()
         # This will allow for passing in the result and handling
@@ -161,8 +167,11 @@ class BaseRetrying(object):
         self.retry_error_cls = retry_error_cls
 
     def copy(self, sleep=_unset, stop=_unset, wait=_unset,
-             retry=_unset, before=_unset, after=_unset, reraise=_unset):
+             retry=_unset, before=_unset, after=_unset, before_sleep=_unset,
+             reraise=_unset):
         """Copy this object with some parameters changed if needed."""
+        if before_sleep is _unset:
+            before_sleep = self.before_sleep
         return self.__class__(
             sleep=self.sleep if sleep is _unset else sleep,
             stop=self.stop if stop is _unset else stop,
@@ -170,6 +179,7 @@ class BaseRetrying(object):
             retry=self.retry if retry is _unset else retry,
             before=self.before if before is _unset else before,
             after=self.after if after is _unset else after,
+            before_sleep=before_sleep,
             reraise=self.reraise if after is _unset else reraise,
         )
 
@@ -294,6 +304,9 @@ class BaseRetrying(object):
             sleep = 0
         self.statistics['idle_for'] += sleep
         self.statistics['attempt_number'] += 1
+
+        if self.before_sleep is not None:
+            self.before_sleep(self, sleep=sleep, last_result=fut)
 
         return DoSleep(sleep)
 
