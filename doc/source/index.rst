@@ -254,6 +254,25 @@ In the same spirit, It's possible to execute after a call that failed:
     def raise_my_exception():
         raise MyException("Fail")
 
+Similarly, you can call a custom callback function after all retries failed, without raising an exception (or you can re-raise or do anything really)
+
+.. testcode::
+
+    def return_last_value(last_attempt):
+        """return the result of the last call attempt"""
+        return last_attempt.result()
+
+    def is_false(value):
+        """Return True if value is False"""
+        return value is False
+
+    # will return False after trying 3 times to get a different result
+    @retry(stop=stop_after_attempt(3),
+           retry_error_callback=return_last_value,
+           retry=retry_if_result(is_false))
+    def eventually_return_false():
+        return False
+
 You can access the statistics about the retry made over a function by using the
 `retry` attribute attached to the function and its `statistics` attribute:
 

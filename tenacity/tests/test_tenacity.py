@@ -831,5 +831,31 @@ class TestStatistics(unittest.TestCase):
         self.assertEqual(2, _foobar.retry.statistics['attempt_number'])
 
 
+class TestRetryErrorCallback(unittest.TestCase):
+
+    def setUp(self):
+        self._attempt_number = 0
+        self._callback_called = False
+
+    def _callback(self, fut):
+        self._callback_called = True
+        return fut
+
+    def test_retry_error_callback(self):
+        num_attempts = 3
+
+        @retry(stop=tenacity.stop_after_attempt(num_attempts),
+               retry_error_callback=self._callback)
+        def _foobar():
+            self._attempt_number += 1
+            raise Exception("This exception should not be raised")
+
+        result = _foobar()
+
+        self.assertTrue(self._callback_called)
+        self.assertEqual(num_attempts, self._attempt_number)
+        self.assertIsInstance(result, tenacity.Future)
+
+
 if __name__ == '__main__':
     unittest.main()

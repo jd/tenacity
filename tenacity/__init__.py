@@ -150,7 +150,8 @@ class BaseRetrying(object):
                  after=after_nothing,
                  before_sleep=before_sleep_nothing,
                  reraise=False,
-                 retry_error_cls=RetryError):
+                 retry_error_cls=RetryError,
+                 retry_error_callback=None):
         self.sleep = sleep
         self.stop = stop
         self.wait = wait
@@ -165,6 +166,7 @@ class BaseRetrying(object):
         # the prior result.
         self._wait_takes_result = self._waiter_takes_last_result(wait)
         self.retry_error_cls = retry_error_cls
+        self.retry_error_callback = retry_error_callback
 
     def copy(self, sleep=_unset, stop=_unset, wait=_unset,
              retry=_unset, before=_unset, after=_unset, before_sleep=_unset,
@@ -288,6 +290,8 @@ class BaseRetrying(object):
             delay_since_first_attempt
         if self.stop(self.statistics['attempt_number'],
                      delay_since_first_attempt):
+            if self.retry_error_callback:
+                return self.retry_error_callback(fut)
             retry_exc = self.retry_error_cls(fut)
             if self.reraise:
                 raise retry_exc.reraise()
