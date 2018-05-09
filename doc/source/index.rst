@@ -60,6 +60,9 @@ To install *tenacity*, simply:
 Examples
 ----------
 
+Basic Retry
+~~~~~~~~~~~
+
 .. testsetup:: *
 
     import logging
@@ -77,6 +80,9 @@ an exception is raised.
     def never_give_up_never_surrender():
         print("Retry forever ignoring Exceptions, don't wait between retries")
         raise Exception
+
+Stopping
+~~~~~~~~
 
 Let's be a little less persistent and set some boundaries, such as the number
 of attempts before giving up.
@@ -106,6 +112,9 @@ You can combine several stop conditions by using the `|` operator:
     def stop_after_10_s_or_5_retries():
         print("Stopping after 10 seconds or 5 retries")
         raise Exception
+
+Waiting before retrying
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Most things don't like to be polled as fast as possible, so let's just wait 2
 seconds between retries.
@@ -170,6 +179,9 @@ Sometimes it's necessary to build a chain of backoffs.
         print("Wait 3s for 3 attempts, 7s for the next 2 attempts and 9s for all attempts thereafter")
         raise Exception
 
+Whether to retry
+~~~~~~~~~~~~~~~~
+
 We have a few options for dealing with retries that raise specific or general
 exceptions, as in the cases here.
 
@@ -217,6 +229,9 @@ exception:
        result = something_else()
        if result == 23:
           raise TryAgain
+
+Other
+~~~~~
 
 While callables that "timeout" retrying raise a `RetryError` by default,
 we can reraise the last attempt's exception if needed:
@@ -314,6 +329,9 @@ using the `retry_with` function attached to the wrapped function:
    :hide:
 
    ...
+
+Async and retry
+~~~~~~~~~~~~~~~
 
 Finally, ``retry`` works also on asyncio and Tornado (>= 4.5) coroutines.
 Sleeps are done asynchronously too.
