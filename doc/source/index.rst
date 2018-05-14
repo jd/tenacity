@@ -230,8 +230,8 @@ exception:
        if result == 23:
           raise TryAgain
 
-Other
-~~~~~
+Error Handling
+~~~~~~~~~~~~~~
 
 While callables that "timeout" retrying raise a `RetryError` by default,
 we can reraise the last attempt's exception if needed:
@@ -247,6 +247,9 @@ we can reraise the last attempt's exception if needed:
     except MyException:
         # timed out retrying
         pass
+
+Before and After Retry, and Logging
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It's possible to execute an action before any attempt of calling the function
 by using the before callback function:
@@ -309,6 +312,9 @@ You can access the statistics about the retry made over a function by using the
 
    ...
 
+Changing Arguments at Run Time
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 You can change the arguments of a retry decorator as needed when calling it by
 using the `retry_with` function attached to the wrapped function:
 
@@ -330,6 +336,18 @@ using the `retry_with` function attached to the wrapped function:
 
    ...
 
+If you want to use variables to set up the retry parameters, you don't have
+to use the `retry` decorator - you can instead use `Retrying` directly:
+
+.. testcode::
+
+    def never_good_enough(arg1):
+        raise Exception('Invalid argument: {}'.format(arg1))
+
+    def try_never_good_enough(max_attempts=3):
+        retryer = Retrying(stop=stop_after_attempt(max_attempts), reraise=True)
+        retryer(never_good_enough, 'I really do try')
+
 Async and retry
 ~~~~~~~~~~~~~~~
 
@@ -348,7 +366,7 @@ Sleeps are done asynchronously too.
     @tornado.gen.coroutine
     def my_async_function(http_client, url):
         yield http_client.fetch(url)
-        
+
 You can even use alternative event loops such as `curio` or `Trio` by passing the correct sleep function:
 
 .. code-block:: python
