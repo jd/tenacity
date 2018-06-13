@@ -17,6 +17,7 @@
 import inspect
 import sys
 import time
+from functools import update_wrapper
 
 import six
 
@@ -111,3 +112,23 @@ try:
     now = time.monotonic  # noqa
 except AttributeError:
     from monotonic import monotonic as now  # noqa
+
+
+class cached_property(object):
+    """A property that is computed once per instance.
+
+    Upon being computed it replaces itself with an ordinary attribute. Deleting
+    the attribute resets the property.
+
+    Source: https://github.com/bottlepy/bottle/blob/1de24157e74a6971d136550afe1b63eec5b0df2b/bottle.py#L234-L246
+    """  # noqa: E501
+
+    def __init__(self, func):
+        update_wrapper(self, func)
+        self.func = func
+
+    def __get__(self, obj, cls):
+        if obj is None:
+            return self
+        value = obj.__dict__[self.func.__name__] = self.func(obj)
+        return value
