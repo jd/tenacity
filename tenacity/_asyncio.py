@@ -37,7 +37,8 @@ class AsyncRetrying(BaseRetrying):
     def call(self, fn, *args, **kwargs):
         self.begin(fn)
 
-        call_state = RetryCallState(fn=fn, args=args, kwargs=kwargs)
+        call_state = RetryCallState(
+            retry_object=self, fn=fn, args=args, kwargs=kwargs)
         while True:
             do = self.iter(call_state=call_state)
             if isinstance(do, DoAttempt):

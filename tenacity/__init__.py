@@ -122,6 +122,35 @@ class DoSleep(float):
     pass
 
 
+class BaseAction(object):
+    """Base class for representing actions to take by retry object.
+
+    Concrete implementations must define:
+    - __init__: to initialize all necessary fields
+    - REPR_ATTRS: class variable specifying attributes to include in repr(self)
+    - NAME: for identification in retry object methods and callbacks
+    """
+
+    REPR_FIELDS = ()
+    NAME = None
+
+    def __repr__(self):
+        state_str = ', '.join('%s=%r' % (field, getattr(self, field))
+                              for field in self.REPR_FIELDS)
+        return '%s(%s)' % (type(self).__name__, state_str)
+
+    def __str__(self):
+        return repr(self)
+
+
+class RetryAction(BaseAction):
+    REPR_FIELDS = ('sleep',)
+    NAME = 'retry'
+
+    def __init__(self, sleep):
+        self.sleep = float(sleep)
+
+
 _unset = object()
 
 
@@ -275,7 +304,8 @@ class BaseRetrying(object):
         if self.wait:
             sleep = self.wait(call_state=call_state)
         else:
-            sleep = 0
+            sleep = 0.0
+        call_state.next_action = RetryAction(sleep)
         call_state.idle_for += sleep
         self.statistics['idle_for'] += sleep
         self.statistics['attempt_number'] += 1
@@ -292,7 +322,8 @@ class Retrying(BaseRetrying):
     def call(self, fn, *args, **kwargs):
         self.begin(fn)
 
-        call_state = RetryCallState(fn=fn, args=args, kwargs=kwargs)
+        call_state = RetryCallState(
+            retry_object=self, fn=fn, args=args, kwargs=kwargs)
         while True:
             do = self.iter(call_state=call_state)
             if isinstance(do, DoAttempt):
@@ -337,8 +368,9 @@ class Future(futures.Future):
 class RetryCallState(object):
     """State related to a single call wrapped with Retrying."""
 
-    def __init__(self, fn, args, kwargs):
+    def __init__(self, retry_object, fn, args, kwargs):
         self.start_time = _utils.now()
+        self.retry_object = retry_object
         self.fn = fn
         self.args = args
         self.kwargs = kwargs
@@ -347,6 +379,7 @@ class RetryCallState(object):
         self.outcome = None
         self.outcome_timestamp = None
         self.attempt_number = 1
+        self.next_action = None
 
     @property
     def seconds_since_start(self):
@@ -358,6 +391,7 @@ class RetryCallState(object):
         self.outcome = None
         self.outcome_timestamp = None
         self.attempt_number += 1
+        self.next_action = None
 
     def set_result(self, val):
         ts = _utils.now()

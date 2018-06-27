@@ -39,7 +39,7 @@ def _make_wait_call_state(previous_attempt_number, delay_since_first_attempt,
         raise TypeError('wait func missing parameters: ' + missing_str)
 
     from tenacity import RetryCallState
-    call_state = RetryCallState(None, (), {})
+    call_state = RetryCallState(None, None, (), {})
     call_state.attempt_number = previous_attempt_number
     call_state.outcome_timestamp = (
         call_state.start_time + delay_since_first_attempt)
