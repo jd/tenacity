@@ -34,6 +34,7 @@ from concurrent import futures
 import six
 
 from tenacity import _utils
+from tenacity import before_sleep as _before_sleep
 from tenacity import wait as _wait
 
 # Import all built-in retry strategies for easier usage.
@@ -177,7 +178,7 @@ class BaseRetrying(object):
                  retry=retry_if_exception_type(),
                  before=before_nothing,
                  after=after_nothing,
-                 before_sleep=before_sleep_nothing,
+                 before_sleep=None,
                  reraise=False,
                  retry_error_cls=RetryError,
                  retry_error_callback=None):
@@ -187,7 +188,7 @@ class BaseRetrying(object):
         self.retry = retry
         self.before = before
         self.after = after
-        self.before_sleep = before_sleep
+        self._before_sleep = before_sleep
         self.reraise = reraise
         self._local = threading.local()
         self.retry_error_cls = retry_error_cls
@@ -196,6 +197,11 @@ class BaseRetrying(object):
     @_utils.cached_property
     def wait(self):
         return _wait._wait_func_accept_call_state(self._wait)
+
+    @_utils.cached_property
+    def before_sleep(self):
+        return _before_sleep._before_sleep_func_accept_call_state(
+            self._before_sleep)
 
     def copy(self, sleep=_unset, stop=_unset, wait=_unset,
              retry=_unset, before=_unset, after=_unset, before_sleep=_unset,
@@ -311,7 +317,7 @@ class BaseRetrying(object):
         self.statistics['attempt_number'] += 1
 
         if self.before_sleep is not None:
-            self.before_sleep(self, sleep=sleep, last_result=fut)
+            self.before_sleep(call_state=call_state)
 
         return DoSleep(sleep)
 

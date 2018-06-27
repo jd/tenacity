@@ -233,15 +233,6 @@ class wait_random_exponential(wait_exponential):
         return random.uniform(0, high)
 
 
-def _func_takes_call_state(func):
-    if not six.callable(func):
-        return False
-    if isinstance(func, wait_base):
-        func = func.__call__
-    func_spec = _utils.getargspec(func)
-    return 'call_state' in func_spec.args
-
-
 def _func_takes_last_result(waiter):
     if not six.callable(waiter):
         return False
@@ -255,7 +246,7 @@ def _wait_func_accept_call_state(wait_func):
     if not six.callable(wait_func):
         return wait_func
 
-    takes_call_state = _func_takes_call_state(wait_func)
+    takes_call_state = _utils._func_takes_call_state(wait_func)
     if takes_call_state:
         return wait_func
 
