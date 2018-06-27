@@ -22,6 +22,7 @@ import tenacity
 from tenacity import RetryError
 from tenacity import Retrying
 from tenacity import retry
+from tenacity.wait import _make_wait_call_state
 
 
 class TestBase(unittest.TestCase):
@@ -195,9 +196,9 @@ class TestWaitConditions(unittest.TestCase):
 
     def test_wait_func(self):
         r = Retrying(wait=lambda attempt, delay: attempt * delay)
-        self.assertEqual(r.wait(1, 5), 5)
-        self.assertEqual(r.wait(2, 11), 22)
-        self.assertEqual(r.wait(10, 100), 1000)
+        self.assertEqual(r.wait(_make_wait_call_state(1, 5)), 5)
+        self.assertEqual(r.wait(_make_wait_call_state(2, 11)), 22)
+        self.assertEqual(r.wait(_make_wait_call_state(10, 100)), 1000)
 
     def test_wait_combine(self):
         r = Retrying(wait=tenacity.wait_combine(tenacity.wait_random(0, 3),
@@ -304,6 +305,91 @@ class TestWaitConditions(unittest.TestCase):
         self._assert_inclusive_range(mean(attempt[7]), 28.00, 34.00)
         self._assert_inclusive_range(mean(attempt[8]), 28.00, 34.00)
         self._assert_inclusive_range(mean(attempt[9]), 28.00, 34.00)
+
+    def test_wait_backward_compatibility(self):
+        """Ensure Retrying object accepts both old and newstyle wait funcs."""
+        def wait1(previous_attempt_number, delay_since_first_attempt):
+            wait1.calls.append((
+                previous_attempt_number, delay_since_first_attempt))
+            return 0
+        wait1.calls = []
+
+        def wait2(previous_attempt_number, delay_since_first_attempt,
+                  last_result):
+            wait2.calls.append((
+                previous_attempt_number, delay_since_first_attempt,
+                last_result))
+            return 0
+        wait2.calls = []
+
+        def dying():
+            raise Exception("Broken")
+
+        retrying1 = Retrying(wait=wait1, stop=tenacity.stop_after_attempt(4))
+        self.assertRaises(Exception, lambda: retrying1.call(dying))
+        self.assertEqual([t[0] for t in wait1.calls], [1, 2, 3])
+        # This assumes that 3 iterations complete within 1 second.
+        self.assertTrue(all(t[1] < 1 for t in wait1.calls))
+
+        retrying2 = Retrying(wait=wait2, stop=tenacity.stop_after_attempt(4))
+        self.assertRaises(Exception, lambda: retrying2.call(dying))
+        self.assertEqual([t[0] for t in wait2.calls], [1, 2, 3])
+        # This assumes that 3 iterations complete within 1 second.
+        self.assertTrue(all(t[1] < 1 for t in wait2.calls))
+        self.assertEqual([str(t[2].exception()) for t in wait2.calls],
+                         ['Broken'] * 3)
+
+    def test_wait_class_backward_compatibility(self):
+        """Ensure builtin objects accept both old and new parameters."""
+        waitobj = tenacity.wait_fixed(5)
+        self.assertEqual(waitobj(1, 0.1), 5)
+        self.assertEqual(
+            waitobj(1, 0.1, tenacity.Future.construct(1, 1, False)), 5)
+        call_state = _make_wait_call_state(123, 456)
+        self.assertEqual(call_state.attempt_number, 123)
+        self.assertEqual(call_state.seconds_since_start, 456)
+        self.assertEqual(waitobj(call_state=call_state), 5)
+
+    def test_wait_call_state_attributes(self):
+
+        class ExtractCallState(Exception):
+            pass
+
+        # call_state is mutable, so return it as an exception to extract the
+        # exact values it has when wait is called and bypass any other logic.
+        def waitfunc(call_state):
+            raise ExtractCallState(call_state)
+
+        retrying = Retrying(
+            wait=waitfunc,
+            retry=(tenacity.retry_if_exception_type() |
+                   tenacity.retry_if_result(lambda result: result == 123)))
+
+        def returnval():
+            return 123
+        try:
+            retrying.call(returnval)
+        except ExtractCallState as err:
+            call_state = err.args[0]
+        self.assertIs(call_state.fn, returnval)
+        self.assertEqual(call_state.args, ())
+        self.assertEqual(call_state.kwargs, {})
+        self.assertEqual(call_state.outcome.result(), 123)
+        self.assertEqual(call_state.attempt_number, 1)
+        self.assertGreater(call_state.outcome_timestamp, call_state.start_time)
+
+        def dying():
+            raise Exception("Broken")
+        try:
+            retrying.call(dying)
+        except ExtractCallState as err:
+            call_state = err.args[0]
+        self.assertIs(call_state.fn, dying)
+        self.assertEqual(call_state.args, ())
+        self.assertEqual(call_state.kwargs, {})
+        self.assertEqual(str(call_state.outcome.exception()), 'Broken')
+        self.assertEqual(call_state.attempt_number, 1)
+        self.assertGreater(call_state.outcome_timestamp, call_state.start_time)
 
 
 class TestRetryConditions(unittest.TestCase):

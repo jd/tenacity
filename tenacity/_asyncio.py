@@ -22,8 +22,7 @@ import sys
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
 from tenacity import DoSleep
-from tenacity import NO_RESULT
-from tenacity import _utils
+from tenacity import RetryCallState
 
 
 class AsyncRetrying(BaseRetrying):
@@ -38,25 +37,19 @@ class AsyncRetrying(BaseRetrying):
     def call(self, fn, *args, **kwargs):
         self.begin(fn)
 
-        result = NO_RESULT
-        exc_info = None
-        start_time = _utils.now()
-
+        call_state = RetryCallState(fn=fn, args=args, kwargs=kwargs)
         while True:
-            do = self.iter(result=result, exc_info=exc_info,
-                           start_time=start_time)
+            do = self.iter(call_state=call_state)
             if isinstance(do, DoAttempt):
+                call_state.attempt_number += 1
                 try:
                     result = yield from fn(*args, **kwargs)
-                    exc_info = None
-                    continue
                 except BaseException:
-                    result = NO_RESULT
-                    exc_info = sys.exc_info()
-                    continue
+                    call_state.set_exception(sys.exc_info())
+                else:
+                    call_state.set_result(result)
             elif isinstance(do, DoSleep):
-                result = NO_RESULT
-                exc_info = None
+                call_state.prepare_for_next_attempt()
                 yield from self.sleep(do)
             else:
                 return do

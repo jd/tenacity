@@ -154,19 +154,19 @@ class BaseRetrying(object):
                  retry_error_callback=None):
         self.sleep = sleep
         self.stop = stop
-        self.wait = wait
+        self._wait = wait
         self.retry = retry
         self.before = before
         self.after = after
         self.before_sleep = before_sleep
         self.reraise = reraise
         self._local = threading.local()
-        # This will allow for passing in the result and handling
-        # the older versions of these functions that do not take
-        # the prior result.
-        self._wait_takes_result = self._waiter_takes_last_result(wait)
         self.retry_error_cls = retry_error_cls
         self.retry_error_callback = retry_error_callback
+
+    @_utils.cached_property
+    def wait(self):
+        return _wait._wait_func_accept_call_state(self._wait)
 
     def copy(self, sleep=_unset, stop=_unset, wait=_unset,
              retry=_unset, before=_unset, after=_unset, before_sleep=_unset,
@@ -184,15 +184,6 @@ class BaseRetrying(object):
             before_sleep=before_sleep,
             reraise=self.reraise if after is _unset else reraise,
         )
-
-    @staticmethod
-    def _waiter_takes_last_result(waiter):
-        if not six.callable(waiter):
-            return False
-        if isinstance(waiter, _wait.wait_base):
-            waiter = waiter.__call__
-        waiter_spec = _utils.getargspec(waiter)
-        return 'last_result' in waiter_spec.args
 
     def __repr__(self):
         attrs = dict(
@@ -249,47 +240,31 @@ class BaseRetrying(object):
         return wrapped_f
 
     def begin(self, fn):
-        self.fn = fn
         self.statistics.clear()
         self.statistics['start_time'] = _utils.now()
         self.statistics['attempt_number'] = 1
         self.statistics['idle_for'] = 0
 
-    def iter(self, result, exc_info, start_time):  # noqa
-        fut = Future(self.statistics['attempt_number'])
-        if result is not NO_RESULT:
-            trial_end_time = _utils.now()
-            fut.set_result(result)
-            retry = self.retry(fut)
-        elif exc_info:
-            trial_end_time = _utils.now()
-            t, e, tb = exc_info
-            _utils.capture(fut, exc_info)
-            if isinstance(e, TryAgain):
-                retry = True
-            else:
-                retry = self.retry(fut)
-        else:
+    def iter(self, call_state):  # noqa
+        fut = call_state.outcome
+        attempt_number = call_state.attempt_number
+        if fut is None:
             if self.before is not None:
-                self.before(self.fn, self.statistics['attempt_number'])
-
+                self.before(call_state.fn, attempt_number)
             return DoAttempt()
 
-        if not retry:
+        is_explicit_retry = call_state.outcome.failed \
+            and isinstance(call_state.outcome.exception(), TryAgain)
+        if not (is_explicit_retry or self.retry(fut)):
             return fut.result()
 
         if self.after is not None:
-            trial_time_taken = trial_end_time - start_time
-            self.after(self.fn, self.statistics['attempt_number'],
-                       trial_time_taken)
+            trial_time_taken = call_state.seconds_since_start
+            self.after(call_state.fn, attempt_number, trial_time_taken)
 
-        delay_since_first_attempt = (
-            _utils.now() - self.statistics['start_time']
-        )
         self.statistics['delay_since_first_attempt'] = \
-            delay_since_first_attempt
-        if self.stop(self.statistics['attempt_number'],
-                     delay_since_first_attempt):
+            call_state.seconds_since_start
+        if self.stop(attempt_number, call_state.seconds_since_start):
             if self.retry_error_callback:
                 return self.retry_error_callback(fut)
             retry_exc = self.retry_error_cls(fut)
@@ -298,14 +273,10 @@ class BaseRetrying(object):
             six.raise_from(retry_exc, fut.exception())
 
         if self.wait:
-            if self._wait_takes_result:
-                sleep = self.wait(self.statistics['attempt_number'],
-                                  delay_since_first_attempt, last_result=fut)
-            else:
-                sleep = self.wait(self.statistics['attempt_number'],
-                                  delay_since_first_attempt)
+            sleep = self.wait(call_state=call_state)
         else:
             sleep = 0
+        call_state.idle_for += sleep
         self.statistics['idle_for'] += sleep
         self.statistics['attempt_number'] += 1
 
@@ -321,23 +292,18 @@ class Retrying(BaseRetrying):
     def call(self, fn, *args, **kwargs):
         self.begin(fn)
 
-        result = NO_RESULT
-        exc_info = None
-        start_time = _utils.now()
-
+        call_state = RetryCallState(fn=fn, args=args, kwargs=kwargs)
         while True:
-            do = self.iter(result=result, exc_info=exc_info,
-                           start_time=start_time)
+            do = self.iter(call_state=call_state)
             if isinstance(do, DoAttempt):
                 try:
                     result = fn(*args, **kwargs)
-                    continue
                 except BaseException:
-                    exc_info = sys.exc_info()
-                    continue
+                    call_state.set_exception(sys.exc_info())
+                else:
+                    call_state.set_result(result)
             elif isinstance(do, DoSleep):
-                result = NO_RESULT
-                exc_info = None
+                call_state.prepare_for_next_attempt()
                 self.sleep(do)
             else:
                 return do
@@ -366,6 +332,44 @@ class Future(futures.Future):
         else:
             fut.set_result(value)
         return fut
+
+
+class RetryCallState(object):
+    """State related to a single call wrapped with Retrying."""
+
+    def __init__(self, fn, args, kwargs):
+        self.start_time = _utils.now()
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+
+        self.idle_for = 0
+        self.outcome = None
+        self.outcome_timestamp = None
+        self.attempt_number = 1
+
+    @property
+    def seconds_since_start(self):
+        if self.outcome_timestamp is None:
+            return None
+        return self.outcome_timestamp - self.start_time
+
+    def prepare_for_next_attempt(self):
+        self.outcome = None
+        self.outcome_timestamp = None
+        self.attempt_number += 1
+
+    def set_result(self, val):
+        ts = _utils.now()
+        fut = Future(self.attempt_number)
+        fut.set_result(val)
+        self.outcome, self.outcome_timestamp = fut, ts
+
+    def set_exception(self, exc_info):
+        ts = _utils.now()
+        fut = Future(self.attempt_number)
+        _utils.capture(fut, exc_info)
+        self.outcome, self.outcome_timestamp = fut, ts
 
 
 if asyncio:
