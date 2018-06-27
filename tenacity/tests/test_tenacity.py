@@ -601,6 +601,17 @@ class NoCustomErrorAfterCount(object):
         return True
 
 
+class CapturingHandler(logging.Handler):
+    """Captures log records for inspection."""
+
+    def __init__(self, *args, **kwargs):
+        super(CapturingHandler, self).__init__(*args, **kwargs)
+        self.records = []
+
+    def emit(self, record):
+        self.records.append(record)
+
+
 def current_time_ms():
     return int(round(time.time() * 1000))
 
@@ -839,37 +850,48 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         _test_before_sleep()
         self.assertEqual(_before_sleep.attempt_number, 2)
 
-    def test_before_sleep_log(self):
-        logger = logging.getLogger(__name__ + '.test_before_sleep_log')
+    def test_before_sleep_log_raises(self):
+        thing = NoIOErrorAfterCount(2)
+        logger = logging.getLogger(self.id())
         logger.propagate = False
-
-        class CapturingHandler(logging.Handler):
-            def __init__(self, *args, **kwargs):
-                super(CapturingHandler, self).__init__(*args, **kwargs)
-                self.records = []
-
-            def emit(self, record):
-                self.records.append(record)
-
+        logger.setLevel(logging.INFO)
         handler = CapturingHandler()
         logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-        _before_sleep = tenacity.before_sleep_log(logger, logging.INFO)
+        try:
+            _before_sleep = tenacity.before_sleep_log(logger, logging.INFO)
+            retrying = Retrying(wait=tenacity.wait_fixed(0.01),
+                                stop=tenacity.stop_after_attempt(3),
+                                before_sleep=_before_sleep)
+            retrying.call(thing.go)
+        finally:
+            logger.removeHandler(handler)
 
-        @retry(wait=tenacity.wait_fixed(0.01),
-               stop=tenacity.stop_after_attempt(3),
-               before_sleep=_before_sleep)
-        def _test_before_sleep():
-            _test_before_sleep.attempt_number += 1
-            if _test_before_sleep.attempt_number < 3:
-                raise Exception("testing before_sleep_attempts handler")
-        _test_before_sleep.attempt_number = 0
-
-        _test_before_sleep()
+        etalon_re = r'Retrying .* in 0\.01 seconds as it raised .*\.'
         self.assertEqual(len(handler.records), 2)
-        etalon_msg = 'Retrying %s in %d seconds as it raised %s.'
-        self.assertEqual(handler.records[0].msg, etalon_msg)
-        self.assertEqual(handler.records[1].msg, etalon_msg)
+        self.assertRegexpMatches(handler.records[0].getMessage(), etalon_re)
+        self.assertRegexpMatches(handler.records[1].getMessage(), etalon_re)
+
+    def test_before_sleep_log_returns(self):
+        thing = NoneReturnUntilAfterCount(2)
+        logger = logging.getLogger(self.id())
+        logger.propagate = False
+        logger.setLevel(logging.INFO)
+        handler = CapturingHandler()
+        logger.addHandler(handler)
+        try:
+            _before_sleep = tenacity.before_sleep_log(logger, logging.INFO)
+            _retry = tenacity.retry_if_result(lambda result: result is None)
+            retrying = Retrying(wait=tenacity.wait_fixed(0.01),
+                                stop=tenacity.stop_after_attempt(3),
+                                retry=_retry, before_sleep=_before_sleep)
+            retrying.call(thing.go)
+        finally:
+            logger.removeHandler(handler)
+
+        self.assertEqual(len(handler.records), 2)
+        etalon_re = r'Retrying .* in 0\.01 seconds as it returned None'
+        self.assertRegexpMatches(handler.records[0].getMessage(), etalon_re)
+        self.assertRegexpMatches(handler.records[1].getMessage(), etalon_re)
 
 
 class TestReraiseExceptions(unittest.TestCase):

@@ -26,11 +26,16 @@ def before_sleep_nothing(call_state, sleep, last_result):
 def before_sleep_log(logger, log_level):
     """Before call strategy that logs to some logger the attempt."""
     def log_it(call_state):
+        if call_state.outcome.failed:
+            verb, value = 'raised', call_state.outcome.exception()
+        else:
+            verb, value = 'returned', call_state.outcome.result()
+
         logger.log(log_level,
-                   "Retrying %s in %d seconds as it raised %s.",
+                   "Retrying %s in %s seconds as it %s %s.",
                    _utils.get_callback_name(call_state.fn),
                    getattr(call_state.next_action, 'sleep'),
-                   call_state.outcome.exception())
+                   verb, value)
     return log_it
 
 
