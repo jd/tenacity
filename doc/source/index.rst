@@ -272,6 +272,109 @@ In the same spirit, It's possible to execute after a call that failed:
     def raise_my_exception():
         raise MyException("Fail")
 
+It's also possible to only log failures that are going to be retried. Normally
+retries happen after a wait interval, so the keyword argument is called
+``before_sleep``:
+
+.. testcode::
+
+    logger = logging.getLogger(__name__)
+    @retry(stop=stop_after_attempt(3),
+           before_sleep=before_sleep_log(logger, logging.DEBUG))
+    def raise_my_exception():
+        raise MyException("Fail")
+
+You can also define a custom ``before_sleep`` function. It should have one
+parameter called ``call_state`` that contains all information about current
+retry invocation.
+
+.. testcode::
+
+    logger = logging.getLogger(__name__)
+
+    def my_before_sleep(call_state):
+        if call_state.attempt_number < 1:
+            loglevel = logging.INFO
+        else:
+            loglevel = logging.WARNING
+        logger.log(
+            loglevel, 'Retrying %s: attempt %s ended with: %s',
+            call_state.fn, call_state.attempt_number, call_state.outcome)
+
+    @retry(stop=stop_after_attempt(3), before_sleep=my_before_sleep)
+    def raise_my_exception():
+        raise MyException("Fail")
+
+    try:
+        raise_my_exception()
+    except RetryError:
+        pass
+
+``call_state`` argument is an object of `RetryCallState` class:
+
+.. autoclass:: tenacity.RetryCallState
+
+   Constant attributes:
+
+   .. autoinstanceattribute:: start_time(float)
+      :annotation:
+
+   .. autoinstanceattribute:: retry_object(BaseRetrying)
+      :annotation:
+
+   .. autoinstanceattribute:: fn(callable)
+      :annotation:
+
+   .. autoinstanceattribute:: args(tuple)
+      :annotation:
+
+   .. autoinstanceattribute:: kwargs(dict)
+      :annotation:
+
+   Variable attributes:
+
+   .. autoinstanceattribute:: attempt_number(int)
+      :annotation:
+
+   .. autoinstanceattribute:: outcome(tenacity.Future or None)
+      :annotation:
+
+   .. autoinstanceattribute:: outcome_timestamp(float or None)
+      :annotation:
+
+   .. autoinstanceattribute:: idle_for(float)
+      :annotation:
+
+   .. autoinstanceattribute:: next_action(tenacity.RetryAction or None)
+      :annotation:
+
+
+
+Previously custom ``before_sleep`` functions could also accept three
+parameters. This approach is deprecated but kept for backward compatibility:
+
+- ``retry_object``: the `Retrying` object that runs the retries,
+- ``sleep``: wait interval in seconds before the next attempt,
+- ``last_result``: the outcome of the current attempt.
+
+.. testcode::
+
+    logger = logging.getLogger(__name__)
+
+    def my_before_sleep(retry_object, sleep, last_result):
+        logger.warning(
+            'Retrying %s: last_result=%s, retrying in %s seconds...',
+            retry_object.fn, last_result, sleep)
+
+    @retry(stop=stop_after_attempt(3), before_sleep=my_before_sleep)
+    def raise_my_exception():
+        raise MyException("Fail")
+
+    try:
+        raise_my_exception()
+    except RetryError:
+        pass
+
 Similarly, you can call a custom callback function after all retries failed, without raising an exception (or you can re-raise or do anything really)
 
 .. testcode::

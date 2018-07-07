@@ -194,6 +194,10 @@ class BaseRetrying(object):
         self.retry_error_cls = retry_error_cls
         self.retry_error_callback = retry_error_callback
 
+        # This attribute was moved to RetryCallState and is deprecated on
+        # Retrying objects but kept for backward compatibility.
+        self.fn = None
+
     @_utils.cached_property
     def wait(self):
         return _wait._wait_func_accept_call_state(self._wait)
@@ -279,6 +283,7 @@ class BaseRetrying(object):
         self.statistics['start_time'] = _utils.now()
         self.statistics['attempt_number'] = 1
         self.statistics['idle_for'] = 0
+        self.fn = fn
 
     def iter(self, call_state):  # noqa
         fut = call_state.outcome
@@ -375,16 +380,26 @@ class RetryCallState(object):
     """State related to a single call wrapped with Retrying."""
 
     def __init__(self, retry_object, fn, args, kwargs):
+        #: Retry call start timestamp
         self.start_time = _utils.now()
+        #: Retry manager object
         self.retry_object = retry_object
+        #: Function wrapped by this retry call
         self.fn = fn
+        #: Arguments of the function wrapped by this retry call
         self.args = args
+        #: Keyword arguments of the function wrapped by this retry call
         self.kwargs = kwargs
 
-        self.idle_for = 0
-        self.outcome = None
-        self.outcome_timestamp = None
+        #: The number of the current attempt
         self.attempt_number = 1
+        #: Last outcome (result or exception) produced by the function
+        self.outcome = None
+        #: Timestamp of the last outcome
+        self.outcome_timestamp = None
+        #: Time spent sleeping in retries
+        self.idle_for = 0
+        #: Next action as decided by the retry manager
         self.next_action = None
 
     @property
