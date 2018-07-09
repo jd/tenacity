@@ -22,7 +22,8 @@ master_doc = 'index'
 project = "Tenacity"
 
 extensions = [
-    'sphinx.ext.doctest'
+    'sphinx.ext.doctest',
+    'sphinx.ext.autodoc',
 ]
 
 # -- Options for sphinx.ext.doctest  -----------------------------------------

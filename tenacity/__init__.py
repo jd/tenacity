@@ -34,6 +34,7 @@ from concurrent import futures
 import six
 
 from tenacity import _utils
+from tenacity import before_sleep as _before_sleep
 from tenacity import wait as _wait
 
 # Import all built-in retry strategies for easier usage.
@@ -122,6 +123,35 @@ class DoSleep(float):
     pass
 
 
+class BaseAction(object):
+    """Base class for representing actions to take by retry object.
+
+    Concrete implementations must define:
+    - __init__: to initialize all necessary fields
+    - REPR_ATTRS: class variable specifying attributes to include in repr(self)
+    - NAME: for identification in retry object methods and callbacks
+    """
+
+    REPR_FIELDS = ()
+    NAME = None
+
+    def __repr__(self):
+        state_str = ', '.join('%s=%r' % (field, getattr(self, field))
+                              for field in self.REPR_FIELDS)
+        return '%s(%s)' % (type(self).__name__, state_str)
+
+    def __str__(self):
+        return repr(self)
+
+
+class RetryAction(BaseAction):
+    REPR_FIELDS = ('sleep',)
+    NAME = 'retry'
+
+    def __init__(self, sleep):
+        self.sleep = float(sleep)
+
+
 _unset = object()
 
 
@@ -148,7 +178,7 @@ class BaseRetrying(object):
                  retry=retry_if_exception_type(),
                  before=before_nothing,
                  after=after_nothing,
-                 before_sleep=before_sleep_nothing,
+                 before_sleep=None,
                  reraise=False,
                  retry_error_cls=RetryError,
                  retry_error_callback=None):
@@ -158,15 +188,24 @@ class BaseRetrying(object):
         self.retry = retry
         self.before = before
         self.after = after
-        self.before_sleep = before_sleep
+        self._before_sleep = before_sleep
         self.reraise = reraise
         self._local = threading.local()
         self.retry_error_cls = retry_error_cls
         self.retry_error_callback = retry_error_callback
 
+        # This attribute was moved to RetryCallState and is deprecated on
+        # Retrying objects but kept for backward compatibility.
+        self.fn = None
+
     @_utils.cached_property
     def wait(self):
         return _wait._wait_func_accept_call_state(self._wait)
+
+    @_utils.cached_property
+    def before_sleep(self):
+        return _before_sleep._before_sleep_func_accept_call_state(
+            self._before_sleep)
 
     def copy(self, sleep=_unset, stop=_unset, wait=_unset,
              retry=_unset, before=_unset, after=_unset, before_sleep=_unset,
@@ -244,6 +283,7 @@ class BaseRetrying(object):
         self.statistics['start_time'] = _utils.now()
         self.statistics['attempt_number'] = 1
         self.statistics['idle_for'] = 0
+        self.fn = fn
 
     def iter(self, call_state):  # noqa
         fut = call_state.outcome
@@ -275,13 +315,14 @@ class BaseRetrying(object):
         if self.wait:
             sleep = self.wait(call_state=call_state)
         else:
-            sleep = 0
+            sleep = 0.0
+        call_state.next_action = RetryAction(sleep)
         call_state.idle_for += sleep
         self.statistics['idle_for'] += sleep
         self.statistics['attempt_number'] += 1
 
         if self.before_sleep is not None:
-            self.before_sleep(self, sleep=sleep, last_result=fut)
+            self.before_sleep(call_state=call_state)
 
         return DoSleep(sleep)
 
@@ -292,7 +333,8 @@ class Retrying(BaseRetrying):
     def call(self, fn, *args, **kwargs):
         self.begin(fn)
 
-        call_state = RetryCallState(fn=fn, args=args, kwargs=kwargs)
+        call_state = RetryCallState(
+            retry_object=self, fn=fn, args=args, kwargs=kwargs)
         while True:
             do = self.iter(call_state=call_state)
             if isinstance(do, DoAttempt):
@@ -337,16 +379,28 @@ class Future(futures.Future):
 class RetryCallState(object):
     """State related to a single call wrapped with Retrying."""
 
-    def __init__(self, fn, args, kwargs):
+    def __init__(self, retry_object, fn, args, kwargs):
+        #: Retry call start timestamp
         self.start_time = _utils.now()
+        #: Retry manager object
+        self.retry_object = retry_object
+        #: Function wrapped by this retry call
         self.fn = fn
+        #: Arguments of the function wrapped by this retry call
         self.args = args
+        #: Keyword arguments of the function wrapped by this retry call
         self.kwargs = kwargs
 
-        self.idle_for = 0
-        self.outcome = None
-        self.outcome_timestamp = None
+        #: The number of the current attempt
         self.attempt_number = 1
+        #: Last outcome (result or exception) produced by the function
+        self.outcome = None
+        #: Timestamp of the last outcome
+        self.outcome_timestamp = None
+        #: Time spent sleeping in retries
+        self.idle_for = 0
+        #: Next action as decided by the retry manager
+        self.next_action = None
 
     @property
     def seconds_since_start(self):
@@ -358,6 +412,7 @@ class RetryCallState(object):
         self.outcome = None
         self.outcome_timestamp = None
         self.attempt_number += 1
+        self.next_action = None
 
     def set_result(self, val):
         ts = _utils.now()
