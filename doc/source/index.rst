@@ -285,21 +285,21 @@ retries happen after a wait interval, so the keyword argument is called
         raise MyException("Fail")
 
 You can also define a custom ``before_sleep`` function. It should have one
-parameter called ``call_state`` that contains all information about current
+parameter called ``retry_state`` that contains all information about current
 retry invocation.
 
 .. testcode::
 
     logger = logging.getLogger(__name__)
 
-    def my_before_sleep(call_state):
-        if call_state.attempt_number < 1:
+    def my_before_sleep(retry_state):
+        if retry_state.attempt_number < 1:
             loglevel = logging.INFO
         else:
             loglevel = logging.WARNING
         logger.log(
             loglevel, 'Retrying %s: attempt %s ended with: %s',
-            call_state.fn, call_state.attempt_number, call_state.outcome)
+            retry_state.fn, retry_state.attempt_number, retry_state.outcome)
 
     @retry(stop=stop_after_attempt(3), before_sleep=my_before_sleep)
     def raise_my_exception():
@@ -310,7 +310,7 @@ retry invocation.
     except RetryError:
         pass
 
-``call_state`` argument is an object of `RetryCallState` class:
+``retry_state`` argument is an object of `RetryCallState` class:
 
 .. autoclass:: tenacity.RetryCallState
 

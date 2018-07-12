@@ -202,11 +202,11 @@ class BaseRetrying(object):
 
     @_utils.cached_property
     def wait(self):
-        return _wait._wait_func_accept_call_state(self._wait)
+        return _wait._wait_func_accept_retry_state(self._wait)
 
     @_utils.cached_property
     def before_sleep(self):
-        return _before_sleep._before_sleep_func_accept_call_state(
+        return _before_sleep._before_sleep_func_accept_retry_state(
             self._before_sleep)
 
     def copy(self, sleep=_unset, stop=_unset, wait=_unset,
@@ -287,26 +287,26 @@ class BaseRetrying(object):
         self.statistics['idle_for'] = 0
         self.fn = fn
 
-    def iter(self, call_state):  # noqa
-        fut = call_state.outcome
-        attempt_number = call_state.attempt_number
+    def iter(self, retry_state):  # noqa
+        fut = retry_state.outcome
+        attempt_number = retry_state.attempt_number
         if fut is None:
             if self.before is not None:
-                self.before(call_state.fn, attempt_number)
+                self.before(retry_state.fn, attempt_number)
             return DoAttempt()
 
-        is_explicit_retry = call_state.outcome.failed \
-            and isinstance(call_state.outcome.exception(), TryAgain)
+        is_explicit_retry = retry_state.outcome.failed \
+            and isinstance(retry_state.outcome.exception(), TryAgain)
         if not (is_explicit_retry or self.retry(fut)):
             return fut.result()
 
         if self.after is not None:
-            trial_time_taken = call_state.seconds_since_start
-            self.after(call_state.fn, attempt_number, trial_time_taken)
+            trial_time_taken = retry_state.seconds_since_start
+            self.after(retry_state.fn, attempt_number, trial_time_taken)
 
         self.statistics['delay_since_first_attempt'] = \
-            call_state.seconds_since_start
-        if self.stop(attempt_number, call_state.seconds_since_start):
+            retry_state.seconds_since_start
+        if self.stop(attempt_number, retry_state.seconds_since_start):
             if self.retry_error_callback:
                 return self.retry_error_callback(fut)
             retry_exc = self.retry_error_cls(fut)
@@ -315,16 +315,16 @@ class BaseRetrying(object):
             six.raise_from(retry_exc, fut.exception())
 
         if self.wait:
-            sleep = self.wait(call_state=call_state)
+            sleep = self.wait(retry_state=retry_state)
         else:
             sleep = 0.0
-        call_state.next_action = RetryAction(sleep)
-        call_state.idle_for += sleep
+        retry_state.next_action = RetryAction(sleep)
+        retry_state.idle_for += sleep
         self.statistics['idle_for'] += sleep
         self.statistics['attempt_number'] += 1
 
         if self.before_sleep is not None:
-            self.before_sleep(call_state=call_state)
+            self.before_sleep(retry_state=retry_state)
 
         return DoSleep(sleep)
 
@@ -335,19 +335,19 @@ class Retrying(BaseRetrying):
     def call(self, fn, *args, **kwargs):
         self.begin(fn)
 
-        call_state = RetryCallState(
+        retry_state = RetryCallState(
             retry_object=self, fn=fn, args=args, kwargs=kwargs)
         while True:
-            do = self.iter(call_state=call_state)
+            do = self.iter(retry_state=retry_state)
             if isinstance(do, DoAttempt):
                 try:
                     result = fn(*args, **kwargs)
                 except BaseException:
-                    call_state.set_exception(sys.exc_info())
+                    retry_state.set_exception(sys.exc_info())
                 else:
-                    call_state.set_result(result)
+                    retry_state.set_result(result)
             elif isinstance(do, DoSleep):
-                call_state.prepare_for_next_attempt()
+                retry_state.prepare_for_next_attempt()
                 self.sleep(do)
             else:
                 return do

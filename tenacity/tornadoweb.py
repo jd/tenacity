@@ -35,20 +35,20 @@ class TornadoRetrying(BaseRetrying):
     def call(self, fn, *args, **kwargs):
         self.begin(fn)
 
-        call_state = RetryCallState(
+        retry_state = RetryCallState(
             retry_object=self, fn=fn, args=args, kwargs=kwargs)
         while True:
-            do = self.iter(call_state=call_state)
+            do = self.iter(retry_state=retry_state)
             if isinstance(do, DoAttempt):
-                call_state.attempt_number += 1
+                retry_state.attempt_number += 1
                 try:
                     result = yield fn(*args, **kwargs)
                 except BaseException:
-                    call_state.set_exception(sys.exc_info())
+                    retry_state.set_exception(sys.exc_info())
                 else:
-                    call_state.set_result(result)
+                    retry_state.set_result(result)
             elif isinstance(do, DoSleep):
-                call_state.prepare_for_next_attempt()
+                retry_state.prepare_for_next_attempt()
                 yield self.sleep(do)
             else:
                 raise gen.Return(do)

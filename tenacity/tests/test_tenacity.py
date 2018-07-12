@@ -23,7 +23,7 @@ import tenacity
 from tenacity import RetryError
 from tenacity import Retrying
 from tenacity import retry
-from tenacity.wait import _make_wait_call_state
+from tenacity.wait import _make_wait_retry_state
 
 
 class TestBase(unittest.TestCase):
@@ -197,9 +197,9 @@ class TestWaitConditions(unittest.TestCase):
 
     def test_wait_func(self):
         r = Retrying(wait=lambda attempt, delay: attempt * delay)
-        self.assertEqual(r.wait(_make_wait_call_state(1, 5)), 5)
-        self.assertEqual(r.wait(_make_wait_call_state(2, 11)), 22)
-        self.assertEqual(r.wait(_make_wait_call_state(10, 100)), 1000)
+        self.assertEqual(r.wait(_make_wait_retry_state(1, 5)), 5)
+        self.assertEqual(r.wait(_make_wait_retry_state(2, 11)), 22)
+        self.assertEqual(r.wait(_make_wait_retry_state(10, 100)), 1000)
 
     def test_wait_combine(self):
         r = Retrying(wait=tenacity.wait_combine(tenacity.wait_random(0, 3),
@@ -370,20 +370,20 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(waitobj(1, 0.1), 5)
         self.assertEqual(
             waitobj(1, 0.1, tenacity.Future.construct(1, 1, False)), 5)
-        call_state = _make_wait_call_state(123, 456)
-        self.assertEqual(call_state.attempt_number, 123)
-        self.assertEqual(call_state.seconds_since_start, 456)
-        self.assertEqual(waitobj(call_state=call_state), 5)
+        retry_state = _make_wait_retry_state(123, 456)
+        self.assertEqual(retry_state.attempt_number, 123)
+        self.assertEqual(retry_state.seconds_since_start, 456)
+        self.assertEqual(waitobj(retry_state=retry_state), 5)
 
-    def test_wait_call_state_attributes(self):
+    def test_wait_retry_state_attributes(self):
 
         class ExtractCallState(Exception):
             pass
 
-        # call_state is mutable, so return it as an exception to extract the
+        # retry_state is mutable, so return it as an exception to extract the
         # exact values it has when wait is called and bypass any other logic.
-        def waitfunc(call_state):
-            raise ExtractCallState(call_state)
+        def waitfunc(retry_state):
+            raise ExtractCallState(retry_state)
 
         retrying = Retrying(
             wait=waitfunc,
@@ -395,26 +395,28 @@ class TestWaitConditions(unittest.TestCase):
         try:
             retrying.call(returnval)
         except ExtractCallState as err:
-            call_state = err.args[0]
-        self.assertIs(call_state.fn, returnval)
-        self.assertEqual(call_state.args, ())
-        self.assertEqual(call_state.kwargs, {})
-        self.assertEqual(call_state.outcome.result(), 123)
-        self.assertEqual(call_state.attempt_number, 1)
-        self.assertGreater(call_state.outcome_timestamp, call_state.start_time)
+            retry_state = err.args[0]
+        self.assertIs(retry_state.fn, returnval)
+        self.assertEqual(retry_state.args, ())
+        self.assertEqual(retry_state.kwargs, {})
+        self.assertEqual(retry_state.outcome.result(), 123)
+        self.assertEqual(retry_state.attempt_number, 1)
+        self.assertGreater(retry_state.outcome_timestamp,
+                           retry_state.start_time)
 
         def dying():
             raise Exception("Broken")
         try:
             retrying.call(dying)
         except ExtractCallState as err:
-            call_state = err.args[0]
-        self.assertIs(call_state.fn, dying)
-        self.assertEqual(call_state.args, ())
-        self.assertEqual(call_state.kwargs, {})
-        self.assertEqual(str(call_state.outcome.exception()), 'Broken')
-        self.assertEqual(call_state.attempt_number, 1)
-        self.assertGreater(call_state.outcome_timestamp, call_state.start_time)
+            retry_state = err.args[0]
+        self.assertIs(retry_state.fn, dying)
+        self.assertEqual(retry_state.args, ())
+        self.assertEqual(retry_state.kwargs, {})
+        self.assertEqual(str(retry_state.outcome.exception()), 'Broken')
+        self.assertEqual(retry_state.attempt_number, 1)
+        self.assertGreater(retry_state.outcome_timestamp,
+                           retry_state.start_time)
 
 
 class TestRetryConditions(unittest.TestCase):
@@ -944,9 +946,9 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         self.assertTrue(TestBeforeAfterAttempts._attempt_number is 2)
 
     def test_before_sleep(self):
-        def _before_sleep(call_state):
-            self.assertGreater(call_state.next_action.sleep, 0)
-            _before_sleep.attempt_number = call_state.attempt_number
+        def _before_sleep(retry_state):
+            self.assertGreater(retry_state.next_action.sleep, 0)
+            _before_sleep.attempt_number = retry_state.attempt_number
 
         @retry(wait=tenacity.wait_fixed(0.01),
                stop=tenacity.stop_after_attempt(3),
