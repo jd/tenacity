@@ -17,13 +17,15 @@ import abc
 
 import six
 
+from tenacity import compat as _compat
+
 
 @six.add_metaclass(abc.ABCMeta)
 class stop_base(object):
     """Abstract base class for stop strategies."""
 
     @abc.abstractmethod
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+    def __call__(self, retry_state):
         pass
 
     def __and__(self, other):
@@ -37,30 +39,28 @@ class stop_any(stop_base):
     """Stop if any of the stop condition is valid."""
 
     def __init__(self, *stops):
-        self.stops = stops
+        self.stops = tuple(_compat.stop_func_accept_retry_state(stop_func)
+                           for stop_func in stops)
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
-        return any(map(
-            lambda x: x(previous_attempt_number, delay_since_first_attempt),
-            self.stops))
+    def __call__(self, retry_state):
+        return any(x(retry_state) for x in self.stops)
 
 
 class stop_all(stop_base):
     """Stop if all the stop conditions are valid."""
 
     def __init__(self, *stops):
-        self.stops = stops
+        self.stops = tuple(_compat.stop_func_accept_retry_state(stop_func)
+                           for stop_func in stops)
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
-        return all(map(
-            lambda x: x(previous_attempt_number, delay_since_first_attempt),
-            self.stops))
+    def __call__(self, retry_state):
+        return all(x(retry_state) for x in self.stops)
 
 
 class _stop_never(stop_base):
     """Never stop."""
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+    def __call__(self, retry_state):
         return False
 
 
@@ -73,7 +73,7 @@ class stop_when_event_set(stop_base):
     def __init__(self, event):
         self.event = event
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
+    def __call__(self, retry_state):
         return self.event.is_set()
 
 
@@ -83,8 +83,8 @@ class stop_after_attempt(stop_base):
     def __init__(self, max_attempt_number):
         self.max_attempt_number = max_attempt_number
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
-        return previous_attempt_number >= self.max_attempt_number
+    def __call__(self, retry_state):
+        return retry_state.attempt_number >= self.max_attempt_number
 
 
 class stop_after_delay(stop_base):
@@ -93,5 +93,5 @@ class stop_after_delay(stop_base):
     def __init__(self, max_delay):
         self.max_delay = max_delay
 
-    def __call__(self, previous_attempt_number, delay_since_first_attempt):
-        return delay_since_first_attempt >= self.max_delay
+    def __call__(self, retry_state):
+        return retry_state.seconds_since_start >= self.max_delay

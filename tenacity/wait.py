@@ -16,12 +16,11 @@
 
 import abc
 import random
-from fractions import Fraction
 
 import six
 
-from tenacity import _utils
 from tenacity import compat as _compat
+from tenacity import _utils
 
 
 @six.add_metaclass(abc.ABCMeta)

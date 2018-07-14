@@ -1,10 +1,11 @@
 """Utilities for providing backward compatibility."""
 
-import six
-from tenacity import _utils
 import inspect
-
 from fractions import Fraction
+
+import six
+
+from tenacity import _utils
 
 
 def func_takes_retry_state(func):
@@ -20,8 +21,12 @@ def func_takes_retry_state(func):
 _unset = object()
 
 
-def make_wait_retry_state(previous_attempt_number, delay_since_first_attempt,
-                          last_result=None):
+def make_retry_state(previous_attempt_number, delay_since_first_attempt,
+                     last_result=None):
+    """Construct RetryCallState for given attempt number & delay.
+
+    Only used in testing and thus is extra careful about timestamp arithmetics.
+    """
     required_parameter_unset = (previous_attempt_number is _unset or
                                 delay_since_first_attempt is _unset)
     if required_parameter_unset:
@@ -54,14 +59,14 @@ def wait_dunder_call_accept_old_params(fn):
 
     This is a backward compatibility shim to ensure tests keep working.
     """
-    @six.wraps(fn)
+    @_utils.wraps(fn)
     def new_fn(self,
                previous_attempt_number=_unset,
                delay_since_first_attempt=_unset,
                last_result=None,
                retry_state=None):
         if retry_state is None:
-            retry_state = make_wait_retry_state(
+            retry_state = make_retry_state(
                 previous_attempt_number=previous_attempt_number,
                 delay_since_first_attempt=delay_since_first_attempt,
                 last_result=last_result)
@@ -84,18 +89,33 @@ def func_takes_last_result(waiter):
     return 'last_result' in waiter_spec.args
 
 
+def stop_func_accept_retry_state(stop_func):
+    """Wrap "stop" function to accept "retry_state" parameter."""
+    if not six.callable(stop_func):
+        return stop_func
+
+    if func_takes_retry_state(stop_func):
+        return stop_func
+
+    @_utils.wraps(stop_func)
+    def wrapped_stop_func(retry_state):
+        return stop_func(
+            retry_state.attempt_number,
+            retry_state.seconds_since_start,
+        )
+    return wrapped_stop_func
+
+
 def wait_func_accept_retry_state(wait_func):
     """Wrap wait function to accept "retry_state" parameter."""
     if not six.callable(wait_func):
         return wait_func
 
-    takes_retry_state = func_takes_retry_state(wait_func)
-    if takes_retry_state:
+    if func_takes_retry_state(wait_func):
         return wait_func
 
-    takes_last_result = func_takes_last_result(wait_func)
-    if takes_last_result:
-        @six.wraps(wait_func)
+    if func_takes_last_result(wait_func):
+        @_utils.wraps(wait_func)
         def wrapped_wait_func(retry_state):
             return wait_func(
                 retry_state.attempt_number,
@@ -103,7 +123,7 @@ def wait_func_accept_retry_state(wait_func):
                 last_result=retry_state.outcome,
             )
     else:
-        @six.wraps(wait_func)
+        @_utils.wraps(wait_func)
         def wrapped_wait_func(retry_state):
             return wait_func(
                 retry_state.attempt_number,
@@ -112,16 +132,65 @@ def wait_func_accept_retry_state(wait_func):
     return wrapped_wait_func
 
 
+def retry_func_accept_retry_state(retry_func):
+    """Wrap "retry" function to accept "retry_state" parameter."""
+    if not six.callable(retry_func):
+        return retry_func
+
+    if func_takes_retry_state(retry_func):
+        return retry_func
+
+    @_utils.wraps(retry_func)
+    def wrapped_retry_func(retry_state):
+        return retry_func(retry_state.outcome)
+    return wrapped_retry_func
+
+
+def before_func_accept_retry_state(fn):
+    """Wrap "before" function to accept "retry_state"."""
+    if not six.callable(fn):
+        return fn
+
+    if func_takes_retry_state(fn):
+        return fn
+
+    @_utils.wraps(fn)
+    def wrapped_before_func(retry_state):
+        # func, trial_number, trial_time_taken
+        return fn(
+            retry_state.fn,
+            retry_state.attempt_number,
+        )
+    return wrapped_before_func
+
+
+def after_func_accept_retry_state(fn):
+    """Wrap "after" function to accept "retry_state"."""
+    if not six.callable(fn):
+        return fn
+
+    if func_takes_retry_state(fn):
+        return fn
+
+    @_utils.wraps(fn)
+    def wrapped_after_sleep_func(retry_state):
+        # func, trial_number, trial_time_taken
+        return fn(
+            retry_state.fn,
+            retry_state.attempt_number,
+            retry_state.seconds_since_start)
+    return wrapped_after_sleep_func
+
+
 def before_sleep_func_accept_retry_state(fn):
     """Wrap "before_sleep" function to accept "retry_state"."""
     if not six.callable(fn):
         return fn
 
-    takes_retry_state = func_takes_retry_state(fn)
-    if takes_retry_state:
+    if func_takes_retry_state(fn):
         return fn
 
-    @six.wraps(fn)
+    @_utils.wraps(fn)
     def wrapped_before_sleep_func(retry_state):
         # retry_object, sleep, last_result
         return fn(
@@ -129,3 +198,17 @@ def before_sleep_func_accept_retry_state(fn):
             sleep=getattr(retry_state.next_action, 'sleep'),
             last_result=retry_state.outcome)
     return wrapped_before_sleep_func
+
+
+def retry_error_callback_accept_retry_state(fn):
+    if not six.callable(fn):
+        return fn
+
+    if func_takes_retry_state(fn):
+        return fn
+
+    @_utils.wraps(fn)
+    def wrapped_retry_error_callback(retry_state):
+        # retry_object, sleep, last_result
+        return fn(retry_state.outcome)
+    return wrapped_retry_error_callback
