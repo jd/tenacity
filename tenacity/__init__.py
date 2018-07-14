@@ -34,8 +34,7 @@ from concurrent import futures
 import six
 
 from tenacity import _utils
-from tenacity import before_sleep as _before_sleep
-from tenacity import wait as _wait
+from tenacity import compat as _compat
 
 # Import all built-in retry strategies for easier usage.
 from .retry import retry_all  # noqa
@@ -202,12 +201,11 @@ class BaseRetrying(object):
 
     @_utils.cached_property
     def wait(self):
-        return _wait._wait_func_accept_retry_state(self._wait)
+        return _compat.wait_func_accept_retry_state(self._wait)
 
     @_utils.cached_property
     def before_sleep(self):
-        return _before_sleep._before_sleep_func_accept_retry_state(
-            self._before_sleep)
+        return _compat.before_sleep_func_accept_retry_state(self._before_sleep)
 
     def copy(self, sleep=_unset, stop=_unset, wait=_unset,
              retry=_unset, before=_unset, after=_unset, before_sleep=_unset,

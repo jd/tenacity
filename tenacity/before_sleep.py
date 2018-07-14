@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import six
-
 from tenacity import _utils
 
 
@@ -37,20 +35,3 @@ def before_sleep_log(logger, log_level):
                    getattr(retry_state.next_action, 'sleep'),
                    verb, value)
     return log_it
-
-
-def _before_sleep_func_accept_retry_state(fn):
-    if not six.callable(fn):
-        return fn
-
-    takes_retry_state = _utils._func_takes_retry_state(fn)
-    if takes_retry_state:
-        return fn
-
-    @six.wraps(fn)
-    def wrapped_before_sleep_func(retry_state):
-        return fn(
-            retry_state.retry_object,
-            sleep=getattr(retry_state.next_action, 'sleep'),
-            last_result=retry_state.outcome)
-    return wrapped_before_sleep_func

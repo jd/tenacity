@@ -23,7 +23,7 @@ import tenacity
 from tenacity import RetryError
 from tenacity import Retrying
 from tenacity import retry
-from tenacity.wait import _make_wait_retry_state
+from tenacity.compat import make_wait_retry_state
 
 
 class TestBase(unittest.TestCase):
@@ -197,9 +197,9 @@ class TestWaitConditions(unittest.TestCase):
 
     def test_wait_func(self):
         r = Retrying(wait=lambda attempt, delay: attempt * delay)
-        self.assertEqual(r.wait(_make_wait_retry_state(1, 5)), 5)
-        self.assertEqual(r.wait(_make_wait_retry_state(2, 11)), 22)
-        self.assertEqual(r.wait(_make_wait_retry_state(10, 100)), 1000)
+        self.assertEqual(r.wait(make_wait_retry_state(1, 5)), 5)
+        self.assertEqual(r.wait(make_wait_retry_state(2, 11)), 22)
+        self.assertEqual(r.wait(make_wait_retry_state(10, 100)), 1000)
 
     def test_wait_combine(self):
         r = Retrying(wait=tenacity.wait_combine(tenacity.wait_random(0, 3),
@@ -370,7 +370,7 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(waitobj(1, 0.1), 5)
         self.assertEqual(
             waitobj(1, 0.1, tenacity.Future.construct(1, 1, False)), 5)
-        retry_state = _make_wait_retry_state(123, 456)
+        retry_state = make_wait_retry_state(123, 456)
         self.assertEqual(retry_state.attempt_number, 123)
         self.assertEqual(retry_state.seconds_since_start, 456)
         self.assertEqual(waitobj(retry_state=retry_state), 5)
