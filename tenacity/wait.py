@@ -16,6 +16,7 @@
 
 import abc
 import random
+from fractions import Fraction
 
 import six
 
@@ -39,12 +40,19 @@ def _make_wait_call_state(previous_attempt_number, delay_since_first_attempt,
         raise TypeError('wait func missing parameters: ' + missing_str)
 
     from tenacity import RetryCallState
-    call_state = RetryCallState(None, None, (), {})
-    call_state.attempt_number = previous_attempt_number
-    call_state.outcome_timestamp = (
-        call_state.start_time + delay_since_first_attempt)
-    call_state.outcome = last_result
-    return call_state
+    retry_state = RetryCallState(None, None, (), {})
+    retry_state.attempt_number = previous_attempt_number
+    if last_result is not None:
+        retry_state.outcome = last_result
+    else:
+        retry_state.set_result(None)
+    # Ensure outcome_timestamp - start_time is *exactly* equal to the delay to
+    # avoid complexity in test code.
+    retry_state.start_time = Fraction(retry_state.start_time)
+    retry_state.outcome_timestamp = (
+        retry_state.start_time + Fraction(delay_since_first_attempt))
+    assert retry_state.seconds_since_start == delay_since_first_attempt
+    return retry_state
 
 
 def _wait_dunder_call_accept_old_params(fn):
@@ -147,9 +155,9 @@ class wait_chain(wait_base):
 
     @_wait_dunder_call_accept_old_params
     def __call__(self, call_state):
-        wait_func = self.strategies[0]
-        if len(self.strategies) > 1:
-            self.strategies.pop(0)
+        wait_func_no = min(max(call_state.attempt_number, 1),
+                           len(self.strategies))
+        wait_func = self.strategies[wait_func_no - 1]
         return wait_func(call_state=call_state)
 
 
