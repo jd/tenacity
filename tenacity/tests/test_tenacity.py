@@ -473,6 +473,15 @@ class TestRetryConditions(unittest.TestCase):
                           _r)
         self.assertEqual(5, r.statistics['attempt_number'])
 
+    def test_retry_if_exception_message_negative_no_inputs(self):
+        with self.assertRaises(TypeError):
+            tenacity.retry_if_exception_message()
+
+    def test_retry_if_exception_message_negative_too_many_inputs(self):
+        with self.assertRaises(TypeError):
+            tenacity.retry_if_exception_message(
+                message="negative", match="negative")
+
 
 class NoneReturnUntilAfterCount(object):
     """Holds counter state for invoking a method several times in a row."""
@@ -531,6 +540,8 @@ class NoNameErrorAfterCount(object):
 class NameErrorUntilCount(object):
     """Holds counter state for invoking a method several times in a row."""
 
+    derived_message = "Hi there, I'm a NameError"
+
     def __init__(self, count):
         self.counter = 0
         self.count = count
@@ -543,7 +554,7 @@ class NameErrorUntilCount(object):
         if self.counter < self.count:
             self.counter += 1
             return True
-        raise NameError("Hi there, I'm a NameError")
+        raise NameError(self.derived_message)
 
 
 class IOErrorUntilCount(object):
@@ -579,11 +590,13 @@ class CustomError(Exception):
         self.value = value
 
     def __str__(self):
-        return repr(self.value)
+        return self.value
 
 
 class NoCustomErrorAfterCount(object):
     """Holds counter state for invoking a method several times in a row."""
+
+    derived_message = "This is a Custom exception class"
 
     def __init__(self, count):
         self.counter = 0
@@ -596,8 +609,7 @@ class NoCustomErrorAfterCount(object):
         """
         if self.counter < self.count:
             self.counter += 1
-            derived_message = "This is a Custom exception class"
-            raise CustomError(derived_message)
+            raise CustomError(self.derived_message)
         return True
 
 
@@ -654,6 +666,38 @@ def _retryable_test_with_unless_exception_type_name_attempt_limit(thing):
 
 @retry(retry=tenacity.retry_unless_exception_type())
 def _retryable_test_with_unless_exception_type_no_input(thing):
+    return thing.go()
+
+
+@retry(
+    stop=tenacity.stop_after_attempt(5),
+    retry=tenacity.retry_if_exception_message(
+        message=NoCustomErrorAfterCount.derived_message))
+def _retryable_test_if_exception_message_message(thing):
+    return thing.go()
+
+
+@retry(retry=tenacity.retry_if_not_exception_message(
+    message=NoCustomErrorAfterCount.derived_message))
+def _retryable_test_if_not_exception_message_message(thing):
+    return thing.go()
+
+
+@retry(retry=tenacity.retry_if_exception_message(
+    match=NoCustomErrorAfterCount.derived_message[:3] + ".*"))
+def _retryable_test_if_exception_message_match(thing):
+    return thing.go()
+
+
+@retry(retry=tenacity.retry_if_not_exception_message(
+    match=NoCustomErrorAfterCount.derived_message[:3] + ".*"))
+def _retryable_test_if_not_exception_message_match(thing):
+    return thing.go()
+
+
+@retry(retry=tenacity.retry_if_not_exception_message(
+    message=NameErrorUntilCount.derived_message))
+def _retryable_test_not_exception_message_delay(thing):
     return thing.go()
 
 
@@ -772,6 +816,49 @@ class TestDecoratorWrapper(unittest.TestCase):
         except RetryError as e:
             self.assertTrue(isinstance(e, RetryError))
             print(e)
+
+    def test_retry_if_exception_message(self):
+        try:
+            self.assertTrue(_retryable_test_if_exception_message_message(
+                NoCustomErrorAfterCount(3)))
+        except CustomError:
+            print(_retryable_test_if_exception_message_message.retry.
+                  statistics)
+            self.fail("CustomError should've been retried from errormessage")
+
+    def test_retry_if_not_exception_message(self):
+        try:
+            self.assertTrue(_retryable_test_if_not_exception_message_message(
+                NoCustomErrorAfterCount(2)))
+        except CustomError:
+            s = _retryable_test_if_not_exception_message_message.retry.\
+                statistics
+            self.assertTrue(s['attempt_number'] == 1)
+
+    def test_retry_if_not_exception_message_delay(self):
+        try:
+            self.assertTrue(_retryable_test_not_exception_message_delay(
+                NameErrorUntilCount(3)))
+        except NameError:
+            s = _retryable_test_not_exception_message_delay.retry.statistics
+            print(s['attempt_number'])
+            self.assertTrue(s['attempt_number'] == 4)
+
+    def test_retry_if_exception_message_match(self):
+        try:
+            self.assertTrue(_retryable_test_if_exception_message_match(
+                NoCustomErrorAfterCount(3)))
+        except CustomError:
+            self.fail("CustomError should've been retried from errormessage")
+
+    def test_retry_if_not_exception_message_match(self):
+        try:
+            self.assertTrue(_retryable_test_if_not_exception_message_message(
+                NoCustomErrorAfterCount(2)))
+        except CustomError:
+            s = _retryable_test_if_not_exception_message_message.retry.\
+                statistics
+            self.assertTrue(s['attempt_number'] == 1)
 
     def test_defaults(self):
         self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))

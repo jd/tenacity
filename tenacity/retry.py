@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import abc
+import re
 
 import six
 
@@ -109,6 +110,50 @@ class retry_if_not_result(retry_base):
     def __call__(self, attempt):
         if not attempt.failed:
             return not self.predicate(attempt.result())
+
+
+class retry_if_exception_message(retry_if_exception):
+    """Retries if an exception message equals or matches."""
+
+    def __init__(self, message=None, match=None):
+        if message and match:
+            raise TypeError(
+                "{}() takes either 'message' or 'match', not both".format(
+                    self.__class__.__name__))
+
+        # set predicate
+        if message:
+            def message_fnc(exception):
+                return message == str(exception)
+            predicate = message_fnc
+        elif match:
+            prog = re.compile(match)
+
+            def match_fnc(exception):
+                return prog.match(str(exception))
+            predicate = match_fnc
+        else:
+            raise TypeError(
+                "{}() missing 1 required argument 'message' or 'match'".
+                format(self.__class__.__name__))
+
+        super(retry_if_exception_message, self).__init__(predicate)
+
+
+class retry_if_not_exception_message(retry_if_exception_message):
+    """Retries until an exception message equals or matches."""
+
+    def __init__(self, *args, **kwargs):
+        super(retry_if_not_exception_message, self).__init__(*args, **kwargs)
+        # invert predicate
+        if_predicate = self.predicate
+        self.predicate = lambda *args_, **kwargs_: not if_predicate(
+            *args_, **kwargs_)
+
+    def __call__(self, attempt):
+        if not attempt.failed:
+            return True
+        return self.predicate(attempt.exception())
 
 
 class retry_any(retry_base):
