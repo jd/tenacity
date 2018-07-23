@@ -29,6 +29,24 @@ except AttributeError:
 
 
 if six.PY2:
+    from functools import WRAPPER_ASSIGNMENTS, WRAPPER_UPDATES
+
+    def wraps(fn):
+        """Do the same as six.wraps but only copy attributes that exist.
+
+        For example, object instances don't have __name__ attribute, so
+        six.wraps fails. This is fixed in Python 3
+        (https://bugs.python.org/issue3445), but didn't get backported to six.
+
+        Also, see https://github.com/benjaminp/six/issues/250.
+        """
+        def filter_hasattr(obj, attrs):
+            return tuple(a for a in attrs if hasattr(obj, a))
+        return six.wraps(
+            fn,
+            assigned=filter_hasattr(fn, WRAPPER_ASSIGNMENTS),
+            updated=filter_hasattr(fn, WRAPPER_UPDATES))
+
     def capture(fut, tb):
         # TODO(harlowja): delete this in future, since its
         # has to repeatedly calculate this crap.
@@ -38,6 +56,8 @@ if six.PY2:
         # This was deprecated in Python 3.
         return inspect.getargspec(func)
 else:
+    from functools import wraps  # noqa
+
     def capture(fut, tb):
         fut.set_exception(tb[1])
 

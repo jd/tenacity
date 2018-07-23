@@ -268,7 +268,7 @@ class BaseRetrying(object):
 
         :param f: A function to wraps for retrying.
         """
-        @six.wraps(f)
+        @_utils.wraps(f)
         def wrapped_f(*args, **kw):
             return self.call(f, *args, **kw)
 
