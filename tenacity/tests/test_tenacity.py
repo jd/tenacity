@@ -253,13 +253,37 @@ class TestWaitConditions(unittest.TestCase):
             [tenacity.wait_fixed(8) for i in six.moves.range(1)]))
 
         for i in six.moves.range(10):
-            w = r.wait(i, 1)
+            w = r.wait(i + 1, 1)
             if i < 2:
                 self._assert_range(w, 1, 2)
             elif i < 4:
                 self._assert_range(w, 4, 5)
             else:
                 self._assert_range(w, 8, 9)
+
+    def test_wait_chain_multiple_invocations(self):
+        sleep_intervals = []
+        r = Retrying(
+            sleep=sleep_intervals.append,
+            wait=tenacity.wait_chain(*[
+                tenacity.wait_fixed(i + 1) for i in six.moves.range(3)
+            ]),
+            stop=tenacity.stop_after_attempt(5),
+            retry=tenacity.retry_if_result(lambda x: x == 1),
+        )
+
+        @r.wraps
+        def always_return_1():
+            return 1
+
+        self.assertRaises(tenacity.RetryError, always_return_1)
+        self.assertEqual(sleep_intervals, [1.0, 2.0, 3.0, 3.0])
+        sleep_intervals[:] = []
+
+        # Clear and restart retrying.
+        self.assertRaises(tenacity.RetryError, always_return_1)
+        self.assertEqual(sleep_intervals, [1.0, 2.0, 3.0, 3.0])
+        sleep_intervals[:] = []
 
     def test_wait_random_exponential(self):
         fn = tenacity.wait_random_exponential(0.5, 60.0)
