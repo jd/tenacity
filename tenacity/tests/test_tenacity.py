@@ -866,6 +866,20 @@ class TestDecoratorWrapper(unittest.TestCase):
         self.assertTrue(_retryable_default(NoCustomErrorAfterCount(5)))
         self.assertTrue(_retryable_default_f(NoCustomErrorAfterCount(5)))
 
+    def test_retry_function_object(self):
+        """Test that six.wraps doesn't cause problems with callable objects.
+
+        It raises an error upon trying to wrap it in Py2, because __name__
+        attribute is missing. It's fixed in Py3 but was never backported.
+        """
+        class Hello(object):
+            def __call__(self):
+                return "Hello"
+        retrying = Retrying(wait=tenacity.wait_fixed(0.01),
+                            stop=tenacity.stop_after_attempt(3))
+        h = retrying.wraps(Hello())
+        self.assertEqual(h(), "Hello")
+
 
 class TestBeforeAfterAttempts(unittest.TestCase):
     _attempt_number = 0
