@@ -2,10 +2,18 @@
 
 import inspect
 from fractions import Fraction
+from warnings import warn
 
 import six
 
 from tenacity import _utils
+
+
+def warn_about_non_retry_state_deprecation(cbname, func, stacklevel):
+    msg = (
+        '"%s" function must accept single "retry_state" parameter,'
+        ' please update %s' % (cbname, _utils.get_callback_name(func)))
+    warn(msg, DeprecationWarning, stacklevel=stacklevel + 1)
 
 
 def func_takes_retry_state(func):
@@ -99,6 +107,8 @@ def stop_func_accept_retry_state(stop_func):
 
     @_utils.wraps(stop_func)
     def wrapped_stop_func(retry_state):
+        warn_about_non_retry_state_deprecation(
+            'stop', stop_func, stacklevel=4)
         return stop_func(
             retry_state.attempt_number,
             retry_state.seconds_since_start,
@@ -117,6 +127,8 @@ def wait_func_accept_retry_state(wait_func):
     if func_takes_last_result(wait_func):
         @_utils.wraps(wait_func)
         def wrapped_wait_func(retry_state):
+            warn_about_non_retry_state_deprecation(
+                'wait', wait_func, stacklevel=4)
             return wait_func(
                 retry_state.attempt_number,
                 retry_state.seconds_since_start,
@@ -125,6 +137,8 @@ def wait_func_accept_retry_state(wait_func):
     else:
         @_utils.wraps(wait_func)
         def wrapped_wait_func(retry_state):
+            warn_about_non_retry_state_deprecation(
+                'wait', wait_func, stacklevel=4)
             return wait_func(
                 retry_state.attempt_number,
                 retry_state.seconds_since_start,
@@ -142,6 +156,8 @@ def retry_func_accept_retry_state(retry_func):
 
     @_utils.wraps(retry_func)
     def wrapped_retry_func(retry_state):
+        warn_about_non_retry_state_deprecation(
+            'retry', retry_func, stacklevel=4)
         return retry_func(retry_state.outcome)
     return wrapped_retry_func
 
@@ -157,6 +173,7 @@ def before_func_accept_retry_state(fn):
     @_utils.wraps(fn)
     def wrapped_before_func(retry_state):
         # func, trial_number, trial_time_taken
+        warn_about_non_retry_state_deprecation('before', fn, stacklevel=4)
         return fn(
             retry_state.fn,
             retry_state.attempt_number,
@@ -175,6 +192,7 @@ def after_func_accept_retry_state(fn):
     @_utils.wraps(fn)
     def wrapped_after_sleep_func(retry_state):
         # func, trial_number, trial_time_taken
+        warn_about_non_retry_state_deprecation('after', fn, stacklevel=4)
         return fn(
             retry_state.fn,
             retry_state.attempt_number,
@@ -193,6 +211,8 @@ def before_sleep_func_accept_retry_state(fn):
     @_utils.wraps(fn)
     def wrapped_before_sleep_func(retry_state):
         # retry_object, sleep, last_result
+        warn_about_non_retry_state_deprecation(
+            'before_sleep', fn, stacklevel=4)
         return fn(
             retry_state.retry_object,
             sleep=getattr(retry_state.next_action, 'sleep'),
@@ -209,6 +229,7 @@ def retry_error_callback_accept_retry_state(fn):
 
     @_utils.wraps(fn)
     def wrapped_retry_error_callback(retry_state):
-        # retry_object, sleep, last_result
+        warn_about_non_retry_state_deprecation(
+            'retry_error_callback', fn, stacklevel=4)
         return fn(retry_state.outcome)
     return wrapped_retry_error_callback

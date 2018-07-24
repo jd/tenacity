@@ -17,7 +17,7 @@
 from tenacity import _utils
 
 
-def before_sleep_nothing(retry_state, sleep, last_result):
+def before_sleep_nothing(retry_state):
     """Before call strategy that does nothing."""
 
 

@@ -17,7 +17,7 @@
 from tenacity import _utils
 
 
-def after_nothing(func, trial_number, trial_time_taken):
+def after_nothing(retry_state):
     """After call strategy that does nothing."""
 
 

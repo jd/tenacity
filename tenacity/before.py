@@ -17,7 +17,7 @@
 from tenacity import _utils
 
 
-def before_nothing(func, trial_number):
+def before_nothing(retry_state):
     """Before call strategy that does nothing."""
 
 

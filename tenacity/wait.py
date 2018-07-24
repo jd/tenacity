@@ -19,8 +19,8 @@ import random
 
 import six
 
-from tenacity import compat as _compat
 from tenacity import _utils
+from tenacity import compat as _compat
 
 
 @six.add_metaclass(abc.ABCMeta)
