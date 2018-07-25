@@ -17,16 +17,16 @@
 from tenacity import _utils
 
 
-def before_nothing(func, trial_number):
+def before_nothing(retry_state):
     """Before call strategy that does nothing."""
 
 
 def before_log(logger, log_level):
     """Before call strategy that logs to some logger the attempt."""
-    def log_it(func, trial_number):
+    def log_it(retry_state):
         logger.log(log_level,
                    "Starting call to '%s', this is the %s time calling it.",
-                   _utils.get_callback_name(func),
-                   _utils.to_ordinal(trial_number))
+                   _utils.get_callback_name(retry_state.fn),
+                   _utils.to_ordinal(retry_state.attempt_number))
 
     return log_it

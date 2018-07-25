@@ -14,43 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import six
-
 from tenacity import _utils
 
 
-def before_sleep_nothing(call_state, sleep, last_result):
+def before_sleep_nothing(retry_state):
     """Before call strategy that does nothing."""
 
 
 def before_sleep_log(logger, log_level):
     """Before call strategy that logs to some logger the attempt."""
-    def log_it(call_state):
-        if call_state.outcome.failed:
-            verb, value = 'raised', call_state.outcome.exception()
+    def log_it(retry_state):
+        if retry_state.outcome.failed:
+            verb, value = 'raised', retry_state.outcome.exception()
         else:
-            verb, value = 'returned', call_state.outcome.result()
+            verb, value = 'returned', retry_state.outcome.result()
 
         logger.log(log_level,
                    "Retrying %s in %s seconds as it %s %s.",
-                   _utils.get_callback_name(call_state.fn),
-                   getattr(call_state.next_action, 'sleep'),
+                   _utils.get_callback_name(retry_state.fn),
+                   getattr(retry_state.next_action, 'sleep'),
                    verb, value)
     return log_it
-
-
-def _before_sleep_func_accept_call_state(fn):
-    if not six.callable(fn):
-        return fn
-
-    takes_call_state = _utils._func_takes_call_state(fn)
-    if takes_call_state:
-        return fn
-
-    @six.wraps(fn)
-    def wrapped_before_sleep_func(call_state):
-        return fn(
-            call_state.retry_object,
-            sleep=getattr(call_state.next_action, 'sleep'),
-            last_result=call_state.outcome)
-    return wrapped_before_sleep_func

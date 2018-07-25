@@ -287,33 +287,68 @@ retries happen after a wait interval, so the keyword argument is called
     def raise_my_exception():
         raise MyException("Fail")
 
-You can also define a custom ``before_sleep`` function. It should have one
-parameter called ``call_state`` that contains all information about current
-retry invocation.
+
+Statistics
+~~~~~~~~~~
+
+You can access the statistics about the retry made over a function by using the
+`retry` attribute attached to the function and its `statistics` attribute:
 
 .. testcode::
 
-    logger = logging.getLogger(__name__)
-
-    def my_before_sleep(call_state):
-        if call_state.attempt_number < 1:
-            loglevel = logging.INFO
-        else:
-            loglevel = logging.WARNING
-        logger.log(
-            loglevel, 'Retrying %s: attempt %s ended with: %s',
-            call_state.fn, call_state.attempt_number, call_state.outcome)
-
-    @retry(stop=stop_after_attempt(3), before_sleep=my_before_sleep)
+    @retry(stop=stop_after_attempt(3))
     def raise_my_exception():
         raise MyException("Fail")
 
     try:
         raise_my_exception()
-    except RetryError:
+    except Exception:
         pass
 
-``call_state`` argument is an object of `RetryCallState` class:
+    print(raise_my_exception.retry.statistics)
+
+.. testoutput::
+   :hide:
+
+   ...
+
+Custom Callbacks
+~~~~~~~~~~~~~~~~
+
+You can also define your own callbacks. The callback should accept one
+parameter called ``retry_state`` that contains all information about current
+retry invocation.
+
+For example, you can call a custom callback function after all retries failed,
+without raising an exception (or you can re-raise or do anything really)
+
+.. testcode::
+
+    def return_last_value(retry_state):
+        """return the result of the last call attempt"""
+        return retry_state.last_outcome.result()
+
+    def is_false(value):
+        """Return True if value is False"""
+        return value is False
+
+    # will return False after trying 3 times to get a different result
+    @retry(stop=stop_after_attempt(3),
+           retry_error_callback=return_last_value,
+           retry=retry_if_result(is_false))
+    def eventually_return_false():
+        return False
+
+.. note::
+
+   Calling the parameter ``retry_state`` is important, because this is how
+   *tenacity* internally distinguishes callbacks from their :ref:`deprecated
+   counterparts <deprecated-callbacks>`.
+
+RetryCallState
+~~~~~~~~~~~~~~
+
+``retry_state`` argument is an object of `RetryCallState` class:
 
 .. autoclass:: tenacity.RetryCallState
 
@@ -351,14 +386,129 @@ retry invocation.
    .. autoinstanceattribute:: next_action(tenacity.RetryAction or None)
       :annotation:
 
+Other Custom Callbacks
+~~~~~~~~~~~~~~~~~~~~~~
 
+It's also possible to define custom callbacks for other keyword arguments.
 
-Previously custom ``before_sleep`` functions could also accept three
-parameters. This approach is deprecated but kept for backward compatibility:
+.. function:: my_stop(retry_state)
 
-- ``retry_object``: the `Retrying` object that runs the retries,
-- ``sleep``: wait interval in seconds before the next attempt,
-- ``last_result``: the outcome of the current attempt.
+   :param RetryState retry_state: info about current retry invocation
+   :return: whether or not retrying should stop
+   :rtype: bool
+
+.. function:: my_wait(retry_state)
+
+   :param RetryState retry_state: info about current retry invocation
+   :return: number of seconds to wait before next retry
+   :rtype: float
+
+.. function:: my_retry(retry_state)
+
+   :param RetryState retry_state: info about current retry invocation
+   :return: whether or not retrying should continue
+   :rtype: bool
+
+.. function:: my_before(retry_state)
+
+   :param RetryState retry_state: info about current retry invocation
+
+.. function:: my_after(retry_state)
+
+   :param RetryState retry_state: info about current retry invocation
+
+.. function:: my_before_sleep(retry_state)
+
+   :param RetryState retry_state: info about current retry invocation
+
+Here's an example with a custom ``before_sleep`` function:
+
+.. testcode::
+
+    logger = logging.getLogger(__name__)
+
+    def my_before_sleep(retry_state):
+        if retry_state.attempt_number < 1:
+            loglevel = logging.INFO
+        else:
+            loglevel = logging.WARNING
+        logger.log(
+            loglevel, 'Retrying %s: attempt %s ended with: %s',
+            retry_state.fn, retry_state.attempt_number, retry_state.outcome)
+
+    @retry(stop=stop_after_attempt(3), before_sleep=my_before_sleep)
+    def raise_my_exception():
+        raise MyException("Fail")
+
+    try:
+        raise_my_exception()
+    except RetryError:
+        pass
+
+.. _deprecated-callbacks:
+
+.. note::
+
+   It was also possible to define custom callbacks before, but they accepted
+   varying parameter sets and none of those provided full state. The old way is
+   deprecated, but kept for backward compatibility.
+
+   .. function:: my_stop(previous_attempt_number, delay_since_first_attempt)
+
+      *deprecated*
+
+      :param previous_attempt_number: the number of current attempt
+      :type previous_attempt_number: int
+      :param delay_since_first_attempt: interval in seconds between the
+           beginning of first attempt and current time
+      :type delay_since_first_attempt: float
+      :rtype: bool
+
+   .. function:: my_wait(previous_attempt_number, delay_since_first_attempt [, last_result])
+
+      *deprecated*
+
+      :param previous_attempt_number: the number of current attempt
+      :type previous_attempt_number: int
+      :param delay_since_first_attempt: interval in seconds between the
+           beginning of first attempt and current time
+      :type delay_since_first_attempt: float
+      :param tenacity.Future last_result: current outcome
+
+      :return: number of seconds to wait before next retry
+      :rtype: float
+
+   .. function:: my_retry(attempt)
+
+      *deprecated*
+
+      :param tenacity.Future attempt: current outcome
+      :return: whether or not retrying should continue
+      :rtype: bool
+
+   .. function:: my_before(func, trial_number)
+
+      *deprecated*
+
+      :param callable func: function whose outcome is to be retried
+      :param int trial_number: the number of current attempt
+
+   .. function:: my_after(func, trial_number, trial_time_taken)
+
+      *deprecated*
+
+      :param callable func: function whose outcome is to be retried
+      :param int trial_number: the number of current attempt
+      :param float trial_time_taken: interval in seconds between the beginning
+         of first attempt and current time
+
+   .. function:: my_before_sleep(func, sleep, last_result)
+
+      *deprecated*
+
+      :param callable func: function whose outcome is to be retried
+      :param float sleep: number of seconds to wait until next retry
+      :param tenacity.Future last_result: current outcome
 
 .. testcode::
 
@@ -377,46 +527,6 @@ parameters. This approach is deprecated but kept for backward compatibility:
         raise_my_exception()
     except RetryError:
         pass
-
-Similarly, you can call a custom callback function after all retries failed, without raising an exception (or you can re-raise or do anything really)
-
-.. testcode::
-
-    def return_last_value(last_attempt):
-        """return the result of the last call attempt"""
-        return last_attempt.result()
-
-    def is_false(value):
-        """Return True if value is False"""
-        return value is False
-
-    # will return False after trying 3 times to get a different result
-    @retry(stop=stop_after_attempt(3),
-           retry_error_callback=return_last_value,
-           retry=retry_if_result(is_false))
-    def eventually_return_false():
-        return False
-
-You can access the statistics about the retry made over a function by using the
-`retry` attribute attached to the function and its `statistics` attribute:
-
-.. testcode::
-
-    @retry(stop=stop_after_attempt(3))
-    def raise_my_exception():
-        raise MyException("Fail")
-
-    try:
-        raise_my_exception()
-    except Exception:
-        pass
-
-    print(raise_my_exception.retry.statistics)
-
-.. testoutput::
-   :hide:
-
-   ...
 
 Changing Arguments at Run Time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -493,4 +603,3 @@ Contribute
 #. Make the docs better (or more detailed, or more easier to read, or ...)
 
 .. _`the repository`: https://github.com/jd/tenacity
-

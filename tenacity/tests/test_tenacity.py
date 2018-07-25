@@ -16,14 +16,17 @@
 import logging
 import time
 import unittest
+import warnings
+from contextlib import contextmanager
+from copy import copy
+
+import pytest
 
 import six.moves
 
 import tenacity
-from tenacity import RetryError
-from tenacity import Retrying
-from tenacity import retry
-from tenacity.wait import _make_wait_call_state
+from tenacity import RetryError, Retrying, retry
+from tenacity.compat import make_retry_state
 
 
 class TestBase(unittest.TestCase):
@@ -35,12 +38,15 @@ class TestStopConditions(unittest.TestCase):
 
     def test_never_stop(self):
         r = Retrying()
-        self.assertFalse(r.stop(3, 6546))
+        self.assertFalse(r.stop(make_retry_state(3, 6546)))
 
     def test_stop_any(self):
-        s = tenacity.stop_any(
+        stop = tenacity.stop_any(
             tenacity.stop_after_delay(1),
             tenacity.stop_after_attempt(4))
+
+        def s(*args):
+            return stop(make_retry_state(*args))
         self.assertFalse(s(1, 0.1))
         self.assertFalse(s(2, 0.2))
         self.assertFalse(s(2, 0.8))
@@ -49,9 +55,12 @@ class TestStopConditions(unittest.TestCase):
         self.assertTrue(s(4, 1.8))
 
     def test_stop_all(self):
-        s = tenacity.stop_all(
+        stop = tenacity.stop_all(
             tenacity.stop_after_delay(1),
             tenacity.stop_after_attempt(4))
+
+        def s(*args):
+            return stop(make_retry_state(*args))
         self.assertFalse(s(1, 0.1))
         self.assertFalse(s(2, 0.2))
         self.assertFalse(s(2, 0.8))
@@ -60,7 +69,10 @@ class TestStopConditions(unittest.TestCase):
         self.assertTrue(s(4, 1.8))
 
     def test_stop_or(self):
-        s = tenacity.stop_after_delay(1) | tenacity.stop_after_attempt(4)
+        stop = tenacity.stop_after_delay(1) | tenacity.stop_after_attempt(4)
+
+        def s(*args):
+            return stop(make_retry_state(*args))
         self.assertFalse(s(1, 0.1))
         self.assertFalse(s(2, 0.2))
         self.assertFalse(s(2, 0.8))
@@ -69,7 +81,10 @@ class TestStopConditions(unittest.TestCase):
         self.assertTrue(s(4, 1.8))
 
     def test_stop_and(self):
-        s = tenacity.stop_after_delay(1) & tenacity.stop_after_attempt(4)
+        stop = tenacity.stop_after_delay(1) & tenacity.stop_after_attempt(4)
+
+        def s(*args):
+            return stop(make_retry_state(*args))
         self.assertFalse(s(1, 0.1))
         self.assertFalse(s(2, 0.2))
         self.assertFalse(s(2, 0.8))
@@ -79,24 +94,37 @@ class TestStopConditions(unittest.TestCase):
 
     def test_stop_after_attempt(self):
         r = Retrying(stop=tenacity.stop_after_attempt(3))
-        self.assertFalse(r.stop(2, 6546))
-        self.assertTrue(r.stop(3, 6546))
-        self.assertTrue(r.stop(4, 6546))
+        self.assertFalse(r.stop(make_retry_state(2, 6546)))
+        self.assertTrue(r.stop(make_retry_state(3, 6546)))
+        self.assertTrue(r.stop(make_retry_state(4, 6546)))
 
     def test_stop_after_delay(self):
         r = Retrying(stop=tenacity.stop_after_delay(1))
-        self.assertFalse(r.stop(2, 0.999))
-        self.assertTrue(r.stop(2, 1))
-        self.assertTrue(r.stop(2, 1.001))
+        self.assertFalse(r.stop(make_retry_state(2, 0.999)))
+        self.assertTrue(r.stop(make_retry_state(2, 1)))
+        self.assertTrue(r.stop(make_retry_state(2, 1.001)))
 
     def test_legacy_explicit_stop_type(self):
         Retrying(stop="stop_after_attempt")
 
-    def test_stop_func(self):
+    def test_stop_backward_compat(self):
         r = Retrying(stop=lambda attempt, delay: attempt == delay)
-        self.assertFalse(r.stop(1, 3))
-        self.assertFalse(r.stop(100, 99))
-        self.assertTrue(r.stop(101, 101))
+        with reports_deprecation_warning():
+            self.assertFalse(r.stop(make_retry_state(1, 3)))
+        with reports_deprecation_warning():
+            self.assertFalse(r.stop(make_retry_state(100, 99)))
+        with reports_deprecation_warning():
+            self.assertTrue(r.stop(make_retry_state(101, 101)))
+
+    def test_stop_func_with_retry_state(self):
+        def stop_func(retry_state):
+            rs = retry_state
+            return rs.attempt_number == rs.seconds_since_start
+
+        r = Retrying(stop=stop_func)
+        self.assertFalse(r.stop(make_retry_state(1, 3)))
+        self.assertFalse(r.stop(make_retry_state(100, 99)))
+        self.assertTrue(r.stop(make_retry_state(101, 101)))
 
 
 class TestWaitConditions(unittest.TestCase):
@@ -177,7 +205,7 @@ class TestWaitConditions(unittest.TestCase):
     def test_legacy_explicit_wait_type(self):
         Retrying(wait="exponential_sleep")
 
-    def test_wait_func_result(self):
+    def test_wait_backward_compat_with_result(self):
         captures = []
 
         def wait_capture(attempt, delay, last_result=None):
@@ -191,15 +219,18 @@ class TestWaitConditions(unittest.TestCase):
         r = Retrying(wait=wait_capture, sleep=lambda secs: None,
                      stop=tenacity.stop_after_attempt(r_attempts),
                      reraise=True)
-        self.assertRaises(Exception, r.call, dying)
+        with reports_deprecation_warning():
+            self.assertRaises(Exception, r.call, dying)
         self.assertEqual(r_attempts - 1, len(captures))
         self.assertTrue(all([r.failed for r in captures]))
 
     def test_wait_func(self):
-        r = Retrying(wait=lambda attempt, delay: attempt * delay)
-        self.assertEqual(r.wait(_make_wait_call_state(1, 5)), 5)
-        self.assertEqual(r.wait(_make_wait_call_state(2, 11)), 22)
-        self.assertEqual(r.wait(_make_wait_call_state(10, 100)), 1000)
+        def wait_func(retry_state):
+            return retry_state.attempt_number * retry_state.seconds_since_start
+        r = Retrying(wait=wait_func)
+        self.assertEqual(r.wait(make_retry_state(1, 5)), 5)
+        self.assertEqual(r.wait(make_retry_state(2, 11)), 22)
+        self.assertEqual(r.wait(make_retry_state(10, 100)), 1000)
 
     def test_wait_combine(self):
         r = Retrying(wait=tenacity.wait_combine(tenacity.wait_random(0, 3),
@@ -331,7 +362,7 @@ class TestWaitConditions(unittest.TestCase):
         self._assert_inclusive_range(mean(attempt[8]), 28.00, 34.00)
         self._assert_inclusive_range(mean(attempt[9]), 28.00, 34.00)
 
-    def test_wait_backward_compatibility(self):
+    def test_wait_backward_compat(self):
         """Ensure Retrying object accepts both old and newstyle wait funcs."""
         def wait1(previous_attempt_number, delay_since_first_attempt):
             wait1.calls.append((
@@ -351,13 +382,15 @@ class TestWaitConditions(unittest.TestCase):
             raise Exception("Broken")
 
         retrying1 = Retrying(wait=wait1, stop=tenacity.stop_after_attempt(4))
-        self.assertRaises(Exception, lambda: retrying1.call(dying))
+        with reports_deprecation_warning():
+            self.assertRaises(Exception, lambda: retrying1.call(dying))
         self.assertEqual([t[0] for t in wait1.calls], [1, 2, 3])
         # This assumes that 3 iterations complete within 1 second.
         self.assertTrue(all(t[1] < 1 for t in wait1.calls))
 
         retrying2 = Retrying(wait=wait2, stop=tenacity.stop_after_attempt(4))
-        self.assertRaises(Exception, lambda: retrying2.call(dying))
+        with reports_deprecation_warning():
+            self.assertRaises(Exception, lambda: retrying2.call(dying))
         self.assertEqual([t[0] for t in wait2.calls], [1, 2, 3])
         # This assumes that 3 iterations complete within 1 second.
         self.assertTrue(all(t[1] < 1 for t in wait2.calls))
@@ -370,20 +403,20 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(waitobj(1, 0.1), 5)
         self.assertEqual(
             waitobj(1, 0.1, tenacity.Future.construct(1, 1, False)), 5)
-        call_state = _make_wait_call_state(123, 456)
-        self.assertEqual(call_state.attempt_number, 123)
-        self.assertEqual(call_state.seconds_since_start, 456)
-        self.assertEqual(waitobj(call_state=call_state), 5)
+        retry_state = make_retry_state(123, 456)
+        self.assertEqual(retry_state.attempt_number, 123)
+        self.assertEqual(retry_state.seconds_since_start, 456)
+        self.assertEqual(waitobj(retry_state=retry_state), 5)
 
-    def test_wait_call_state_attributes(self):
+    def test_wait_retry_state_attributes(self):
 
         class ExtractCallState(Exception):
             pass
 
-        # call_state is mutable, so return it as an exception to extract the
+        # retry_state is mutable, so return it as an exception to extract the
         # exact values it has when wait is called and bypass any other logic.
-        def waitfunc(call_state):
-            raise ExtractCallState(call_state)
+        def waitfunc(retry_state):
+            raise ExtractCallState(retry_state)
 
         retrying = Retrying(
             wait=waitfunc,
@@ -395,69 +428,95 @@ class TestWaitConditions(unittest.TestCase):
         try:
             retrying.call(returnval)
         except ExtractCallState as err:
-            call_state = err.args[0]
-        self.assertIs(call_state.fn, returnval)
-        self.assertEqual(call_state.args, ())
-        self.assertEqual(call_state.kwargs, {})
-        self.assertEqual(call_state.outcome.result(), 123)
-        self.assertEqual(call_state.attempt_number, 1)
-        self.assertGreater(call_state.outcome_timestamp, call_state.start_time)
+            retry_state = err.args[0]
+        self.assertIs(retry_state.fn, returnval)
+        self.assertEqual(retry_state.args, ())
+        self.assertEqual(retry_state.kwargs, {})
+        self.assertEqual(retry_state.outcome.result(), 123)
+        self.assertEqual(retry_state.attempt_number, 1)
+        self.assertGreater(retry_state.outcome_timestamp,
+                           retry_state.start_time)
 
         def dying():
             raise Exception("Broken")
         try:
             retrying.call(dying)
         except ExtractCallState as err:
-            call_state = err.args[0]
-        self.assertIs(call_state.fn, dying)
-        self.assertEqual(call_state.args, ())
-        self.assertEqual(call_state.kwargs, {})
-        self.assertEqual(str(call_state.outcome.exception()), 'Broken')
-        self.assertEqual(call_state.attempt_number, 1)
-        self.assertGreater(call_state.outcome_timestamp, call_state.start_time)
+            retry_state = err.args[0]
+        self.assertIs(retry_state.fn, dying)
+        self.assertEqual(retry_state.args, ())
+        self.assertEqual(retry_state.kwargs, {})
+        self.assertEqual(str(retry_state.outcome.exception()), 'Broken')
+        self.assertEqual(retry_state.attempt_number, 1)
+        self.assertGreater(retry_state.outcome_timestamp,
+                           retry_state.start_time)
 
 
 class TestRetryConditions(unittest.TestCase):
 
     def test_retry_if_result(self):
-        r = (tenacity.retry_if_result(lambda x: x == 1))
+        retry = (tenacity.retry_if_result(lambda x: x == 1))
+
+        def r(fut):
+            retry_state = make_retry_state(1, 1.0, last_result=fut)
+            return retry(retry_state)
         self.assertTrue(r(tenacity.Future.construct(1, 1, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 2, False)))
 
     def test_retry_if_not_result(self):
-        r = (tenacity.retry_if_not_result(lambda x: x == 1))
+        retry = (tenacity.retry_if_not_result(lambda x: x == 1))
+
+        def r(fut):
+            retry_state = make_retry_state(1, 1.0, last_result=fut)
+            return retry(retry_state)
         self.assertTrue(r(tenacity.Future.construct(1, 2, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 1, False)))
 
     def test_retry_any(self):
-        r = tenacity.retry_any(
+        retry = tenacity.retry_any(
             tenacity.retry_if_result(lambda x: x == 1),
             tenacity.retry_if_result(lambda x: x == 2))
+
+        def r(fut):
+            retry_state = make_retry_state(1, 1.0, last_result=fut)
+            return retry(retry_state)
         self.assertTrue(r(tenacity.Future.construct(1, 1, False)))
         self.assertTrue(r(tenacity.Future.construct(1, 2, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 3, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 1, True)))
 
     def test_retry_all(self):
-        r = tenacity.retry_all(
+        retry = tenacity.retry_all(
             tenacity.retry_if_result(lambda x: x == 1),
             tenacity.retry_if_result(lambda x: isinstance(x, int)))
+
+        def r(fut):
+            retry_state = make_retry_state(1, 1.0, last_result=fut)
+            return retry(retry_state)
         self.assertTrue(r(tenacity.Future.construct(1, 1, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 2, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 3, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 1, True)))
 
     def test_retry_and(self):
-        r = (tenacity.retry_if_result(lambda x: x == 1) &
-             tenacity.retry_if_result(lambda x: isinstance(x, int)))
+        retry = (tenacity.retry_if_result(lambda x: x == 1) &
+                 tenacity.retry_if_result(lambda x: isinstance(x, int)))
+
+        def r(fut):
+            retry_state = make_retry_state(1, 1.0, last_result=fut)
+            return retry(retry_state)
         self.assertTrue(r(tenacity.Future.construct(1, 1, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 2, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 3, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 1, True)))
 
     def test_retry_or(self):
-        r = (tenacity.retry_if_result(lambda x: x == "foo") |
-             tenacity.retry_if_result(lambda x: isinstance(x, int)))
+        retry = (tenacity.retry_if_result(lambda x: x == "foo") |
+                 tenacity.retry_if_result(lambda x: isinstance(x, int)))
+
+        def r(fut):
+            retry_state = make_retry_state(1, 1.0, last_result=fut)
+            return retry(retry_state)
         self.assertTrue(r(tenacity.Future.construct(1, "foo", False)))
         self.assertFalse(r(tenacity.Future.construct(1, "foobar", False)))
         self.assertFalse(r(tenacity.Future.construct(1, 2.2, False)))
@@ -911,8 +970,9 @@ class TestBeforeAfterAttempts(unittest.TestCase):
     def test_before_attempts(self):
         TestBeforeAfterAttempts._attempt_number = 0
 
-        def _before(fn, attempt_number):
-            TestBeforeAfterAttempts._attempt_number = attempt_number
+        def _before(retry_state):
+            TestBeforeAfterAttempts._attempt_number = \
+                retry_state.attempt_number
 
         @retry(wait=tenacity.wait_fixed(1),
                stop=tenacity.stop_after_attempt(1),
@@ -927,8 +987,9 @@ class TestBeforeAfterAttempts(unittest.TestCase):
     def test_after_attempts(self):
         TestBeforeAfterAttempts._attempt_number = 0
 
-        def _after(fn, attempt_number, trial_time_taken_ms):
-            TestBeforeAfterAttempts._attempt_number = attempt_number
+        def _after(retry_state):
+            TestBeforeAfterAttempts._attempt_number = \
+                retry_state.attempt_number
 
         @retry(wait=tenacity.wait_fixed(0.1),
                stop=tenacity.stop_after_attempt(3),
@@ -944,9 +1005,9 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         self.assertTrue(TestBeforeAfterAttempts._attempt_number is 2)
 
     def test_before_sleep(self):
-        def _before_sleep(call_state):
-            self.assertGreater(call_state.next_action.sleep, 0)
-            _before_sleep.attempt_number = call_state.attempt_number
+        def _before_sleep(retry_state):
+            self.assertGreater(retry_state.next_action.sleep, 0)
+            _before_sleep.attempt_number = retry_state.attempt_number
 
         @retry(wait=tenacity.wait_fixed(0.01),
                stop=tenacity.stop_after_attempt(3),
@@ -972,7 +1033,8 @@ class TestBeforeAfterAttempts(unittest.TestCase):
             if _before_sleep.attempt_number < 2:
                 raise Exception("testing before_sleep_attempts handler")
 
-        _test_before_sleep()
+        with reports_deprecation_warning():
+            _test_before_sleep()
         self.assertEqual(_before_sleep.attempt_number, 2)
 
     def test_before_sleep_log_raises(self):
@@ -1057,7 +1119,7 @@ class TestReraiseExceptions(unittest.TestCase):
 
         @retry(wait=tenacity.wait_fixed(0.1),
                stop=tenacity.stop_after_attempt(2),
-               retry=lambda x: True)
+               retry=lambda retry_state: True)
         def _mock_fn():
             calls.append('x')
 
@@ -1075,7 +1137,7 @@ class TestReraiseExceptions(unittest.TestCase):
 
         @retry(wait=tenacity.wait_fixed(0.1),
                stop=tenacity.stop_after_attempt(2),
-               retry=lambda x: True,
+               retry=lambda retry_state: True,
                reraise=True)
         def _mock_fn():
             calls.append('x')
@@ -1118,20 +1180,60 @@ class TestRetryErrorCallback(unittest.TestCase):
         self._callback_called = True
         return fut
 
+    def test_retry_error_callback_backward_compat(self):
+        num_attempts = 3
+
+        def retry_error_callback(fut):
+            retry_error_callback.called_times += 1
+            return fut
+
+        retry_error_callback.called_times = 0
+
+        @retry(stop=tenacity.stop_after_attempt(num_attempts),
+               retry_error_callback=retry_error_callback)
+        def _foobar():
+            self._attempt_number += 1
+            raise Exception("This exception should not be raised")
+
+        with reports_deprecation_warning():
+            result = _foobar()
+
+        self.assertEqual(retry_error_callback.called_times, 1)
+        self.assertEqual(num_attempts, self._attempt_number)
+        self.assertIsInstance(result, tenacity.Future)
+
     def test_retry_error_callback(self):
         num_attempts = 3
 
+        def retry_error_callback(retry_state):
+            retry_error_callback.called_times += 1
+            return retry_state.outcome
+
+        retry_error_callback.called_times = 0
+
         @retry(stop=tenacity.stop_after_attempt(num_attempts),
-               retry_error_callback=self._callback)
+               retry_error_callback=retry_error_callback)
         def _foobar():
             self._attempt_number += 1
             raise Exception("This exception should not be raised")
 
         result = _foobar()
 
-        self.assertTrue(self._callback_called)
+        self.assertEqual(retry_error_callback.called_times, 1)
         self.assertEqual(num_attempts, self._attempt_number)
         self.assertIsInstance(result, tenacity.Future)
+
+
+@contextmanager
+def reports_deprecation_warning():
+    __tracebackhide__ = True
+    oldfilters = copy(warnings.filters)
+    warnings.simplefilter('always')
+    try:
+        with pytest.warns(DeprecationWarning):
+            yield
+    finally:
+        warnings.filters = oldfilters
 
 
 if __name__ == '__main__':

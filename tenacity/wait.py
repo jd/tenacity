@@ -16,59 +16,11 @@
 
 import abc
 import random
-from fractions import Fraction
 
 import six
 
 from tenacity import _utils
-
-
-_unset = object()
-
-
-def _make_wait_call_state(previous_attempt_number, delay_since_first_attempt,
-                          last_result=None):
-    required_parameter_unset = (previous_attempt_number is _unset or
-                                delay_since_first_attempt is _unset)
-    if required_parameter_unset:
-        missing = []
-        if previous_attempt_number is _unset:
-            missing.append('previous_attempt_number')
-        if delay_since_first_attempt is _unset:
-            missing.append('delay_since_first_attempt')
-        missing_str = ', '.join(repr(s) for s in missing)
-        raise TypeError('wait func missing parameters: ' + missing_str)
-
-    from tenacity import RetryCallState
-    retry_state = RetryCallState(None, None, (), {})
-    retry_state.attempt_number = previous_attempt_number
-    if last_result is not None:
-        retry_state.outcome = last_result
-    else:
-        retry_state.set_result(None)
-    # Ensure outcome_timestamp - start_time is *exactly* equal to the delay to
-    # avoid complexity in test code.
-    retry_state.start_time = Fraction(retry_state.start_time)
-    retry_state.outcome_timestamp = (
-        retry_state.start_time + Fraction(delay_since_first_attempt))
-    assert retry_state.seconds_since_start == delay_since_first_attempt
-    return retry_state
-
-
-def _wait_dunder_call_accept_old_params(fn):
-    @six.wraps(fn)
-    def new_fn(self,
-               previous_attempt_number=_unset,
-               delay_since_first_attempt=_unset,
-               last_result=None,
-               call_state=None):
-        if call_state is None:
-            call_state = _make_wait_call_state(
-                previous_attempt_number=previous_attempt_number,
-                delay_since_first_attempt=delay_since_first_attempt,
-                last_result=last_result)
-        return fn(self, call_state=call_state)
-    return new_fn
+from tenacity import compat as _compat
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -76,7 +28,7 @@ class wait_base(object):
     """Abstract base class for wait strategies."""
 
     @abc.abstractmethod
-    def __call__(self, call_state):
+    def __call__(self, retry_state):
         pass
 
     def __add__(self, other):
@@ -95,8 +47,8 @@ class wait_fixed(wait_base):
     def __init__(self, wait):
         self.wait_fixed = wait
 
-    @_wait_dunder_call_accept_old_params
-    def __call__(self, call_state):
+    @_compat.wait_dunder_call_accept_old_params
+    def __call__(self, retry_state):
         return self.wait_fixed
 
 
@@ -114,8 +66,8 @@ class wait_random(wait_base):
         self.wait_random_min = min
         self.wait_random_max = max
 
-    @_wait_dunder_call_accept_old_params
-    def __call__(self, call_state):
+    @_compat.wait_dunder_call_accept_old_params
+    def __call__(self, retry_state):
         return (self.wait_random_min +
                 (random.random() *
                  (self.wait_random_max - self.wait_random_min)))
@@ -125,12 +77,12 @@ class wait_combine(wait_base):
     """Combine several waiting strategies."""
 
     def __init__(self, *strategies):
-        self.wait_funcs = tuple(_wait_func_accept_call_state(strategy)
+        self.wait_funcs = tuple(_compat.wait_func_accept_retry_state(strategy)
                                 for strategy in strategies)
 
-    @_wait_dunder_call_accept_old_params
-    def __call__(self, call_state):
-        return sum(x(call_state=call_state) for x in self.wait_funcs)
+    @_compat.wait_dunder_call_accept_old_params
+    def __call__(self, retry_state):
+        return sum(x(retry_state=retry_state) for x in self.wait_funcs)
 
 
 class wait_chain(wait_base):
@@ -150,15 +102,15 @@ class wait_chain(wait_base):
     """
 
     def __init__(self, *strategies):
-        self.strategies = [_wait_func_accept_call_state(strategy)
+        self.strategies = [_compat.wait_func_accept_retry_state(strategy)
                            for strategy in strategies]
 
-    @_wait_dunder_call_accept_old_params
-    def __call__(self, call_state):
-        wait_func_no = min(max(call_state.attempt_number, 1),
+    @_compat.wait_dunder_call_accept_old_params
+    def __call__(self, retry_state):
+        wait_func_no = min(max(retry_state.attempt_number, 1),
                            len(self.strategies))
         wait_func = self.strategies[wait_func_no - 1]
-        return wait_func(call_state=call_state)
+        return wait_func(retry_state=retry_state)
 
 
 class wait_incrementing(wait_base):
@@ -173,10 +125,10 @@ class wait_incrementing(wait_base):
         self.increment = increment
         self.max = max
 
-    @_wait_dunder_call_accept_old_params
-    def __call__(self, call_state):
+    @_compat.wait_dunder_call_accept_old_params
+    def __call__(self, retry_state):
         result = self.start + (
-            self.increment * (call_state.attempt_number - 1)
+            self.increment * (retry_state.attempt_number - 1)
         )
         return max(0, min(result, self.max))
 
@@ -199,10 +151,10 @@ class wait_exponential(wait_base):
         self.max = max
         self.exp_base = exp_base
 
-    @_wait_dunder_call_accept_old_params
-    def __call__(self, call_state):
+    @_compat.wait_dunder_call_accept_old_params
+    def __call__(self, retry_state):
         try:
-            exp = self.exp_base ** call_state.attempt_number
+            exp = self.exp_base ** retry_state.attempt_number
             result = self.multiplier * exp
         except OverflowError:
             return self.max
@@ -234,44 +186,8 @@ class wait_random_exponential(wait_exponential):
     wait_exponential strategy (which uses a fixed interval) may be preferable.
     """
 
-    @_wait_dunder_call_accept_old_params
-    def __call__(self, call_state):
+    @_compat.wait_dunder_call_accept_old_params
+    def __call__(self, retry_state):
         high = super(wait_random_exponential, self).__call__(
-            call_state=call_state)
+            retry_state=retry_state)
         return random.uniform(0, high)
-
-
-def _func_takes_last_result(waiter):
-    if not six.callable(waiter):
-        return False
-    if isinstance(waiter, wait_base):
-        waiter = waiter.__call__
-    waiter_spec = _utils.getargspec(waiter)
-    return 'last_result' in waiter_spec.args
-
-
-def _wait_func_accept_call_state(wait_func):
-    if not six.callable(wait_func):
-        return wait_func
-
-    takes_call_state = _utils._func_takes_call_state(wait_func)
-    if takes_call_state:
-        return wait_func
-
-    takes_last_result = _func_takes_last_result(wait_func)
-    if takes_last_result:
-        @six.wraps(wait_func)
-        def wrapped_wait_func(call_state):
-            return wait_func(
-                call_state.attempt_number,
-                call_state.seconds_since_start,
-                last_result=call_state.outcome,
-            )
-    else:
-        @six.wraps(wait_func)
-        def wrapped_wait_func(call_state):
-            return wait_func(
-                call_state.attempt_number,
-                call_state.seconds_since_start,
-            )
-    return wrapped_wait_func

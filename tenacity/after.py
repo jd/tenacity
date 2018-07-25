@@ -17,7 +17,7 @@
 from tenacity import _utils
 
 
-def after_nothing(func, trial_number, trial_time_taken):
+def after_nothing(retry_state):
     """After call strategy that does nothing."""
 
 
@@ -26,9 +26,10 @@ def after_log(logger, log_level, sec_format="%0.3f"):
     log_tpl = ("Finished call to '%s' after " + str(sec_format) + "(s), "
                "this was the %s time calling it.")
 
-    def log_it(func, trial_number, trial_time_taken):
+    def log_it(retry_state):
         logger.log(log_level, log_tpl,
-                   _utils.get_callback_name(func), trial_time_taken,
-                   _utils.to_ordinal(trial_number))
+                   _utils.get_callback_name(retry_state.fn),
+                   retry_state.seconds_since_start,
+                   _utils.to_ordinal(retry_state.attempt_number))
 
     return log_it

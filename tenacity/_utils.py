@@ -152,13 +152,3 @@ class cached_property(object):
             return self
         value = obj.__dict__[self.func.__name__] = self.func(obj)
         return value
-
-
-def _func_takes_call_state(func):
-    if not six.callable(func):
-        return False
-    if not inspect.isfunction(func):
-        # func is a callable object rather than a function
-        func = func.__call__
-    func_spec = getargspec(func)
-    return 'call_state' in func_spec.args
