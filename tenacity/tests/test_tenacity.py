@@ -207,6 +207,17 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(7, 0), 40)
         self.assertEqual(r.wait(50, 0), 40)
 
+    def test_exponential_with_min_wait(self):
+        r = Retrying(wait=tenacity.wait_exponential(min=20))
+        self.assertEqual(r.wait(1, 0), 20)
+        self.assertEqual(r.wait(2, 0), 20)
+        self.assertEqual(r.wait(3, 0), 20)
+        self.assertEqual(r.wait(4, 0), 20)
+        self.assertEqual(r.wait(5, 0), 32)
+        self.assertEqual(r.wait(6, 0), 64)
+        self.assertEqual(r.wait(7, 0), 128)
+        self.assertEqual(r.wait(20, 0), 1048576)
+
     def test_exponential_with_max_wait_and_multiplier(self):
         r = Retrying(wait=tenacity.wait_exponential(
             max=50, multiplier=1))
@@ -218,6 +229,29 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(6, 0), 50)
         self.assertEqual(r.wait(7, 0), 50)
         self.assertEqual(r.wait(50, 0), 50)
+
+    def test_exponential_with_min_wait_and_multiplier(self):
+        r = Retrying(wait=tenacity.wait_exponential(
+            min=20, multiplier=2))
+        self.assertEqual(r.wait(1, 0), 20)
+        self.assertEqual(r.wait(2, 0), 20)
+        self.assertEqual(r.wait(3, 0), 20)
+        self.assertEqual(r.wait(4, 0), 32)
+        self.assertEqual(r.wait(5, 0), 64)
+        self.assertEqual(r.wait(6, 0), 128)
+        self.assertEqual(r.wait(7, 0), 256)
+        self.assertEqual(r.wait(20, 0), 2097152)
+
+    def test_exponential_with_min_wait_and_max_wait(self):
+        r = Retrying(wait=tenacity.wait_exponential(min=10, max=100))
+        self.assertEqual(r.wait(1, 0), 10)
+        self.assertEqual(r.wait(2, 0), 10)
+        self.assertEqual(r.wait(3, 0), 10)
+        self.assertEqual(r.wait(4, 0), 16)
+        self.assertEqual(r.wait(5, 0), 32)
+        self.assertEqual(r.wait(6, 0), 64)
+        self.assertEqual(r.wait(7, 0), 100)
+        self.assertEqual(r.wait(20, 0), 100)
 
     def test_legacy_explicit_wait_type(self):
         Retrying(wait="exponential_sleep")
