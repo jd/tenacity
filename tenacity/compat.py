@@ -16,6 +16,13 @@ def warn_about_non_retry_state_deprecation(cbname, func, stacklevel):
     warn(msg, DeprecationWarning, stacklevel=stacklevel + 1)
 
 
+def warn_about_dunder_non_retry_state_deprecation(fn, stacklevel):
+    msg = (
+        '"%s" method must be called with'
+        ' single "retry_state" parameter' % (_utils.get_callback_name(fn)))
+    warn(msg, DeprecationWarning, stacklevel=stacklevel + 1)
+
+
 def func_takes_retry_state(func):
     if not six.callable(func):
         return False
@@ -29,6 +36,23 @@ def func_takes_retry_state(func):
 _unset = object()
 
 
+def _make_unset_exception(func_name, **kwargs):
+    missing = []
+    for k, v in kwargs.iteritems():
+        if v is _unset:
+            missing.append(k)
+    missing_str = ', '.join(repr(s) for s in missing)
+    return TypeError(func_name + ' func missing parameters: ' + missing_str)
+
+
+def _set_delay_since_start(retry_state, delay):
+    # Ensure outcome_timestamp - start_time is *exactly* equal to the delay to
+    # avoid complexity in test code.
+    retry_state.start_time = Fraction(retry_state.start_time)
+    retry_state.outcome_timestamp = (retry_state.start_time + Fraction(delay))
+    assert retry_state.seconds_since_start == delay
+
+
 def make_retry_state(previous_attempt_number, delay_since_first_attempt,
                      last_result=None):
     """Construct RetryCallState for given attempt number & delay.
@@ -38,13 +62,10 @@ def make_retry_state(previous_attempt_number, delay_since_first_attempt,
     required_parameter_unset = (previous_attempt_number is _unset or
                                 delay_since_first_attempt is _unset)
     if required_parameter_unset:
-        missing = []
-        if previous_attempt_number is _unset:
-            missing.append('previous_attempt_number')
-        if delay_since_first_attempt is _unset:
-            missing.append('delay_since_first_attempt')
-        missing_str = ', '.join(repr(s) for s in missing)
-        raise TypeError('wait func missing parameters: ' + missing_str)
+        raise _make_unset_exception(
+            'wait/stop',
+            previous_attempt_number=previous_attempt_number,
+            delay_since_first_attempt=delay_since_first_attempt)
 
     from tenacity import RetryCallState
     retry_state = RetryCallState(None, None, (), {})
@@ -53,33 +74,8 @@ def make_retry_state(previous_attempt_number, delay_since_first_attempt,
         retry_state.outcome = last_result
     else:
         retry_state.set_result(None)
-    # Ensure outcome_timestamp - start_time is *exactly* equal to the delay to
-    # avoid complexity in test code.
-    retry_state.start_time = Fraction(retry_state.start_time)
-    retry_state.outcome_timestamp = (
-        retry_state.start_time + Fraction(delay_since_first_attempt))
-    assert retry_state.seconds_since_start == delay_since_first_attempt
+    _set_delay_since_start(retry_state, delay_since_first_attempt)
     return retry_state
-
-
-def wait_dunder_call_accept_old_params(fn):
-    """Wrap wait fn taking "retry_state" to accept old parameter tuple.
-
-    This is a backward compatibility shim to ensure tests keep working.
-    """
-    @_utils.wraps(fn)
-    def new_fn(self,
-               previous_attempt_number=_unset,
-               delay_since_first_attempt=_unset,
-               last_result=None,
-               retry_state=None):
-        if retry_state is None:
-            retry_state = make_retry_state(
-                previous_attempt_number=previous_attempt_number,
-                delay_since_first_attempt=delay_since_first_attempt,
-                last_result=last_result)
-        return fn(self, retry_state=retry_state)
-    return new_fn
 
 
 def func_takes_last_result(waiter):
@@ -95,6 +91,29 @@ def func_takes_last_result(waiter):
         waiter = waiter.__call__
     waiter_spec = _utils.getargspec(waiter)
     return 'last_result' in waiter_spec.args
+
+
+def stop_dunder_call_accept_old_params(fn):
+    """Decorate cls.__call__ method to accept old "stop" signature."""
+    @_utils.wraps(fn)
+    def new_fn(self,
+               previous_attempt_number=_unset,
+               delay_since_first_attempt=_unset,
+               retry_state=None):
+        if retry_state is None:
+            from tenacity import RetryCallState
+            retry_state_passed_as_non_kwarg = (
+                previous_attempt_number is not _unset and
+                isinstance(previous_attempt_number, RetryCallState))
+            if retry_state_passed_as_non_kwarg:
+                retry_state = previous_attempt_number
+            else:
+                warn_about_dunder_non_retry_state_deprecation(fn, stacklevel=2)
+                retry_state = make_retry_state(
+                    previous_attempt_number=previous_attempt_number,
+                    delay_since_first_attempt=delay_since_first_attempt)
+        return fn(self, retry_state=retry_state)
+    return new_fn
 
 
 def stop_func_accept_retry_state(stop_func):
@@ -114,6 +133,31 @@ def stop_func_accept_retry_state(stop_func):
             retry_state.seconds_since_start,
         )
     return wrapped_stop_func
+
+
+def wait_dunder_call_accept_old_params(fn):
+    """Decorate cls.__call__ method to accept old "wait" signature."""
+    @_utils.wraps(fn)
+    def new_fn(self,
+               previous_attempt_number=_unset,
+               delay_since_first_attempt=_unset,
+               last_result=None,
+               retry_state=None):
+        if retry_state is None:
+            from tenacity import RetryCallState
+            retry_state_passed_as_non_kwarg = (
+                previous_attempt_number is not _unset and
+                isinstance(previous_attempt_number, RetryCallState))
+            if retry_state_passed_as_non_kwarg:
+                retry_state = previous_attempt_number
+            else:
+                warn_about_dunder_non_retry_state_deprecation(fn, stacklevel=2)
+                retry_state = make_retry_state(
+                    previous_attempt_number=previous_attempt_number,
+                    delay_since_first_attempt=delay_since_first_attempt,
+                    last_result=last_result)
+        return fn(self, retry_state=retry_state)
+    return new_fn
 
 
 def wait_func_accept_retry_state(wait_func):
@@ -144,6 +188,27 @@ def wait_func_accept_retry_state(wait_func):
                 retry_state.seconds_since_start,
             )
     return wrapped_wait_func
+
+
+def retry_dunder_call_accept_old_params(fn):
+    """Decorate cls.__call__ method to accept old "retry" signature."""
+    @_utils.wraps(fn)
+    def new_fn(self, attempt=_unset, retry_state=None):
+        if retry_state is None:
+            from tenacity import RetryCallState
+            if attempt is _unset:
+                raise _make_unset_exception('retry', attempt=attempt)
+            retry_state_passed_as_non_kwarg = (
+                attempt is not _unset and
+                isinstance(attempt, RetryCallState))
+            if retry_state_passed_as_non_kwarg:
+                retry_state = attempt
+            else:
+                warn_about_dunder_non_retry_state_deprecation(fn, stacklevel=2)
+                retry_state = RetryCallState(None, None, (), {})
+                retry_state.outcome = attempt
+        return fn(self, retry_state=retry_state)
+    return new_fn
 
 
 def retry_func_accept_retry_state(retry_func):

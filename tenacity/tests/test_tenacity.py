@@ -116,6 +116,23 @@ class TestStopConditions(unittest.TestCase):
         with reports_deprecation_warning():
             self.assertTrue(r.stop(make_retry_state(101, 101)))
 
+    def test_retry_child_class_with_override_backward_compat(self):
+
+        class MyStop(tenacity.stop_after_attempt):
+            def __init__(self):
+                super(MyStop, self).__init__(1)
+
+            def __call__(self, attempt_number, seconds_since_start):
+                return super(MyStop, self).__call__(
+                    attempt_number, seconds_since_start)
+        retrying = Retrying(wait=tenacity.wait_fixed(0.01),
+                            stop=MyStop())
+
+        def failing():
+            raise NotImplementedError()
+        with pytest.raises(RetryError):
+            retrying.call(failing)
+
     def test_stop_func_with_retry_state(self):
         def stop_func(retry_state):
             rs = retry_state
@@ -962,6 +979,25 @@ class TestDecoratorWrapper(unittest.TestCase):
                             stop=tenacity.stop_after_attempt(3))
         h = retrying.wraps(Hello())
         self.assertEqual(h(), "Hello")
+
+    def test_retry_child_class_with_override_backward_compat(self):
+        def always_true(_):
+            return True
+
+        class MyRetry(tenacity.retry_if_exception):
+            def __init__(self):
+                super(MyRetry, self).__init__(always_true)
+
+            def __call__(self, attempt):
+                return super(MyRetry, self).__call__(attempt)
+        retrying = Retrying(wait=tenacity.wait_fixed(0.01),
+                            stop=tenacity.stop_after_attempt(1),
+                            retry=MyRetry())
+
+        def failing():
+            raise NotImplementedError()
+        with pytest.raises(RetryError):
+            retrying.call(failing)
 
 
 class TestBeforeAfterAttempts(unittest.TestCase):

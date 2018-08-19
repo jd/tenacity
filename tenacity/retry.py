@@ -63,6 +63,7 @@ class retry_if_exception(retry_base):
     def __init__(self, predicate):
         self.predicate = predicate
 
+    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         if retry_state.outcome.failed:
             return self.predicate(retry_state.outcome.exception())
@@ -85,6 +86,7 @@ class retry_unless_exception_type(retry_if_exception):
         super(retry_unless_exception_type, self).__init__(
             lambda e: not isinstance(e, exception_types))
 
+    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         # always retry if no exception was raised
         if not retry_state.outcome.failed:
@@ -98,6 +100,7 @@ class retry_if_result(retry_base):
     def __init__(self, predicate):
         self.predicate = predicate
 
+    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         if not retry_state.outcome.failed:
             return self.predicate(retry_state.outcome.result())
@@ -109,6 +112,7 @@ class retry_if_not_result(retry_base):
     def __init__(self, predicate):
         self.predicate = predicate
 
+    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         if not retry_state.outcome.failed:
             return not self.predicate(retry_state.outcome.result())
@@ -152,6 +156,7 @@ class retry_if_not_exception_message(retry_if_exception_message):
         self.predicate = lambda *args_, **kwargs_: not if_predicate(
             *args_, **kwargs_)
 
+    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         if not retry_state.outcome.failed:
             return True
@@ -165,6 +170,7 @@ class retry_any(retry_base):
         self.retries = tuple(_compat.retry_func_accept_retry_state(r)
                              for r in retries)
 
+    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return any(r(retry_state) for r in self.retries)
 
@@ -176,5 +182,6 @@ class retry_all(retry_base):
         self.retries = tuple(_compat.retry_func_accept_retry_state(r)
                              for r in retries)
 
+    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return all(r(retry_state) for r in self.retries)
