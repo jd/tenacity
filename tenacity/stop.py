@@ -42,6 +42,7 @@ class stop_any(stop_base):
         self.stops = tuple(_compat.stop_func_accept_retry_state(stop_func)
                            for stop_func in stops)
 
+    @_compat.stop_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return any(x(retry_state) for x in self.stops)
 
@@ -53,6 +54,7 @@ class stop_all(stop_base):
         self.stops = tuple(_compat.stop_func_accept_retry_state(stop_func)
                            for stop_func in stops)
 
+    @_compat.stop_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return all(x(retry_state) for x in self.stops)
 
@@ -60,6 +62,7 @@ class stop_all(stop_base):
 class _stop_never(stop_base):
     """Never stop."""
 
+    @_compat.stop_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return False
 
@@ -73,6 +76,7 @@ class stop_when_event_set(stop_base):
     def __init__(self, event):
         self.event = event
 
+    @_compat.stop_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return self.event.is_set()
 
@@ -83,6 +87,7 @@ class stop_after_attempt(stop_base):
     def __init__(self, max_attempt_number):
         self.max_attempt_number = max_attempt_number
 
+    @_compat.stop_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return retry_state.attempt_number >= self.max_attempt_number
 
@@ -93,5 +98,6 @@ class stop_after_delay(stop_base):
     def __init__(self, max_delay):
         self.max_delay = max_delay
 
+    @_compat.stop_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return retry_state.seconds_since_start >= self.max_delay

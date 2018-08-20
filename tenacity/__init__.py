@@ -315,17 +315,17 @@ class BaseRetrying(object):
 
         is_explicit_retry = retry_state.outcome.failed \
             and isinstance(retry_state.outcome.exception(), TryAgain)
-        if not (is_explicit_retry or self.retry(retry_state)):
+        if not (is_explicit_retry or self.retry(retry_state=retry_state)):
             return fut.result()
 
         if self.after is not None:
-            self.after(retry_state)
+            self.after(retry_state=retry_state)
 
         self.statistics['delay_since_first_attempt'] = \
             retry_state.seconds_since_start
-        if self.stop(retry_state):
+        if self.stop(retry_state=retry_state):
             if self.retry_error_callback:
-                return self.retry_error_callback(retry_state)
+                return self.retry_error_callback(retry_state=retry_state)
             retry_exc = self.retry_error_cls(fut)
             if self.reraise:
                 raise retry_exc.reraise()
