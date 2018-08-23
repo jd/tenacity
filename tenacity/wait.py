@@ -137,7 +137,7 @@ class wait_exponential(wait_base):
     """Wait strategy that applies exponential backoff.
 
     It allows for a customized multiplier and an ability to restrict the
-    upper limit to some maximum value.
+    upper and lower limits to some maximum and minimum value.
 
     The intervals are fixed (i.e. there is no jitter), so this strategy is
     suitable for balancing retries against latency when a required resource is
@@ -146,8 +146,9 @@ class wait_exponential(wait_base):
     wait_random_exponential for the latter case.
     """
 
-    def __init__(self, multiplier=1, max=_utils.MAX_WAIT, exp_base=2):  # noqa
+    def __init__(self, multiplier=1, max=_utils.MAX_WAIT, exp_base=2, min=0):  # noqa
         self.multiplier = multiplier
+        self.min = min
         self.max = max
         self.exp_base = exp_base
 
@@ -158,7 +159,7 @@ class wait_exponential(wait_base):
             result = self.multiplier * exp
         except OverflowError:
             return self.max
-        return max(0, min(result, self.max))
+        return max(max(0, self.min), min(result, self.max))
 
 
 class wait_random_exponential(wait_exponential):
