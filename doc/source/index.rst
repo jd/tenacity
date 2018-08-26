@@ -143,9 +143,9 @@ services and other remote endpoints.
 
 .. testcode::
 
-    @retry(wait=wait_exponential(multiplier=1, max=10))
+    @retry(wait=wait_exponential(multiplier=1, min=4, max=10))
     def wait_exponential_1():
-        print("Wait 2^x * 1 second between each retry, up to 10 seconds, then 10 seconds afterwards")
+        print("Wait 2^x * 1 second between each retry starting with 4 seconds, then up to 10 seconds, then 10 seconds afterwards")
         raise Exception
 
 
