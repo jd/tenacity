@@ -39,7 +39,7 @@ def asynctest(callable_):
 @asyncio.coroutine
 def _retryable_coroutine(thing):
     yield from asyncio.sleep(0.00001)
-    thing.go()
+    return thing.go()
 
 
 @retry(stop=stop_after_attempt(2))
@@ -69,6 +69,34 @@ class TestAsync(unittest.TestCase):
 
     def test_repr(self):
         repr(tasyncio.AsyncRetrying())
+
+    @asynctest
+    def test_attempt_number_is_correct_for_interleaved_coroutines(self):
+
+        attempts = []
+
+        def after(retry_state):
+            attempts.append((retry_state.args[0], retry_state.attempt_number))
+
+        thing1 = NoIOErrorAfterCount(3)
+        thing2 = NoIOErrorAfterCount(3)
+        future1 = asyncio.ensure_future(
+            _retryable_coroutine.retry_with(after=after)(thing1))
+        future2 = asyncio.ensure_future(
+            _retryable_coroutine.retry_with(after=after)(thing2))
+        yield from asyncio.gather(future1, future2)
+
+        # There's no waiting on retry, only a wait in the coroutine, so the
+        # executions should be interleaved.
+        thing1_attempts = attempts[::2]
+        things1, attempt_nos1 = zip(*thing1_attempts)
+        assert all(thing is thing1 for thing in things1)
+        assert list(attempt_nos1) == [1, 2, 3]
+
+        thing2_attempts = attempts[1::2]
+        things2, attempt_nos2 = zip(*thing2_attempts)
+        assert all(thing is thing2 for thing in things2)
+        assert list(attempt_nos2) == [1, 2, 3]
 
 
 if __name__ == '__main__':
