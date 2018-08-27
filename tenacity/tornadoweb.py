@@ -40,7 +40,6 @@ class TornadoRetrying(BaseRetrying):
         while True:
             do = self.iter(retry_state=retry_state)
             if isinstance(do, DoAttempt):
-                retry_state.attempt_number += 1
                 try:
                     result = yield fn(*args, **kwargs)
                 except BaseException:
