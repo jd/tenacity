@@ -326,7 +326,7 @@ without raising an exception (or you can re-raise or do anything really)
 
     def return_last_value(retry_state):
         """return the result of the last call attempt"""
-        return retry_state.last_outcome.result()
+        return retry_state.outcome.result()
 
     def is_false(value):
         """Return True if value is False"""
