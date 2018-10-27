@@ -24,6 +24,7 @@ project = "Tenacity"
 extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.autodoc',
+    'reno.sphinxext',
 ]
 
 # -- Options for sphinx.ext.doctest  -----------------------------------------
