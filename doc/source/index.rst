@@ -39,6 +39,14 @@ occurs until a value is returned.
 
    Awesome sauce!
 
+
+.. toctree::
+    :hidden:
+    :maxdepth: 2
+
+    changelog
+
+
 Features
 --------
 
@@ -600,6 +608,21 @@ Contribute
    **master** branch (or branch off of it).
 #. Write a test which shows that the bug was fixed or that the feature works as
    expected.
+#. Add a `changelog <#Changelogs>`_
 #. Make the docs better (or more detailed, or more easier to read, or ...)
 
 .. _`the repository`: https://github.com/jd/tenacity
+
+Changelogs
+~~~~~~~~~~
+
+`reno`_ is used for managing changelogs. Take a look at their usage docs.
+
+The doc generation will automatically compile the changelogs. You just need to add them.
+
+.. code-block:: sh
+
+    # Opens a template file in an editor
+    tox -e reno -- new some-slug-for-my-change --edit
+
+.. _`reno`: https://docs.openstack.org/reno/latest/user/usage.html
