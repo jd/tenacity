@@ -1,9 +1,15 @@
-rules:
-  default:
-    protection:
-      required_status_checks:
-        strict: True
-        contexts:
-          - continuous-integration/travis-ci
-      required_pull_request_reviews:
-        required_approving_review_count: 1
+pull_request_rules:
+  - name: automatic merge
+    conditions:
+      - base=master
+      - status-success=continuous-integration/travis-ci/pr
+      - "#approved-reviews-by>=1"
+      - label!=work-in-progress
+    actions:
+      merge:
+        strict: "smart"
+        method: rebase
+  - name: dismiss reviews
+    conditions: []
+    actions:
+      dismiss_reviews: {}
