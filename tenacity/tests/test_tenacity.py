@@ -1052,7 +1052,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
 
         _test_before()
 
-        self.assertTrue(TestBeforeAfterAttempts._attempt_number is 1)
+        self.assertTrue(TestBeforeAfterAttempts._attempt_number == 1)
 
     def test_after_attempts(self):
         TestBeforeAfterAttempts._attempt_number = 0
@@ -1072,7 +1072,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
 
         _test_after()
 
-        self.assertTrue(TestBeforeAfterAttempts._attempt_number is 2)
+        self.assertTrue(TestBeforeAfterAttempts._attempt_number == 2)
 
     def test_before_sleep(self):
         def _before_sleep(retry_state):
