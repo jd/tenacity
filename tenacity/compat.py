@@ -25,9 +25,10 @@ def warn_about_dunder_non_retry_state_deprecation(fn, stacklevel):
 
 def func_takes_retry_state(func):
     if not six.callable(func):
+        raise Exception(func)
         return False
-    if not inspect.isfunction(func):
-        # func is a callable object rather than a function
+    if not inspect.isfunction(func) and not inspect.ismethod(func):
+        # func is a callable object rather than a function/method
         func = func.__call__
     func_spec = _utils.getargspec(func)
     return 'retry_state' in func_spec.args
@@ -86,7 +87,7 @@ def func_takes_last_result(waiter):
     """
     if not six.callable(waiter):
         return False
-    if not inspect.isfunction(waiter):
+    if not inspect.isfunction(waiter) and not inspect.ismethod(waiter):
         # waiter is a class, check dunder-call rather than dunder-init.
         waiter = waiter.__call__
     waiter_spec = _utils.getargspec(waiter)

@@ -166,12 +166,12 @@ class wait_random_exponential(wait_exponential):
     """Random wait with exponentially widening window.
 
     An exponential backoff strategy used to mediate contention between multiple
-    unco-ordinated processes for a shared resource in distributed systems. This
+    uncoordinated processes for a shared resource in distributed systems. This
     is the sense in which "exponential backoff" is meant in e.g. Ethernet
     networking, and corresponds to the "Full Jitter" algorithm described in
     this blog post:
 
-    https://www.awsarchitectureblog.com/2015/03/backoff.html
+    https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
 
     Each retry occurs at a random time in a geometrically expanding interval.
     It allows for a custom multiplier and an ability to restrict the upper
@@ -185,6 +185,7 @@ class wait_random_exponential(wait_exponential):
     When waiting for an unavailable resource to become available again, as
     opposed to trying to resolve contention for a shared resource, the
     wait_exponential strategy (which uses a fixed interval) may be preferable.
+
     """
 
     @_compat.wait_dunder_call_accept_old_params
