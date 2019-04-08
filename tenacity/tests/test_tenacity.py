@@ -1107,6 +1107,25 @@ class TestBeforeAfterAttempts(unittest.TestCase):
             _test_before_sleep()
         self.assertEqual(_before_sleep.attempt_number, 2)
 
+    def _before_sleep(self, retry_state):
+        self.slept += 1
+
+    def test_before_sleep_backward_compat_method(self):
+        self.slept = 0
+
+        @retry(wait=tenacity.wait_fixed(0.01),
+               stop=tenacity.stop_after_attempt(3),
+               before_sleep=self._before_sleep)
+        def _test_before_sleep():
+            raise Exception("testing before_sleep_attempts handler")
+
+        try:
+            _test_before_sleep()
+        except tenacity.RetryError:
+            pass
+
+        self.assertEqual(self.slept, 2)
+
     def test_before_sleep_log_raises(self):
         thing = NoIOErrorAfterCount(2)
         logger = logging.getLogger(self.id())
