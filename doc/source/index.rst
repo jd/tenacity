@@ -267,6 +267,10 @@ by using the before callback function:
 
 .. testcode::
 
+    import logging
+
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+
     logger = logging.getLogger(__name__)
 
     @retry(stop=stop_after_attempt(3), before=before_log(logger, logging.DEBUG))
@@ -276,6 +280,10 @@ by using the before callback function:
 In the same spirit, It's possible to execute after a call that failed:
 
 .. testcode::
+
+    import logging
+
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
     logger = logging.getLogger(__name__)
 
@@ -289,7 +297,12 @@ retries happen after a wait interval, so the keyword argument is called
 
 .. testcode::
 
+    import logging
+
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+
     logger = logging.getLogger(__name__)
+
     @retry(stop=stop_after_attempt(3),
            before_sleep=before_sleep_log(logger, logging.DEBUG))
     def raise_my_exception():
@@ -433,6 +446,10 @@ Here's an example with a custom ``before_sleep`` function:
 
 .. testcode::
 
+    import logging
+
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+
     logger = logging.getLogger(__name__)
 
     def my_before_sleep(retry_state):
@@ -519,6 +536,10 @@ Here's an example with a custom ``before_sleep`` function:
       :param tenacity.Future last_result: current outcome
 
 .. testcode::
+
+    import logging
+
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
     logger = logging.getLogger(__name__)
 
