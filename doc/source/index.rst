@@ -49,6 +49,7 @@ occurs until a value is returned.
     :maxdepth: 2
 
     changelog
+    api
 
 
 Features
