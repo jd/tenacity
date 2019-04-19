@@ -56,6 +56,7 @@ from .nap import sleep_using_event  # noqa
 # Import all built-in stop strategies for easier usage.
 from .stop import stop_after_attempt  # noqa
 from .stop import stop_after_delay  # noqa
+from .stop import stop_after_exception_count  # noqa
 from .stop import stop_all  # noqa
 from .stop import stop_any  # noqa
 from .stop import stop_never  # noqa
