@@ -30,6 +30,7 @@ except ImportError:
 import sys
 import threading
 from concurrent import futures
+from collections import Counter
 
 import six
 
@@ -56,6 +57,7 @@ from .nap import sleep_using_event  # noqa
 # Import all built-in stop strategies for easier usage.
 from .stop import stop_after_attempt  # noqa
 from .stop import stop_after_delay  # noqa
+from .stop import stop_after_exception_count  # noqa
 from .stop import stop_all  # noqa
 from .stop import stop_any  # noqa
 from .stop import stop_never  # noqa
@@ -412,6 +414,8 @@ class RetryCallState(object):
 
         #: The number of the current attempt
         self.attempt_number = 1
+        #: Tracks exceptions raised by the method, by type
+        self.exception_counts = Counter()
         #: Last outcome (result or exception) produced by the function
         self.outcome = None
         #: Timestamp of the last outcome
@@ -443,6 +447,7 @@ class RetryCallState(object):
         ts = _utils.now()
         fut = Future(self.attempt_number)
         _utils.capture(fut, exc_info)
+        self.exception_counts[type(fut.exception())] += 1
         self.outcome, self.outcome_timestamp = fut, ts
 
 

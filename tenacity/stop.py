@@ -101,3 +101,15 @@ class stop_after_delay(stop_base):
     @_compat.stop_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return retry_state.seconds_since_start >= self.max_delay
+
+
+class stop_after_exception_count(stop_base):
+    """Stop after an excpetion occured >= max_attemps."""
+
+    def __init__(self, exception_type, max_attempts):
+        self.exception_type = exception_type
+        self.max_attempts = max_attempts
+
+    @_compat.stop_dunder_call_accept_old_params
+    def __call__(self, retry_state):
+        return retry_state.exception_counts[self.exception_type] >= self.max_attempts

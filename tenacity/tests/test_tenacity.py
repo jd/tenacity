@@ -104,6 +104,25 @@ class TestStopConditions(unittest.TestCase):
         self.assertTrue(r.stop(make_retry_state(2, 1)))
         self.assertTrue(r.stop(make_retry_state(2, 1.001)))
 
+    def test_stop_after_exception_count(self):
+        r = Retrying(stop=
+            tenacity.stop_after_exception_count(TimeoutError, 2) |
+            tenacity.stop_after_exception_count(IOError, 3)
+        )
+        def fails_on_timeout():
+            raise TimeoutError()
+
+        with pytest.raises(RetryError):
+            r.call(fails_on_timeout)
+        assert r.statistics["attempt_number"] == 2
+
+        def fails_on_read():
+            raise IOError()
+
+        with pytest.raises(RetryError):
+            r.call(fails_on_read)
+        assert r.statistics["attempt_number"] == 3
+
     def test_legacy_explicit_stop_type(self):
         Retrying(stop="stop_after_attempt")
 
