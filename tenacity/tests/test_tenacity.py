@@ -106,6 +106,7 @@ class TestStopConditions(unittest.TestCase):
 
     def test_stop_after_exception_count(self):
         r = Retrying(stop=tenacity.stop_after_exception_count(IOError, 2))
+
         def fails_on_io():
             raise IOError()
 
