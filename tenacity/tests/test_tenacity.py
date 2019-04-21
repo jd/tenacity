@@ -105,19 +105,21 @@ class TestStopConditions(unittest.TestCase):
         self.assertTrue(r.stop(make_retry_state(2, 1.001)))
 
     def test_stop_after_exception_count(self):
-        r = Retrying(stop=tenacity.stop_after_exception_count(TimeoutError, 2))
+        r = Retrying(stop=tenacity.stop_after_exception_count(IOError, 2))
+        def fails_on_io():
+            raise IOError()
+
+        with pytest.raises(RetryError):
+            r.call(fails_on_io)
+        assert r.statistics["attempt_number"] == 2
+
+        # Should stop since TimeoutError is subclass of IOError
         def fails_on_timeout():
             raise TimeoutError()
 
         with pytest.raises(RetryError):
             r.call(fails_on_timeout)
         assert r.statistics["attempt_number"] == 2
-
-        # Should stop since TimeoutError is subclass of Exception
-        r = Retrying(stop=tenacity.stop_after_exception_count((Exception, KeyError), 3))
-        with pytest.raises(RetryError):
-            r.call(fails_on_timeout)
-        assert r.statistics["attempt_number"] == 3
 
     def test_legacy_explicit_stop_type(self):
         Retrying(stop="stop_after_attempt")
