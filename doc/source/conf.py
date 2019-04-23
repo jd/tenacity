@@ -18,8 +18,6 @@
 
 import os
 
-import tenacity
-
 master_doc = 'index'
 project = "Tenacity"
 
