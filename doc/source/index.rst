@@ -9,7 +9,7 @@ Tenacity
 .. image:: https://img.shields.io/badge/SayThanks.io-%E2%98%BC-1EAEDB.svg
     :target: https://saythanks.io/to/jd
 
-.. image:: https://gh.mergify.io/badges/jd/tenacity.png?style=cut
+.. image:: https://img.shields.io/endpoint.svg?url=https://gh.mergify.io/badges/jd/tenacity&style=flat
    :target: https://mergify.io
    :alt: Mergify Status
 
