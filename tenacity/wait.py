@@ -155,7 +155,7 @@ class wait_exponential(wait_base):
     @_compat.wait_dunder_call_accept_old_params
     def __call__(self, retry_state):
         try:
-            exp = self.exp_base ** retry_state.attempt_number
+            exp = self.exp_base ** (retry_state.attempt_number - 1)
             result = self.multiplier * exp
         except OverflowError:
             return self.max

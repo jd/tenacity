@@ -188,23 +188,26 @@ class TestWaitConditions(unittest.TestCase):
             self.assertTrue(t <= 2)
 
     def test_exponential(self):
-        r = Retrying(wait=tenacity.wait_exponential(max=100))
-        self.assertEqual(r.wait(1, 0), 2)
-        self.assertEqual(r.wait(2, 0), 4)
-        self.assertEqual(r.wait(3, 0), 8)
-        self.assertEqual(r.wait(4, 0), 16)
-        self.assertEqual(r.wait(5, 0), 32)
-        self.assertEqual(r.wait(6, 0), 64)
+        r = Retrying(wait=tenacity.wait_exponential())
+        self.assertEqual(r.wait(1, 0), 1)
+        self.assertEqual(r.wait(2, 0), 2)
+        self.assertEqual(r.wait(3, 0), 4)
+        self.assertEqual(r.wait(4, 0), 8)
+        self.assertEqual(r.wait(5, 0), 16)
+        self.assertEqual(r.wait(6, 0), 32)
+        self.assertEqual(r.wait(7, 0), 64)
+        self.assertEqual(r.wait(8, 0), 128)
 
     def test_exponential_with_max_wait(self):
         r = Retrying(wait=tenacity.wait_exponential(max=40))
-        self.assertEqual(r.wait(1, 0), 2)
-        self.assertEqual(r.wait(2, 0), 4)
-        self.assertEqual(r.wait(3, 0), 8)
-        self.assertEqual(r.wait(4, 0), 16)
-        self.assertEqual(r.wait(5, 0), 32)
-        self.assertEqual(r.wait(6, 0), 40)
+        self.assertEqual(r.wait(1, 0), 1)
+        self.assertEqual(r.wait(2, 0), 2)
+        self.assertEqual(r.wait(3, 0), 4)
+        self.assertEqual(r.wait(4, 0), 8)
+        self.assertEqual(r.wait(5, 0), 16)
+        self.assertEqual(r.wait(6, 0), 32)
         self.assertEqual(r.wait(7, 0), 40)
+        self.assertEqual(r.wait(8, 0), 40)
         self.assertEqual(r.wait(50, 0), 40)
 
     def test_exponential_with_min_wait(self):
@@ -213,21 +216,23 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(2, 0), 20)
         self.assertEqual(r.wait(3, 0), 20)
         self.assertEqual(r.wait(4, 0), 20)
-        self.assertEqual(r.wait(5, 0), 32)
-        self.assertEqual(r.wait(6, 0), 64)
-        self.assertEqual(r.wait(7, 0), 128)
-        self.assertEqual(r.wait(20, 0), 1048576)
+        self.assertEqual(r.wait(5, 0), 20)
+        self.assertEqual(r.wait(6, 0), 32)
+        self.assertEqual(r.wait(7, 0), 64)
+        self.assertEqual(r.wait(8, 0), 128)
+        self.assertEqual(r.wait(20, 0), 524288)
 
     def test_exponential_with_max_wait_and_multiplier(self):
         r = Retrying(wait=tenacity.wait_exponential(
             max=50, multiplier=1))
-        self.assertEqual(r.wait(1, 0), 2)
-        self.assertEqual(r.wait(2, 0), 4)
-        self.assertEqual(r.wait(3, 0), 8)
-        self.assertEqual(r.wait(4, 0), 16)
-        self.assertEqual(r.wait(5, 0), 32)
-        self.assertEqual(r.wait(6, 0), 50)
+        self.assertEqual(r.wait(1, 0), 1)
+        self.assertEqual(r.wait(2, 0), 2)
+        self.assertEqual(r.wait(3, 0), 4)
+        self.assertEqual(r.wait(4, 0), 8)
+        self.assertEqual(r.wait(5, 0), 16)
+        self.assertEqual(r.wait(6, 0), 32)
         self.assertEqual(r.wait(7, 0), 50)
+        self.assertEqual(r.wait(8, 0), 50)
         self.assertEqual(r.wait(50, 0), 50)
 
     def test_exponential_with_min_wait_and_multiplier(self):
@@ -236,21 +241,24 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(1, 0), 20)
         self.assertEqual(r.wait(2, 0), 20)
         self.assertEqual(r.wait(3, 0), 20)
-        self.assertEqual(r.wait(4, 0), 32)
-        self.assertEqual(r.wait(5, 0), 64)
-        self.assertEqual(r.wait(6, 0), 128)
-        self.assertEqual(r.wait(7, 0), 256)
-        self.assertEqual(r.wait(20, 0), 2097152)
+        self.assertEqual(r.wait(4, 0), 20)
+        self.assertEqual(r.wait(5, 0), 32)
+        self.assertEqual(r.wait(6, 0), 64)
+        self.assertEqual(r.wait(7, 0), 128)
+        self.assertEqual(r.wait(8, 0), 256)
+        self.assertEqual(r.wait(20, 0), 1048576)
 
     def test_exponential_with_min_wait_and_max_wait(self):
         r = Retrying(wait=tenacity.wait_exponential(min=10, max=100))
         self.assertEqual(r.wait(1, 0), 10)
         self.assertEqual(r.wait(2, 0), 10)
         self.assertEqual(r.wait(3, 0), 10)
-        self.assertEqual(r.wait(4, 0), 16)
-        self.assertEqual(r.wait(5, 0), 32)
-        self.assertEqual(r.wait(6, 0), 64)
-        self.assertEqual(r.wait(7, 0), 100)
+        self.assertEqual(r.wait(4, 0), 10)
+        self.assertEqual(r.wait(5, 0), 16)
+        self.assertEqual(r.wait(6, 0), 32)
+        self.assertEqual(r.wait(7, 0), 64)
+        self.assertEqual(r.wait(8, 0), 100)
+        self.assertEqual(r.wait(9, 0), 100)
         self.assertEqual(r.wait(20, 0), 100)
 
     def test_legacy_explicit_wait_type(self):
@@ -375,19 +383,21 @@ class TestWaitConditions(unittest.TestCase):
         fn = tenacity.wait_random_exponential(0.5, 60.0)
 
         for _ in six.moves.range(1000):
-            self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0, 1.0)
-            self._assert_inclusive_range(fn(make_retry_state(2, 0)), 0, 2.0)
-            self._assert_inclusive_range(fn(make_retry_state(3, 0)), 0, 4.0)
-            self._assert_inclusive_range(fn(make_retry_state(4, 0)), 0, 8.0)
-            self._assert_inclusive_range(fn(make_retry_state(5, 0)), 0, 16.0)
-            self._assert_inclusive_range(fn(make_retry_state(6, 0)), 0, 32.0)
-            self._assert_inclusive_range(fn(make_retry_state(7, 0)), 0, 60.0)
+            self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0, 0.5)
+            self._assert_inclusive_range(fn(make_retry_state(2, 0)), 0, 1.0)
+            self._assert_inclusive_range(fn(make_retry_state(3, 0)), 0, 2.0)
+            self._assert_inclusive_range(fn(make_retry_state(4, 0)), 0, 4.0)
+            self._assert_inclusive_range(fn(make_retry_state(5, 0)), 0, 8.0)
+            self._assert_inclusive_range(fn(make_retry_state(6, 0)), 0, 16.0)
+            self._assert_inclusive_range(fn(make_retry_state(7, 0)), 0, 32.0)
             self._assert_inclusive_range(fn(make_retry_state(8, 0)), 0, 60.0)
             self._assert_inclusive_range(fn(make_retry_state(9, 0)), 0, 60.0)
 
         fn = tenacity.wait_random_exponential(10, 5)
         for _ in six.moves.range(1000):
-            self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0.00, 5.00)
+            self._assert_inclusive_range(
+                fn(make_retry_state(1, 0)), 0.00, 5.00
+            )
 
         # Default arguments exist
         fn = tenacity.wait_random_exponential()
@@ -406,13 +416,13 @@ class TestWaitConditions(unittest.TestCase):
             return float(sum(lst)) / float(len(lst))
 
         # skipping attempt 0
-        self._assert_inclusive_epsilon(mean(attempt[1]), 0.50, 0.04)
-        self._assert_inclusive_epsilon(mean(attempt[2]), 1, 0.08)
-        self._assert_inclusive_epsilon(mean(attempt[3]), 2, 0.16)
-        self._assert_inclusive_epsilon(mean(attempt[4]), 4, 0.32)
-        self._assert_inclusive_epsilon(mean(attempt[5]), 8, 0.64)
-        self._assert_inclusive_epsilon(mean(attempt[6]), 16, 1.28)
-        self._assert_inclusive_epsilon(mean(attempt[7]), 30, 2.56)
+        self._assert_inclusive_epsilon(mean(attempt[1]), 0.25, 0.02)
+        self._assert_inclusive_epsilon(mean(attempt[2]), 0.50, 0.04)
+        self._assert_inclusive_epsilon(mean(attempt[3]), 1, 0.08)
+        self._assert_inclusive_epsilon(mean(attempt[4]), 2, 0.16)
+        self._assert_inclusive_epsilon(mean(attempt[5]), 4, 0.32)
+        self._assert_inclusive_epsilon(mean(attempt[6]), 8, 0.64)
+        self._assert_inclusive_epsilon(mean(attempt[7]), 16, 1.28)
         self._assert_inclusive_epsilon(mean(attempt[8]), 30, 2.56)
         self._assert_inclusive_epsilon(mean(attempt[9]), 30, 2.56)
 
