@@ -1,7 +1,11 @@
 pull_request_rules:
   - name: automatic merge
     conditions:
-      - status-success=continuous-integration/travis-ci/pr
+      - "status-success=ci/circleci: pep8"
+      - "status-success=ci/circleci: py27"
+      - "status-success=ci/circleci: py35"
+      - "status-success=ci/circleci: py36"
+      - "status-success=ci/circleci: py37"
       - "#approved-reviews-by>=1"
       - label!=work-in-progress
     actions:
