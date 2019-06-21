@@ -387,7 +387,9 @@ class TestWaitConditions(unittest.TestCase):
 
         fn = tenacity.wait_random_exponential(10, 5)
         for _ in six.moves.range(1000):
-            self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0.00, 5.00)
+            self._assert_inclusive_range(
+                fn(make_retry_state(1, 0)), 0.00, 5.00
+            )
 
         # Default arguments exist
         fn = tenacity.wait_random_exponential()
