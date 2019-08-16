@@ -39,7 +39,7 @@ _unset = object()
 
 def _make_unset_exception(func_name, **kwargs):
     missing = []
-    for k, v in kwargs.iteritems():
+    for k, v in six.iteritems(kwargs):
         if v is _unset:
             missing.append(k)
     missing_str = ', '.join(repr(s) for s in missing)
