@@ -1326,6 +1326,61 @@ class TestRetryErrorCallback(unittest.TestCase):
         self.assertIsInstance(result, tenacity.Future)
 
 
+class TestContextManager(unittest.TestCase):
+    def test_context_manager_retry_one(self):
+        from tenacity import Retrying
+
+        raise_ = True
+
+        for attempt in Retrying():
+            with attempt:
+                if raise_:
+                    raise_ = False
+                    raise Exception("Retry it!")
+
+    def test_context_manager_on_error(self):
+        from tenacity import Retrying
+
+        class CustomError(Exception):
+            pass
+
+        retry = Retrying(retry=tenacity.retry_if_exception_type(IOError))
+
+        def test():
+            for attempt in retry:
+                with attempt:
+                    raise CustomError("Don't retry!")
+
+        self.assertRaises(CustomError, test)
+
+    def test_context_manager_retry_error(self):
+        from tenacity import Retrying
+
+        retry = Retrying(stop=tenacity.stop_after_attempt(2))
+
+        def test():
+            for attempt in retry:
+                with attempt:
+                    raise Exception("Retry it!")
+
+        self.assertRaises(RetryError, test)
+
+    def test_context_manager_reraise(self):
+        from tenacity import Retrying
+
+        class CustomError(Exception):
+            pass
+
+        retry = Retrying(reraise=True, stop=tenacity.stop_after_attempt(2))
+
+        def test():
+            for attempt in retry:
+                with attempt:
+                    raise CustomError("Don't retry!")
+
+        self.assertRaises(CustomError, test)
+
+
 class TestRetryException(unittest.TestCase):
 
     def test_retry_error_is_pickleable(self):

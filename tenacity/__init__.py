@@ -172,6 +172,24 @@ class RetryError(Exception):
         return "{0}[{1}]".format(self.__class__.__name__, self.last_attempt)
 
 
+class AttemptManager(object):
+    """Manage attempt context."""
+
+    def __init__(self, retry_state):
+        self.retry_state = retry_state
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if isinstance(exc_value, BaseException):
+            self.retry_state.set_exception((exc_type, exc_value, traceback))
+            return True  # Swallow exception.
+        else:
+            # We don't have the result, actually.
+            self.retry_state.set_result(None)
+
+
 class BaseRetrying(object):
 
     def __init__(self,
@@ -345,6 +363,20 @@ class BaseRetrying(object):
             self.before_sleep(retry_state=retry_state)
 
         return DoSleep(sleep)
+
+    def __iter__(self):
+        self.begin(None)
+
+        retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
+        while True:
+            do = self.iter(retry_state=retry_state)
+            if isinstance(do, DoAttempt):
+                yield AttemptManager(retry_state=retry_state)
+            elif isinstance(do, DoSleep):
+                retry_state.prepare_for_next_attempt()
+                self.sleep(do)
+            else:
+                break
 
 
 class Retrying(BaseRetrying):
