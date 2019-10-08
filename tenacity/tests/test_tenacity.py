@@ -1325,6 +1325,7 @@ class TestRetryErrorCallback(unittest.TestCase):
         self.assertEqual(num_attempts, self._attempt_number)
         self.assertIsInstance(result, tenacity.Future)
 
+
 class TestRetryException(unittest.TestCase):
 
     def test_retry_error_is_pickleable(self):
