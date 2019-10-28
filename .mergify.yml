@@ -6,6 +6,7 @@ pull_request_rules:
       - "status-success=ci/circleci: py35"
       - "status-success=ci/circleci: py36"
       - "status-success=ci/circleci: py37"
+      - "status-success=ci/circleci: py38"
       - "#approved-reviews-by>=1"
       - label!=work-in-progress
     actions:
