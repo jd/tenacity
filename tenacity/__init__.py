@@ -161,6 +161,7 @@ class RetryError(Exception):
 
     def __init__(self, last_attempt):
         self.last_attempt = last_attempt
+        super(RetryError, self).__init__(last_attempt)
 
     def reraise(self):
         if self.last_attempt.failed:

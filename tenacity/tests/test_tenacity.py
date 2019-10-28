@@ -1326,6 +1326,16 @@ class TestRetryErrorCallback(unittest.TestCase):
         self.assertIsInstance(result, tenacity.Future)
 
 
+class TestRetryException(unittest.TestCase):
+
+    def test_retry_error_is_pickleable(self):
+        import pickle
+        expected = RetryError(last_attempt=123)
+        pickled = pickle.dumps(expected)
+        actual = pickle.loads(pickled)
+        self.assertEqual(expected.last_attempt, actual.last_attempt)
+
+
 @contextmanager
 def reports_deprecation_warning():
     __tracebackhide__ = True
