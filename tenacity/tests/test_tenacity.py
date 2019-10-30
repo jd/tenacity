@@ -634,7 +634,7 @@ class TestRetryConditions(unittest.TestCase):
         def _kw_fun():
             raise tenacity.TryAgain
 
-        g = retry(_kw_fun, stop=tenacity.stop_after_attempt(5), reraise=True)
+        g = retry(stop=tenacity.stop_after_attempt(5), reraise=True)(_kw_fun)
         with self.assertRaises(tenacity.TryAgain):
             g()
 
