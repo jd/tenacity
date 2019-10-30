@@ -632,10 +632,10 @@ class TestRetryConditions(unittest.TestCase):
 
     def test_retry_kwargs_passed_properly(self):
 
-        def test_kw_fun():
+        def _kw_fun():
             raise tenacity.TryAgain
 
-        g = retry(test_kw_fun, stop=tenacity.stop_after_attempt(5), reraise=True)
+        g = retry(_kw_fun, stop=tenacity.stop_after_attempt(5), reraise=True)
         with self.assertRaises(tenacity.TryAgain):
             g()
 
