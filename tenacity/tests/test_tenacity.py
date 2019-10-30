@@ -630,6 +630,18 @@ class TestRetryConditions(unittest.TestCase):
                 message="negative", match="negative")
 
 
+    def test_retry_kwargs_passed_properly(self):
+
+        def test_kw_fun():
+            raise tenacity.TryAgain
+
+        g = retry(test_kw_fun, stop=tenacity.stop_after_attempt(5), reraise=True)
+        with self.assertRaises(tenacity.TryAgain):
+            g()
+
+        self.assertEqual(5, g.retry.statistics["attempt_number"])
+
+
 class NoneReturnUntilAfterCount(object):
     """Holds counter state for invoking a method several times in a row."""
 

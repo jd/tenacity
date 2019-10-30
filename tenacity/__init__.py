@@ -93,7 +93,7 @@ def retry(*dargs, **dkw):
     """
     # support both @retry and @retry() as valid syntax
     if len(dargs) == 1 and callable(dargs[0]):
-        return retry()(dargs[0])
+        return retry(**dkw)(dargs[0])
     else:
         def wrap(f):
             if asyncio and asyncio.iscoroutinefunction(f):
