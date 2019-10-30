@@ -629,7 +629,6 @@ class TestRetryConditions(unittest.TestCase):
             tenacity.retry_if_exception_message(
                 message="negative", match="negative")
 
-
     def test_retry_kwargs_passed_properly(self):
 
         def _kw_fun():
