@@ -61,6 +61,7 @@ Features
 - Customize retrying on Exceptions
 - Customize retrying on expected returned result
 - Retry on coroutines
+- Retry code block with context manager
 
 
 Installation
@@ -597,6 +598,27 @@ to use the `retry` decorator - you can instead use `Retrying` directly:
     def try_never_good_enough(max_attempts=3):
         retryer = Retrying(stop=stop_after_attempt(max_attempts), reraise=True)
         retryer(never_good_enough, 'I really do try')
+
+Retrying code block
+~~~~~~~~~~~~~~~~~~~
+
+Tenacity allows you to retry a code block without the need to wraps it in an
+isolated function. This makes it easy to isolate failing block while sharing
+context. The trick is to combine a for loop and a context manager.
+
+.. testcode::
+
+   from tenacity import Retrying, RetryError, stop_after_attempt
+
+   try:
+       for attempt in Retrying(stop=stop_after_attempt(3)):
+           with attempt:
+               raise Exception('My code is failing!')
+   except RetryError:
+       pass
+
+You can configure every details of retry policy by configuring the Retrying
+object.
 
 Async and retry
 ~~~~~~~~~~~~~~~
