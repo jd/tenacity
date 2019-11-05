@@ -38,6 +38,12 @@ if asyncio:
             super(AsyncRetrying, self).__init__(**kwargs)
             self.sleep = sleep
 
+        def wraps(self, fn):
+            fn = super().wraps(fn)
+            # Ensure wrapper is recognized as a coroutine function.
+            fn._is_coroutine = asyncio.coroutines._is_coroutine
+            return fn
+
         @asyncio.coroutine
         def call(self, fn, *args, **kwargs):
             self.begin(fn)
