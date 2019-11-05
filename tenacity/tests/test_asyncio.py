@@ -36,9 +36,8 @@ def asynctest(callable_):
 
 
 @retry
-@asyncio.coroutine
-def _retryable_coroutine(thing):
-    yield from asyncio.sleep(0.00001)
+async def _retryable_coroutine(thing):
+    await asyncio.sleep(0.00001)
     return thing.go()
 
 
