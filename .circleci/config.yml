@@ -61,21 +61,23 @@ jobs:
     steps:
       - checkout
       - run: |
-          pip install twine
+          python -m venv venv
+      - run: |
+          venv/bin/pip install twine wheel
       - run:
           name: init .pypirc
           command: |
             echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = __token__ >> ~/.pypirc
+            echo -e "username = __token__" >> ~/.pypirc
             echo -e "password = $PYPI_TOKEN" >> ~/.pypirc
       - run:
           name: create packages
           command: |
-            python setup.py sdist bdist_wheel
+            venv/bin/python setup.py sdist bdist_wheel
       - run:
           name: upload to PyPI
           command: |
-            twine upload dist/*
+            venv/bin/twine upload dist/*
 
 workflows:
   version: 2
