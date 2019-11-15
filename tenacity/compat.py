@@ -1,10 +1,9 @@
 """Utilities for providing backward compatibility."""
 
 import inspect
+import functools
 from fractions import Fraction
 from warnings import warn
-
-import six
 
 from tenacity import _utils
 
@@ -24,9 +23,8 @@ def warn_about_dunder_non_retry_state_deprecation(fn, stacklevel):
 
 
 def func_takes_retry_state(func):
-    if not six.callable(func):
+    if not callable(func):
         raise Exception(func)
-        return False
     if not inspect.isfunction(func) and not inspect.ismethod(func):
         # func is a callable object rather than a function/method
         func = func.__call__
@@ -39,7 +37,7 @@ _unset = object()
 
 def _make_unset_exception(func_name, **kwargs):
     missing = []
-    for k, v in six.iteritems(kwargs):
+    for k, v in kwargs.items():
         if v is _unset:
             missing.append(k)
     missing_str = ', '.join(repr(s) for s in missing)
@@ -85,7 +83,7 @@ def func_takes_last_result(waiter):
     Needed to provide backward compatibility for wait functions that didn't
     take "last_result" in the beginning.
     """
-    if not six.callable(waiter):
+    if not callable(waiter):
         return False
     if not inspect.isfunction(waiter) and not inspect.ismethod(waiter):
         # waiter is a class, check dunder-call rather than dunder-init.
@@ -96,7 +94,7 @@ def func_takes_last_result(waiter):
 
 def stop_dunder_call_accept_old_params(fn):
     """Decorate cls.__call__ method to accept old "stop" signature."""
-    @_utils.wraps(fn)
+    @functools.wraps(fn)
     def new_fn(self,
                previous_attempt_number=_unset,
                delay_since_first_attempt=_unset,
@@ -119,13 +117,13 @@ def stop_dunder_call_accept_old_params(fn):
 
 def stop_func_accept_retry_state(stop_func):
     """Wrap "stop" function to accept "retry_state" parameter."""
-    if not six.callable(stop_func):
+    if not callable(stop_func):
         return stop_func
 
     if func_takes_retry_state(stop_func):
         return stop_func
 
-    @_utils.wraps(stop_func)
+    @functools.wraps(stop_func)
     def wrapped_stop_func(retry_state):
         warn_about_non_retry_state_deprecation(
             'stop', stop_func, stacklevel=4)
@@ -138,7 +136,7 @@ def stop_func_accept_retry_state(stop_func):
 
 def wait_dunder_call_accept_old_params(fn):
     """Decorate cls.__call__ method to accept old "wait" signature."""
-    @_utils.wraps(fn)
+    @functools.wraps(fn)
     def new_fn(self,
                previous_attempt_number=_unset,
                delay_since_first_attempt=_unset,
@@ -163,14 +161,14 @@ def wait_dunder_call_accept_old_params(fn):
 
 def wait_func_accept_retry_state(wait_func):
     """Wrap wait function to accept "retry_state" parameter."""
-    if not six.callable(wait_func):
+    if not callable(wait_func):
         return wait_func
 
     if func_takes_retry_state(wait_func):
         return wait_func
 
     if func_takes_last_result(wait_func):
-        @_utils.wraps(wait_func)
+        @functools.wraps(wait_func)
         def wrapped_wait_func(retry_state):
             warn_about_non_retry_state_deprecation(
                 'wait', wait_func, stacklevel=4)
@@ -180,7 +178,7 @@ def wait_func_accept_retry_state(wait_func):
                 last_result=retry_state.outcome,
             )
     else:
-        @_utils.wraps(wait_func)
+        @functools.wraps(wait_func)
         def wrapped_wait_func(retry_state):
             warn_about_non_retry_state_deprecation(
                 'wait', wait_func, stacklevel=4)
@@ -193,7 +191,7 @@ def wait_func_accept_retry_state(wait_func):
 
 def retry_dunder_call_accept_old_params(fn):
     """Decorate cls.__call__ method to accept old "retry" signature."""
-    @_utils.wraps(fn)
+    @functools.wraps(fn)
     def new_fn(self, attempt=_unset, retry_state=None):
         if retry_state is None:
             from tenacity import RetryCallState
@@ -214,13 +212,13 @@ def retry_dunder_call_accept_old_params(fn):
 
 def retry_func_accept_retry_state(retry_func):
     """Wrap "retry" function to accept "retry_state" parameter."""
-    if not six.callable(retry_func):
+    if not callable(retry_func):
         return retry_func
 
     if func_takes_retry_state(retry_func):
         return retry_func
 
-    @_utils.wraps(retry_func)
+    @functools.wraps(retry_func)
     def wrapped_retry_func(retry_state):
         warn_about_non_retry_state_deprecation(
             'retry', retry_func, stacklevel=4)
@@ -230,13 +228,13 @@ def retry_func_accept_retry_state(retry_func):
 
 def before_func_accept_retry_state(fn):
     """Wrap "before" function to accept "retry_state"."""
-    if not six.callable(fn):
+    if not callable(fn):
         return fn
 
     if func_takes_retry_state(fn):
         return fn
 
-    @_utils.wraps(fn)
+    @functools.wraps(fn)
     def wrapped_before_func(retry_state):
         # func, trial_number, trial_time_taken
         warn_about_non_retry_state_deprecation('before', fn, stacklevel=4)
@@ -249,13 +247,13 @@ def before_func_accept_retry_state(fn):
 
 def after_func_accept_retry_state(fn):
     """Wrap "after" function to accept "retry_state"."""
-    if not six.callable(fn):
+    if not callable(fn):
         return fn
 
     if func_takes_retry_state(fn):
         return fn
 
-    @_utils.wraps(fn)
+    @functools.wraps(fn)
     def wrapped_after_sleep_func(retry_state):
         # func, trial_number, trial_time_taken
         warn_about_non_retry_state_deprecation('after', fn, stacklevel=4)
@@ -268,13 +266,13 @@ def after_func_accept_retry_state(fn):
 
 def before_sleep_func_accept_retry_state(fn):
     """Wrap "before_sleep" function to accept "retry_state"."""
-    if not six.callable(fn):
+    if not callable(fn):
         return fn
 
     if func_takes_retry_state(fn):
         return fn
 
-    @_utils.wraps(fn)
+    @functools.wraps(fn)
     def wrapped_before_sleep_func(retry_state):
         # retry_object, sleep, last_result
         warn_about_non_retry_state_deprecation(
@@ -287,13 +285,13 @@ def before_sleep_func_accept_retry_state(fn):
 
 
 def retry_error_callback_accept_retry_state(fn):
-    if not six.callable(fn):
+    if not callable(fn):
         return fn
 
     if func_takes_retry_state(fn):
         return fn
 
-    @_utils.wraps(fn)
+    @functools.wraps(fn)
     def wrapped_retry_error_callback(retry_state):
         warn_about_non_retry_state_deprecation(
             'retry_error_callback', fn, stacklevel=4)

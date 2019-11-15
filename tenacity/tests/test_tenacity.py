@@ -22,8 +22,6 @@ from copy import copy
 
 import pytest
 
-import six.moves
-
 import tenacity
 from tenacity import RetryError, Retrying, retry
 from tenacity.compat import make_retry_state
@@ -164,7 +162,7 @@ class TestWaitConditions(unittest.TestCase):
     def test_random_sleep(self):
         r = Retrying(wait=tenacity.wait_random(min=1, max=20))
         times = set()
-        for x in six.moves.range(1000):
+        for x in range(1000):
             times.add(r.wait(1, 6546))
 
         # this is kind of non-deterministic...
@@ -295,7 +293,7 @@ class TestWaitConditions(unittest.TestCase):
         r = Retrying(wait=tenacity.wait_combine(tenacity.wait_random(0, 3),
                                                 tenacity.wait_fixed(5)))
         # Test it a few time since it's random
-        for i in six.moves.range(1000):
+        for i in range(1000):
             w = r.wait(1, 5)
             self.assertLess(w, 8)
             self.assertGreaterEqual(w, 5)
@@ -303,7 +301,7 @@ class TestWaitConditions(unittest.TestCase):
     def test_wait_double_sum(self):
         r = Retrying(wait=tenacity.wait_random(0, 3) + tenacity.wait_fixed(5))
         # Test it a few time since it's random
-        for i in six.moves.range(1000):
+        for i in range(1000):
             w = r.wait(1, 5)
             self.assertLess(w, 8)
             self.assertGreaterEqual(w, 5)
@@ -312,7 +310,7 @@ class TestWaitConditions(unittest.TestCase):
         r = Retrying(wait=tenacity.wait_fixed(1) + tenacity.wait_random(0, 3) +
                      tenacity.wait_fixed(5))
         # Test it a few time since it's random
-        for i in six.moves.range(1000):
+        for i in range(1000):
             w = r.wait(1, 5)
             self.assertLess(w, 9)
             self.assertGreaterEqual(w, 6)
@@ -323,7 +321,7 @@ class TestWaitConditions(unittest.TestCase):
                                tenacity.wait_fixed(5),
                                tenacity.wait_none()]))
         # Test it a few time since it's random
-        for i in six.moves.range(1000):
+        for i in range(1000):
             w = r.wait(1, 5)
             self.assertLess(w, 9)
             self.assertGreaterEqual(w, 6)
@@ -342,11 +340,11 @@ class TestWaitConditions(unittest.TestCase):
 
     def test_wait_chain(self):
         r = Retrying(wait=tenacity.wait_chain(
-            *[tenacity.wait_fixed(1) for i in six.moves.range(2)] +
-            [tenacity.wait_fixed(4) for i in six.moves.range(2)] +
-            [tenacity.wait_fixed(8) for i in six.moves.range(1)]))
+            *[tenacity.wait_fixed(1) for i in range(2)] +
+            [tenacity.wait_fixed(4) for i in range(2)] +
+            [tenacity.wait_fixed(8) for i in range(1)]))
 
-        for i in six.moves.range(10):
+        for i in range(10):
             w = r.wait(i + 1, 1)
             if i < 2:
                 self._assert_range(w, 1, 2)
@@ -360,7 +358,7 @@ class TestWaitConditions(unittest.TestCase):
         r = Retrying(
             sleep=sleep_intervals.append,
             wait=tenacity.wait_chain(*[
-                tenacity.wait_fixed(i + 1) for i in six.moves.range(3)
+                tenacity.wait_fixed(i + 1) for i in range(3)
             ]),
             stop=tenacity.stop_after_attempt(5),
             retry=tenacity.retry_if_result(lambda x: x == 1),
@@ -382,7 +380,7 @@ class TestWaitConditions(unittest.TestCase):
     def test_wait_random_exponential(self):
         fn = tenacity.wait_random_exponential(0.5, 60.0)
 
-        for _ in six.moves.range(1000):
+        for _ in range(1000):
             self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0, 0.5)
             self._assert_inclusive_range(fn(make_retry_state(2, 0)), 0, 1.0)
             self._assert_inclusive_range(fn(make_retry_state(3, 0)), 0, 2.0)
@@ -394,7 +392,7 @@ class TestWaitConditions(unittest.TestCase):
             self._assert_inclusive_range(fn(make_retry_state(9, 0)), 0, 60.0)
 
         fn = tenacity.wait_random_exponential(10, 5)
-        for _ in six.moves.range(1000):
+        for _ in range(1000):
             self._assert_inclusive_range(
                 fn(make_retry_state(1, 0)), 0.00, 5.00
             )
@@ -407,9 +405,9 @@ class TestWaitConditions(unittest.TestCase):
         fn = tenacity.wait_random_exponential(0.5, 60.0)
 
         attempt = []
-        for i in six.moves.range(10):
+        for i in range(10):
             attempt.append(
-                [fn(make_retry_state(i, 0)) for _ in six.moves.range(4000)]
+                [fn(make_retry_state(i, 0)) for _ in range(4000)]
             )
 
         def mean(lst):
@@ -1012,20 +1010,6 @@ class TestDecoratorWrapper(unittest.TestCase):
         self.assertTrue(_retryable_default_f(NoNameErrorAfterCount(5)))
         self.assertTrue(_retryable_default(NoCustomErrorAfterCount(5)))
         self.assertTrue(_retryable_default_f(NoCustomErrorAfterCount(5)))
-
-    def test_retry_function_object(self):
-        """Test that six.wraps doesn't cause problems with callable objects.
-
-        It raises an error upon trying to wrap it in Py2, because __name__
-        attribute is missing. It's fixed in Py3 but was never backported.
-        """
-        class Hello(object):
-            def __call__(self):
-                return "Hello"
-        retrying = Retrying(wait=tenacity.wait_fixed(0.01),
-                            stop=tenacity.stop_after_attempt(3))
-        h = retrying.wraps(Hello())
-        self.assertEqual(h(), "Hello")
 
     def test_retry_child_class_with_override_backward_compat(self):
         def always_true(_):

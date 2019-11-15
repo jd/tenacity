@@ -15,13 +15,10 @@
 # limitations under the License.
 import abc
 
-import six
-
 from tenacity import compat as _compat
 
 
-@six.add_metaclass(abc.ABCMeta)
-class stop_base(object):
+class stop_base(abc.ABC):
     """Abstract base class for stop strategies."""
 
     @abc.abstractmethod

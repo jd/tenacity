@@ -17,14 +17,12 @@
 import abc
 import random
 
-import six
 
 from tenacity import _utils
 from tenacity import compat as _compat
 
 
-@six.add_metaclass(abc.ABCMeta)
-class wait_base(object):
+class wait_base(abc.ABC):
     """Abstract base class for wait strategies."""
 
     @abc.abstractmethod

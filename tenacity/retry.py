@@ -17,13 +17,10 @@
 import abc
 import re
 
-import six
-
 from tenacity import compat as _compat
 
 
-@six.add_metaclass(abc.ABCMeta)
-class retry_base(object):
+class retry_base(abc.ABC):
     """Abstract base class for retry strategies."""
 
     @abc.abstractmethod

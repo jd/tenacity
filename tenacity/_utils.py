@@ -19,8 +19,6 @@ import sys
 import time
 from functools import update_wrapper
 
-import six
-
 # sys.maxint / 2, since Python 3.2 doesn't have a sys.maxint...
 try:
     MAX_WAIT = sys.maxint / 2
@@ -28,41 +26,11 @@ except AttributeError:
     MAX_WAIT = 1073741823
 
 
-if six.PY2:
-    from functools import WRAPPER_ASSIGNMENTS, WRAPPER_UPDATES
+def capture(fut, tb):
+    fut.set_exception(tb[1])
 
-    def wraps(fn):
-        """Do the same as six.wraps but only copy attributes that exist.
-
-        For example, object instances don't have __name__ attribute, so
-        six.wraps fails. This is fixed in Python 3
-        (https://bugs.python.org/issue3445), but didn't get backported to six.
-
-        Also, see https://github.com/benjaminp/six/issues/250.
-        """
-        def filter_hasattr(obj, attrs):
-            return tuple(a for a in attrs if hasattr(obj, a))
-        return six.wraps(
-            fn,
-            assigned=filter_hasattr(fn, WRAPPER_ASSIGNMENTS),
-            updated=filter_hasattr(fn, WRAPPER_UPDATES))
-
-    def capture(fut, tb):
-        # TODO(harlowja): delete this in future, since its
-        # has to repeatedly calculate this crap.
-        fut.set_exception_info(tb[1], tb[2])
-
-    def getargspec(func):
-        # This was deprecated in Python 3.
-        return inspect.getargspec(func)
-else:
-    from functools import wraps  # noqa
-
-    def capture(fut, tb):
-        fut.set_exception(tb[1])
-
-    def getargspec(func):
-        return inspect.getfullargspec(func)
+def getargspec(func):
+    return inspect.getfullargspec(func)
 
 
 def visible_attrs(obj, attrs=None):

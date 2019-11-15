@@ -27,11 +27,10 @@ try:
 except ImportError:
     tornado = None
 
+import functools
 import sys
 import threading
 from concurrent import futures
-
-import six
 
 from tenacity import _utils
 from tenacity import compat as _compat
@@ -306,7 +305,7 @@ class BaseRetrying(object):
 
         :param f: A function to wraps for retrying.
         """
-        @_utils.wraps(f)
+        @functools.wraps(f)
         def wrapped_f(*args, **kw):
             return self.call(f, *args, **kw)
 
@@ -348,7 +347,7 @@ class BaseRetrying(object):
             retry_exc = self.retry_error_cls(fut)
             if self.reraise:
                 raise retry_exc.reraise()
-            six.raise_from(retry_exc, fut.exception())
+            raise retry_exc from fut.exception()
 
         if self.wait:
             sleep = self.wait(retry_state=retry_state)
