@@ -44,8 +44,7 @@ if asyncio:
             fn._is_coroutine = asyncio.coroutines._is_coroutine
             return fn
 
-        @asyncio.coroutine
-        def call(self, fn, *args, **kwargs):
+        async def call(self, fn, *args, **kwargs):
             self.begin(fn)
 
             retry_state = RetryCallState(
@@ -54,13 +53,13 @@ if asyncio:
                 do = self.iter(retry_state=retry_state)
                 if isinstance(do, DoAttempt):
                     try:
-                        result = yield from fn(*args, **kwargs)
+                        result = await fn(*args, **kwargs)
                     except BaseException:
                         retry_state.set_exception(sys.exc_info())
                     else:
                         retry_state.set_result(result)
                 elif isinstance(do, DoSleep):
                     retry_state.prepare_for_next_attempt()
-                    yield from self.sleep(do)
+                    await self.sleep(do)
                 else:
                     return do
