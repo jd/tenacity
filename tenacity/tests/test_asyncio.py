@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import asyncio
+
 import pytest
+
 from tenacity import RetryError
 from tenacity import _asyncio as tasyncio
 from tenacity import retry, stop_after_attempt
@@ -31,7 +33,6 @@ async def _retryable_coroutine(thing):
 async def _retryable_coroutine_with_2_attempts(thing):
     await asyncio.sleep(0.00001)
     thing.go()
-
 
 
 @pytest.mark.asyncio
@@ -51,6 +52,7 @@ async def test_stop_after_attempt():
         await _retryable_coroutine_with_2_attempts(thing)
     except RetryError:
         assert thing.counter == 2
+
 
 def test_repr():
     repr(tasyncio.AsyncRetrying())

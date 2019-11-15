@@ -29,6 +29,7 @@ except AttributeError:
 def capture(fut, tb):
     fut.set_exception(tb[1])
 
+
 def getargspec(func):
     return inspect.getfullargspec(func)
 

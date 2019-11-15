@@ -1,7 +1,7 @@
 """Utilities for providing backward compatibility."""
 
-import inspect
 import functools
+import inspect
 from fractions import Fraction
 from warnings import warn
 
