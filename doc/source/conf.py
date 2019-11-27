@@ -17,9 +17,13 @@
 # limitations under the License.
 
 import os
+import sys
 
 master_doc = 'index'
 project = "Tenacity"
+
+# Add tenacity to the path, so sphinx can find the functions for autodoc.
+sys.path.insert(0, os.path.abspath('../..'))
 
 extensions = [
     'sphinx.ext.doctest',
