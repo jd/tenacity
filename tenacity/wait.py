@@ -32,12 +32,18 @@ class wait_base(object):
         pass
 
     def __add__(self, other):
+        # check that other is instance of wait_base
+        if not isinstance(other, wait_base):
+            return NotImplemented
         return wait_combine(self, other)
 
     def __radd__(self, other):
         # make it possible to use multiple waits with the built-in sum function
         if other == 0:
             return self
+        # check that other is instance of wait_base
+        if not isinstance(other, wait_base):
+            return NotImplemented
         return self.__add__(other)
 
 
@@ -77,6 +83,9 @@ class wait_combine(wait_base):
     """Combine several waiting strategies."""
 
     def __init__(self, *strategies):
+        # check that all strategies are instance of wait_base
+        if any(map(lambda strategy: not isinstance(strategy, wait_base), strategies)):
+            raise ValueError("can only combine instances of " + wait_base.__name__)
         self.wait_funcs = tuple(_compat.wait_func_accept_retry_state(strategy)
                                 for strategy in strategies)
 
