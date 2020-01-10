@@ -84,8 +84,8 @@ class wait_combine(wait_base):
 
     def __init__(self, *strategies):
         # check that all strategies are instance of wait_base
-        if any(map(lambda strategy: not isinstance(strategy, wait_base), strategies)):
-            raise ValueError("can only combine instances of " + wait_base.__name__)
+        if any(map(lambda strategy: not isinstance(strategy, wait_base), strategies)):  # noqa: E501
+            raise ValueError("can only combine instances of " + wait_base.__name__)     # noqa: E501
         self.wait_funcs = tuple(_compat.wait_func_accept_retry_state(strategy)
                                 for strategy in strategies)
 

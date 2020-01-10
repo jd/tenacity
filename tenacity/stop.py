@@ -47,7 +47,7 @@ class stop_any(stop_base):
     def __init__(self, *stops):
         # check that all stops are instance of stop_base
         if any(map(lambda stop: not isinstance(stop, stop_base), stops)):
-            raise ValueError("can only combine instances of " + stop_base.__name__)
+            raise ValueError("can only combine instances of " + stop_base.__name__)  # noqa: E501
         self.stops = tuple(_compat.stop_func_accept_retry_state(stop_func)
                            for stop_func in stops)
 
@@ -62,7 +62,7 @@ class stop_all(stop_base):
     def __init__(self, *stops):
         # check that all stops are instance of stop_base
         if any(map(lambda stop: not isinstance(stop, stop_base), stops)):
-            raise ValueError("can only combine instances of " + stop_base.__name__)
+            raise ValueError("can only combine instances of " + stop_base.__name__)  # noqa: E501
         self.stops = tuple(_compat.stop_func_accept_retry_state(stop_func)
                            for stop_func in stops)
 
