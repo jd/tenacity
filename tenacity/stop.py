@@ -29,9 +29,15 @@ class stop_base(object):
         pass
 
     def __and__(self, other):
+        # check that other is instance of stop_base
+        if not isinstance(other, stop_base):
+            return NotImplemented
         return stop_all(self, other)
 
     def __or__(self, other):
+        # check that other is instance of stop_base
+        if not isinstance(other, stop_base):
+            return NotImplemented
         return stop_any(self, other)
 
 
@@ -39,6 +45,9 @@ class stop_any(stop_base):
     """Stop if any of the stop condition is valid."""
 
     def __init__(self, *stops):
+        # check that all stops are instance of stop_base
+        if any(map(lambda stop: not isinstance(stop, stop_base), stops)):
+            raise ValueError("can only combine instances of " + stop_base.__name__)
         self.stops = tuple(_compat.stop_func_accept_retry_state(stop_func)
                            for stop_func in stops)
 
@@ -51,6 +60,9 @@ class stop_all(stop_base):
     """Stop if all the stop conditions are valid."""
 
     def __init__(self, *stops):
+        # check that all stops are instance of stop_base
+        if any(map(lambda stop: not isinstance(stop, stop_base), stops)):
+            raise ValueError("can only combine instances of " + stop_base.__name__)
         self.stops = tuple(_compat.stop_func_accept_retry_state(stop_func)
                            for stop_func in stops)
 
