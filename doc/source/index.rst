@@ -599,6 +599,57 @@ to use the `retry` decorator - you can instead use `Retrying` directly:
         retryer = Retrying(stop=stop_after_attempt(max_attempts), reraise=True)
         retryer(never_good_enough, 'I really do try')
 
+Configuration Groups
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can group configuration parameters which allows to reuse them. This allows 
+to avoids redudant configuration if heavily relying on the retry.
+
+Instead of writing
+
+.. testcode::
+
+    import tenacity
+
+    import logging
+
+    @retry(stop=tenacity.stop_after_attempt(2), after=tenacity.after_log(logger, logging.DEBUG))
+    def do_sometihng():
+        pass
+
+    @retry(stop=tenacity.stop_after_attempt(2), after=tenacity.after_log(logger, logging.DEBUG))
+    def do_sometihng_else():
+        pass
+
+    @retry(stop=tenacity.stop_after_attempt(3), after=tenacity.after_log(logger, logging.DEBUG))
+    def do_something_else_else():
+        pass
+
+it is possible to write
+
+.. testcode::
+
+    import tenacity
+
+    import logging
+
+    tenacity.config_group('my_default', stop=tenacity.stop_after_attempt(2), after=tenacity.after_log(logger, logging.DEBUG))
+
+    @retry(config_group='my_default')
+    def do_sometihng():
+        pass
+
+    @retry(config_group='my_default')
+    def do_sometihng_else():
+        pass
+
+    @retry(config_group='my_default', stop=tenacity.stop_after_attempt(3))
+    def do_something_else_else():
+        pass
+
+It is possible to define multiple configuration groups. It is possible to oversteer
+the configuration group in individual retry calls, parameters can be updated and/or added.
+
 Retrying code block
 ~~~~~~~~~~~~~~~~~~~
 
