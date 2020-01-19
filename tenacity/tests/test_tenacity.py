@@ -1391,6 +1391,52 @@ class TestRetryException(unittest.TestCase):
         self.assertEqual(expected.last_attempt, actual.last_attempt)
 
 
+class TestConfigGroup(unittest.TestCase):
+
+    def setUp(self):
+        tenacity.config_group('test_config_group', stop=tenacity.stop_after_attempt(3))
+        tenacity.config_group('test_config_group_misconfigured', banana='rama')
+
+    def test_config_group_only(self):
+        counter = 0
+        with pytest.raises(RetryError):
+            for attempt in Retrying(config_group='test_config_group'):
+                with attempt:
+                    counter += 1
+                    raise Exception('Trapped!')
+                if counter > 3:
+                    raise Exception("ConfigGroup was not applied at all.")
+        self.assertEqual(counter, 3)
+
+    def test_config_group_instance_overwrite(self):
+        counter = 0
+        with pytest.raises(RetryError):
+            for attempt in Retrying(config_group='test_config_group', stop=tenacity.stop_after_attempt(2)):
+                with attempt:
+                    counter += 1
+                    raise Exception('Trapped!')
+                if counter > 2:
+                    raise Exception("Instance overwrite did not succeed.")
+                if counter > 3:
+                    raise Exception("ConfigGroup was not applied at all.")
+        self.assertEqual(counter, 2)
+
+    def test_config_group_misconfigured(self):
+        with pytest.raises(ValueError):
+            for attempt in Retrying(config_group='test_config_group_misconfigured'):
+                raise Exception("ConfigGroup was not applied at all.")
+
+    def test_config_group_inexistent(self):
+        counter = 0
+        with pytest.raises(ValueError):
+            for attempt in Retrying(config_group='test_config_group_inexistent', stop=tenacity.stop_after_attempt(2)):
+                with attempt:
+                    raise Exception('Trapped!')
+                if counter > 0:
+                    raise Exception("ConfigGroup was not applied at all.")
+        self.assertEqual(counter, 0)
+
+
 @contextmanager
 def reports_deprecation_warning():
     __tracebackhide__ = True

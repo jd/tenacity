@@ -83,6 +83,7 @@ from .after import after_nothing  # noqa
 # Import all built-in after strategies for easier usage.
 from .before_sleep import before_sleep_log  # noqa
 from .before_sleep import before_sleep_nothing  # noqa
+from ._utils import config_group as config_group
 
 
 def retry(*dargs, **dkw):
@@ -190,29 +191,60 @@ class AttemptManager(object):
             self.retry_state.set_result(None)
 
 
+_default_config = dict()
+_default_config['sleep'] = globals()['sleep']
+_default_config['stop'] = stop_never
+_default_config['wait'] = wait_none()
+_default_config['retry'] = retry_if_exception_type()
+_default_config['before'] = before_nothing
+_default_config['after'] = after_nothing
+_default_config['before_sleep'] = None
+_default_config['reraise'] = False
+_default_config['retry_error_cls'] = RetryError
+_default_config['retry_error_callback'] = None
+
+
 class BaseRetrying(object):
 
     def __init__(self,
-                 sleep=sleep,
-                 stop=stop_never, wait=wait_none(),
-                 retry=retry_if_exception_type(),
-                 before=before_nothing,
-                 after=after_nothing,
-                 before_sleep=None,
-                 reraise=False,
-                 retry_error_cls=RetryError,
-                 retry_error_callback=None):
-        self.sleep = sleep
-        self._stop = stop
-        self._wait = wait
-        self._retry = retry
-        self._before = before
-        self._after = after
-        self._before_sleep = before_sleep
-        self.reraise = reraise
+                 sleep=_unset,
+                 stop=_unset,
+                 wait=_unset,
+                 retry=_unset,
+                 before=_unset,
+                 after=_unset,
+                 before_sleep=_unset,
+                 reraise=_unset,
+                 retry_error_cls=_unset,
+                 retry_error_callback=_unset,
+                 config_group=None):
+        if config_group:
+            config_group = globals()['config_group'](config_group)
+        else:
+            config_group = dict()
+
+        def value(name, given):
+            if given is _unset:
+                return arguments.pop(name, _default_config[name])
+            arguments.pop(name, None)
+            return given
+
+        self.sleep = value('sleep', sleep)
+        self._stop = value('stop', stop)
+        self._wait = value('wait', wait)
+        self._retry = value('retry', retry)
+        self._before = value('before', before)
+        self._after = value('after', after)
+        self._before_sleep = value('before_sleep', before_sleep)
+        self.reraise = value('reraise', reraise)
         self._local = threading.local()
-        self.retry_error_cls = retry_error_cls
-        self._retry_error_callback = retry_error_callback
+        self.retry_error_cls = value(
+            'retry_error_cls', retry_error_cls)
+        self._retry_error_callback = value(
+            'retry_error_callback', retry_error_callback)
+        if config_group:
+            raise ValueError(
+                "The arguments {} are unsupported.".format(config_group))
 
         # This attribute was moved to RetryCallState and is deprecated on
         # Retrying objects but kept for backward compatibility.
