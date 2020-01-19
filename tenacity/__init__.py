@@ -85,7 +85,7 @@ from .before_sleep import before_sleep_log  # noqa
 from .before_sleep import before_sleep_nothing  # noqa
 
 # Import config group util
-from ._utils import config_group  # noqa
+from ._utils import config_group  as _config_group # noqa
 
 
 def retry(*dargs, **dkw):
@@ -221,7 +221,7 @@ class BaseRetrying(object):
                  retry_error_callback=_unset,
                  config_group=None):
         if config_group:
-            config_group = globals()['config_group'](config_group)
+            config_group = globals()['_config_group'](config_group)
         else:
             config_group = dict()
 
