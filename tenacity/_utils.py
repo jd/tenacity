@@ -153,12 +153,15 @@ class cached_property(object):
         value = obj.__dict__[self.func.__name__] = self.func(obj)
         return value
 
+
 CONFIG_GROUPS = {}
 
+
 def config_group(name, **kwargs):
-    """A utility method which allows to store values in groups."""
+    """Store values in configuration groups."""
     # Do not fill the cache when not needed
-    # Catch usage error: config_group() return value passed to Retrying constructor instead of its name
+    # Catch usage error: config_group() return
+    # value passed to Retrying constructor instead of its name
     if isinstance(name, dict):
         return name
     if kwargs:
@@ -170,4 +173,5 @@ def config_group(name, **kwargs):
         if name in CONFIG_GROUPS:
             return dict(CONFIG_GROUPS[name])
         else:
-            raise ValueError("The config_group '{}' does not exist".format(name))
+            raise ValueError(
+                "The config_group '{}' does not exist".format(name))

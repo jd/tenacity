@@ -1394,8 +1394,10 @@ class TestRetryException(unittest.TestCase):
 class TestConfigGroup(unittest.TestCase):
 
     def setUp(self):
-        tenacity.config_group('test_config_group', stop=tenacity.stop_after_attempt(3))
-        tenacity.config_group('test_config_group_misconfigured', banana='rama')
+        tenacity.config_group('test_config_group',
+                              stop=tenacity.stop_after_attempt(3))
+        tenacity.config_group('test_config_group_misconfigured',
+                              banana='rama')
 
     def test_config_group_only(self):
         counter = 0
@@ -1411,7 +1413,8 @@ class TestConfigGroup(unittest.TestCase):
     def test_config_group_instance_overwrite(self):
         counter = 0
         with pytest.raises(RetryError):
-            for attempt in Retrying(config_group='test_config_group', stop=tenacity.stop_after_attempt(2)):
+            for attempt in Retrying(config_group='test_config_group',
+                                    stop=tenacity.stop_after_attempt(2)):
                 with attempt:
                     counter += 1
                     raise Exception('Trapped!')
@@ -1423,13 +1426,16 @@ class TestConfigGroup(unittest.TestCase):
 
     def test_config_group_misconfigured(self):
         with pytest.raises(ValueError):
-            for attempt in Retrying(config_group='test_config_group_misconfigured'):
+            for attempt in Retrying(
+                    config_group='test_config_group_misconfigured'):
                 raise Exception("ConfigGroup was not applied at all.")
 
     def test_config_group_inexistent(self):
         counter = 0
         with pytest.raises(ValueError):
-            for attempt in Retrying(config_group='test_config_group_inexistent', stop=tenacity.stop_after_attempt(2)):
+            for attempt in Retrying(
+                    config_group='test_config_group_inexistent',
+                    stop=tenacity.stop_after_attempt(2)):
                 with attempt:
                     raise Exception('Trapped!')
                 if counter > 0:
