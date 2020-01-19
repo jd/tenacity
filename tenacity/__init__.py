@@ -222,7 +222,7 @@ class BaseRetrying(object):
                  # noqa: F811
                  config_group=None):
         if config_group:
-            config_group = globals()['_config_group'](config_group)
+            config_group = globals()['config_group'](config_group)
         else:
             config_group = dict()
 
