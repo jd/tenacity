@@ -225,8 +225,8 @@ class BaseRetrying(object):
 
         def value(name, given):
             if given is _unset:
-                return arguments.pop(name, _default_config[name])
-            arguments.pop(name, None)
+                return config_group.pop(name, _default_config[name])
+            config_group.pop(name, None)
             return given
 
         self.sleep = value('sleep', sleep)
