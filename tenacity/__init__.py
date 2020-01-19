@@ -194,7 +194,7 @@ class AttemptManager(object):
 
 
 _default_config = dict()
-_default_config['sleep'] = globals()['sleep']
+_default_config['sleep'] = sleep
 _default_config['stop'] = stop_never
 _default_config['wait'] = wait_none()
 _default_config['retry'] = retry_if_exception_type()
