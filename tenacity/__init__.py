@@ -219,8 +219,7 @@ class BaseRetrying(object):
                  reraise=_unset,
                  retry_error_cls=_unset,
                  retry_error_callback=_unset,
-                 # noqa: F811
-                 config_group=None):
+                 config_group=None): # noqa: F811
         if config_group:
             config_group = globals()['config_group'](config_group)
         else:
