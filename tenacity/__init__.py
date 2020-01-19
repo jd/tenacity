@@ -83,7 +83,7 @@ from .after import after_nothing  # noqa
 # Import all built-in after strategies for easier usage.
 from .before_sleep import before_sleep_log  # noqa
 from .before_sleep import before_sleep_nothing  # noqa
-from ._utils import config_group as config_group
+from ._utils import config_group
 
 
 def retry(*dargs, **dkw):

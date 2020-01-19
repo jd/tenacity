@@ -16,7 +16,6 @@
 
 import inspect
 import sys
-import threading
 import time
 from functools import update_wrapper
 
@@ -154,7 +153,6 @@ class cached_property(object):
         value = obj.__dict__[self.func.__name__] = self.func(obj)
         return value
 
-CONFIG_GROUPS_LOCK = threading.Lock()
 CONFIG_GROUPS = {}
 
 def config_group(name, **kwargs):
@@ -163,14 +161,13 @@ def config_group(name, **kwargs):
     # Catch usage error: config_group() return value passed to Retrying constructor instead of its name
     if isinstance(name, dict):
         return name
-    with CONFIG_GROUPS_LOCK:
-        if kwargs:
-            if name not in CONFIG_GROUPS:
-                CONFIG_GROUPS[name] = dict()
-            CONFIG_GROUPS[name].update(kwargs)
+    if kwargs:
+        if name not in CONFIG_GROUPS:
+            CONFIG_GROUPS[name] = dict()
+        CONFIG_GROUPS[name].update(kwargs)
+        return dict(CONFIG_GROUPS[name])
+    else:
+        if name in CONFIG_GROUPS:
             return dict(CONFIG_GROUPS[name])
         else:
-            if name in CONFIG_GROUPS:
-                return dict(CONFIG_GROUPS[name])
-            else:
-                raise ValueError("The config_group '{}' does not exist".format(name))
+            raise ValueError("The config_group '{}' does not exist".format(name))
