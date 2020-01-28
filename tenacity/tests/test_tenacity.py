@@ -321,7 +321,8 @@ class TestWaitConditions(unittest.TestCase):
         r = Retrying(wait=sum([tenacity.wait_fixed(1),
                                tenacity.wait_random(0, 3),
                                tenacity.wait_fixed(5),
-                               tenacity.wait_none()]))
+                               tenacity.wait_none()],
+                               tenacity.wait_none()))
         # Test it a few time since it's random
         for i in six.moves.range(1000):
             w = r.wait(1, 5)
