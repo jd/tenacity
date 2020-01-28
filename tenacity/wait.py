@@ -37,15 +37,6 @@ class wait_base(object):
             return NotImplemented
         return wait_combine(self, other)
 
-    def __radd__(self, other):
-        # make it possible to use multiple waits with the built-in sum function
-        if other == 0:
-            return self
-        # check that other is instance of wait_base
-        if not isinstance(other, wait_base):
-            return NotImplemented
-        return self.__add__(other)
-
 
 class wait_fixed(wait_base):
     """Wait strategy that waits a fixed amount of time between each retry."""
