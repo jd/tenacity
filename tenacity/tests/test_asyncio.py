@@ -25,8 +25,6 @@ from tenacity.tests.test_tenacity import NoIOErrorAfterCount
 
 
 def asynctest(callable_):
-    callable_ = asyncio.coroutine(callable_)
-
     @six.wraps(callable_)
     def wrapper(*a, **kw):
         loop = asyncio.get_event_loop()
@@ -42,27 +40,23 @@ async def _retryable_coroutine(thing):
 
 
 @retry(stop=stop_after_attempt(2))
-@asyncio.coroutine
-def _retryable_coroutine_with_2_attempts(thing):
-    yield from asyncio.sleep(0.00001)
+async def _retryable_coroutine_with_2_attempts(thing):
+    await asyncio.sleep(0.00001)
     thing.go()
 
 
 class TestAsync(unittest.TestCase):
     @asynctest
-    def test_retry(self):
-        assert asyncio.iscoroutinefunction(_retryable_coroutine)
+    async def test_retry(self):
         thing = NoIOErrorAfterCount(5)
-        yield from _retryable_coroutine(thing)
+        await _retryable_coroutine(thing)
         assert thing.counter == thing.count
 
     @asynctest
-    def test_stop_after_attempt(self):
-        assert asyncio.iscoroutinefunction(
-            _retryable_coroutine_with_2_attempts)
+    async def test_stop_after_attempt(self):
         thing = NoIOErrorAfterCount(2)
         try:
-            yield from _retryable_coroutine_with_2_attempts(thing)
+            await _retryable_coroutine_with_2_attempts(thing)
         except RetryError:
             assert thing.counter == 2
 
@@ -70,7 +64,7 @@ class TestAsync(unittest.TestCase):
         repr(tasyncio.AsyncRetrying())
 
     @asynctest
-    def test_attempt_number_is_correct_for_interleaved_coroutines(self):
+    async def test_attempt_number_is_correct_for_interleaved_coroutines(self):
 
         attempts = []
 
@@ -79,11 +73,10 @@ class TestAsync(unittest.TestCase):
 
         thing1 = NoIOErrorAfterCount(3)
         thing2 = NoIOErrorAfterCount(3)
-        future1 = asyncio.ensure_future(
-            _retryable_coroutine.retry_with(after=after)(thing1))
-        future2 = asyncio.ensure_future(
+
+        await asyncio.gather(
+            _retryable_coroutine.retry_with(after=after)(thing1),
             _retryable_coroutine.retry_with(after=after)(thing2))
-        yield from asyncio.gather(future1, future2)
 
         # There's no waiting on retry, only a wait in the coroutine, so the
         # executions should be interleaved.

@@ -18,9 +18,9 @@
 # limitations under the License.
 
 try:
-    import asyncio
+    from inspect import iscoroutinefunction
 except ImportError:
-    asyncio = None
+    iscoroutinefunction = None
 
 try:
     import tornado
@@ -96,7 +96,7 @@ def retry(*dargs, **dkw):
         return retry()(dargs[0])
     else:
         def wrap(f):
-            if asyncio and asyncio.iscoroutinefunction(f):
+            if iscoroutinefunction is not None and iscoroutinefunction(f):
                 r = AsyncRetrying(*dargs, **dkw)
             elif tornado and hasattr(tornado.gen, 'is_coroutine_function') \
                     and tornado.gen.is_coroutine_function(f):
@@ -479,7 +479,7 @@ class RetryCallState(object):
         self.outcome, self.outcome_timestamp = fut, ts
 
 
-if asyncio:
+if iscoroutinefunction:
     from tenacity._asyncio import AsyncRetrying
 
 if tornado:
