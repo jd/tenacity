@@ -16,20 +16,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from asyncio import sleep
-
 import sys
+from asyncio import sleep
 
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import RetryCallState
 
+
 class AsyncRetrying(BaseRetrying):
 
     def __init__(self,
-                    sleep=sleep,
-                    **kwargs):
+                 sleep=sleep,
+                 **kwargs):
         super(AsyncRetrying, self).__init__(**kwargs)
         self.sleep = sleep
 
