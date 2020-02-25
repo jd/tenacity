@@ -76,7 +76,7 @@ class TestAsync(unittest.TestCase):
 
         await asyncio.gather(
             _retryable_coroutine.retry_with(after=after)(thing1),
-            _retryable_coroutine.retry_with(after=after)(thing2))        
+            _retryable_coroutine.retry_with(after=after)(thing2))
 
         # There's no waiting on retry, only a wait in the coroutine, so the
         # executions should be interleaved.
