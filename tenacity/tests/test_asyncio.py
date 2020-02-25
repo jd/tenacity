@@ -76,18 +76,18 @@ class TestAsync(unittest.TestCase):
 
         await asyncio.gather(
             _retryable_coroutine.retry_with(after=after)(thing1),
-            _retryable_coroutine.retry_with(after=after)(thing2))
+            _retryable_coroutine.retry_with(after=after)(thing2))        
 
         # There's no waiting on retry, only a wait in the coroutine, so the
         # executions should be interleaved.
-        thing1_attempts = attempts[::2]
-        things1, attempt_nos1 = zip(*thing1_attempts)
-        assert all(thing is thing1 for thing in things1)
+        even_thing_attempts = attempts[::2]
+        things, attempt_nos1 = zip(*even_thing_attempts)
+        assert len(set(things)) == 1
         assert list(attempt_nos1) == [1, 2, 3]
 
-        thing2_attempts = attempts[1::2]
-        things2, attempt_nos2 = zip(*thing2_attempts)
-        assert all(thing is thing2 for thing in things2)
+        odd_thing_attempts = attempts[1::2]
+        things, attempt_nos2 = zip(*odd_thing_attempts)
+        assert len(set(things)) == 1
         assert list(attempt_nos2) == [1, 2, 3]
 
 
