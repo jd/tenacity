@@ -24,7 +24,7 @@ fixes a number of longstanding bugs.
 The simplest use case is retrying a flaky function whenever an `Exception`
 occurs until a value is returned.
 
-.. testcode::
+.. testcode:: python
 
     import random
     from tenacity import retry
@@ -91,7 +91,7 @@ Basic Retry
 As you saw above, the default behavior is to retry forever without waiting when
 an exception is raised.
 
-.. testcode::
+.. testcode:: python
 
     @retry
     def never_give_up_never_surrender():
@@ -104,7 +104,7 @@ Stopping
 Let's be a little less persistent and set some boundaries, such as the number
 of attempts before giving up.
 
-.. testcode::
+.. testcode:: python
 
     @retry(stop=stop_after_attempt(7))
     def stop_after_7_attempts():
@@ -114,7 +114,7 @@ of attempts before giving up.
 We don't have all day, so let's set a boundary for how long we should be
 retrying stuff.
 
-.. testcode::
+.. testcode:: python
 
     @retry(stop=stop_after_delay(10))
     def stop_after_10_s():
@@ -123,7 +123,7 @@ retrying stuff.
 
 You can combine several stop conditions by using the `|` operator:
 
-.. testcode::
+.. testcode:: python
 
     @retry(stop=(stop_after_delay(10) | stop_after_attempt(5)))
     def stop_after_10_s_or_5_retries():
@@ -136,7 +136,7 @@ Waiting before retrying
 Most things don't like to be polled as fast as possible, so let's just wait 2
 seconds between retries.
 
-.. testcode::
+.. testcode:: python
 
     @retry(wait=wait_fixed(2))
     def wait_2_s():
@@ -145,7 +145,7 @@ seconds between retries.
 
 Some things perform best with a bit of randomness injected.
 
-.. testcode::
+.. testcode:: python
 
     @retry(wait=wait_random(min=1, max=2))
     def wait_random_1_to_2_s():
@@ -155,7 +155,7 @@ Some things perform best with a bit of randomness injected.
 Then again, it's hard to beat exponential backoff when retrying distributed
 services and other remote endpoints.
 
-.. testcode::
+.. testcode:: python
 
     @retry(wait=wait_exponential(multiplier=1, min=4, max=10))
     def wait_exponential_1():
@@ -167,7 +167,7 @@ Then again, it's also hard to beat combining fixed waits and jitter (to
 help avoid thundering herds) when retrying distributed services and other
 remote endpoints.
 
-.. testcode::
+.. testcode:: python
 
     @retry(wait=wait_fixed(3) + wait_random(0, 2))
     def wait_fixed_jitter():
@@ -177,7 +177,7 @@ remote endpoints.
 When multiple processes are in contention for a shared resource, exponentially
 increasing jitter helps minimise collisions.
 
-.. testcode::
+.. testcode:: python
 
     @retry(wait=wait_random_exponential(multiplier=1, max=60))
     def wait_exponential_jitter():
@@ -187,7 +187,7 @@ increasing jitter helps minimise collisions.
 
 Sometimes it's necessary to build a chain of backoffs.
 
-.. testcode::
+.. testcode:: python
 
     @retry(wait=wait_chain(*[wait_fixed(3) for i in range(3)] +
                            [wait_fixed(7) for i in range(2)] +
@@ -202,7 +202,7 @@ Whether to retry
 We have a few options for dealing with retries that raise specific or general
 exceptions, as in the cases here.
 
-.. testcode::
+.. testcode:: python
 
     @retry(retry=retry_if_exception_type(IOError))
     def might_io_error():
@@ -211,7 +211,7 @@ exceptions, as in the cases here.
 
 We can also use the result of the function to alter the behavior of retrying.
 
-.. testcode::
+.. testcode:: python
 
     def is_none_p(value):
         """Return True if value is None"""
@@ -223,7 +223,7 @@ We can also use the result of the function to alter the behavior of retrying.
 
 We can also combine several conditions:
 
-.. testcode::
+.. testcode:: python
 
     def is_none_p(value):
         """Return True if value is None"""
@@ -239,7 +239,7 @@ to mix and match.
 It's also possible to retry explicitly at any time by raising the `TryAgain`
 exception:
 
-.. testcode::
+.. testcode:: python
 
    @retry
    def do_something():
@@ -253,7 +253,7 @@ Error Handling
 While callables that "timeout" retrying raise a `RetryError` by default,
 we can reraise the last attempt's exception if needed:
 
-.. testcode::
+.. testcode:: python
 
     @retry(reraise=True, stop=stop_after_attempt(3))
     def raise_my_exception():
@@ -271,7 +271,7 @@ Before and After Retry, and Logging
 It's possible to execute an action before any attempt of calling the function
 by using the before callback function:
 
-.. testcode::
+.. testcode:: python
 
     import logging
 
@@ -285,7 +285,7 @@ by using the before callback function:
 
 In the same spirit, It's possible to execute after a call that failed:
 
-.. testcode::
+.. testcode:: python
 
     import logging
 
@@ -301,7 +301,7 @@ It's also possible to only log failures that are going to be retried. Normally
 retries happen after a wait interval, so the keyword argument is called
 ``before_sleep``:
 
-.. testcode::
+.. testcode:: python
 
     import logging
 
@@ -321,7 +321,7 @@ Statistics
 You can access the statistics about the retry made over a function by using the
 `retry` attribute attached to the function and its `statistics` attribute:
 
-.. testcode::
+.. testcode:: python
 
     @retry(stop=stop_after_attempt(3))
     def raise_my_exception():
@@ -349,7 +349,7 @@ retry invocation.
 For example, you can call a custom callback function after all retries failed,
 without raising an exception (or you can re-raise or do anything really)
 
-.. testcode::
+.. testcode:: python
 
     def return_last_value(retry_state):
         """return the result of the last call attempt"""
@@ -450,7 +450,7 @@ It's also possible to define custom callbacks for other keyword arguments.
 
 Here's an example with a custom ``before_sleep`` function:
 
-.. testcode::
+.. testcode:: python
 
     import logging
 
@@ -541,7 +541,7 @@ Here's an example with a custom ``before_sleep`` function:
       :param float sleep: number of seconds to wait until next retry
       :param tenacity.Future last_result: current outcome
 
-.. testcode::
+.. testcode:: python
 
     import logging
 
@@ -569,7 +569,7 @@ Changing Arguments at Run Time
 You can change the arguments of a retry decorator as needed when calling it by
 using the `retry_with` function attached to the wrapped function:
 
-.. testcode::
+.. testcode:: python
 
     @retry(stop=stop_after_attempt(3))
     def raise_my_exception():
@@ -590,7 +590,7 @@ using the `retry_with` function attached to the wrapped function:
 If you want to use variables to set up the retry parameters, you don't have
 to use the `retry` decorator - you can instead use `Retrying` directly:
 
-.. testcode::
+.. testcode:: python
 
     def never_good_enough(arg1):
         raise Exception('Invalid argument: {}'.format(arg1))
@@ -606,7 +606,7 @@ Tenacity allows you to retry a code block without the need to wraps it in an
 isolated function. This makes it easy to isolate failing block while sharing
 context. The trick is to combine a for loop and a context manager.
 
-.. testcode::
+.. testcode:: python
 
    from tenacity import Retrying, RetryError, stop_after_attempt
 
