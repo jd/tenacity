@@ -38,22 +38,20 @@ class retry_base(object):
 
 
 class _retry_never(retry_base):
-    """Retry strategy that never rejects any result."""
-
     def __call__(self, retry_state):
         return False
 
 
+#: Retry strategy that never rejects any result.
 retry_never = _retry_never()
 
 
 class _retry_always(retry_base):
-    """Retry strategy that always rejects any result."""
-
     def __call__(self, retry_state):
         return True
 
 
+#: Retry strategy that always rejects any result.
 retry_always = _retry_always()
 
 
