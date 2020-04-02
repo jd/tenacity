@@ -1401,7 +1401,6 @@ class TestRetryTyping(unittest.TestCase):
     )
     def test_retry_type_annotations(self):
         """The decorator should maintain types of decorated functions."""
-
         # Just in case this is run with unit-test, return early for py2
         if sys.version_info < (3, 0):
             return
