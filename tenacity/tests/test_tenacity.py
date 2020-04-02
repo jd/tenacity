@@ -1395,9 +1395,12 @@ class TestRetryException(unittest.TestCase):
 
 class TestRetryTyping(unittest.TestCase):
 
-    @pytest.mark.skipif(sys.version_info < (3, 0), reason="typeguard not supported for python 2")
+    @pytest.mark.skipif(
+        sys.version_info < (3, 0),
+        reason="typeguard not supported for python 2"
+    )
     def test_retry_type_annotations(self):
-        """The register decorator should maintain types of decorated functions."""
+        """The decorator should maintain types of decorated functions."""
 
         # Just in case this is run with unit-test, return early for py2
         if sys.version_info < (3, 0):
@@ -1421,7 +1424,9 @@ class TestRetryTyping(unittest.TestCase):
         # These raise TypeError exceptions if they fail
         check_type("with_raw", with_raw, typing.Callable[[int], str])
         check_type("with_raw_result", with_raw_result, str)
-        check_type("with_constructor", with_constructor, typing.Callable[[int], str])
+        check_type(
+            "with_constructor", with_constructor, typing.Callable[[int], str]
+        )
         check_type("with_constructor_result", with_constructor_result, str)
 
 
