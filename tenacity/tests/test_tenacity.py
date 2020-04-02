@@ -16,7 +16,7 @@
 import logging
 import sys
 import time
-import typing as t
+import typing
 import unittest
 import warnings
 from contextlib import contextmanager
@@ -1419,9 +1419,9 @@ class TestRetryTyping(unittest.TestCase):
         with_constructor_result = with_raw(1)
 
         # These raise TypeError exceptions if they fail
-        check_type("with_raw", with_raw, t.Callable[[int], str])
+        check_type("with_raw", with_raw, typing.Callable[[int], str])
         check_type("with_raw_result", with_raw_result, str)
-        check_type("with_constructor", with_constructor, t.Callable[[int], str])
+        check_type("with_constructor", with_constructor, typing.Callable[[int], str])
         check_type("with_constructor_result", with_constructor_result, str)
 
 
