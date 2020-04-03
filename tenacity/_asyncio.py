@@ -19,6 +19,7 @@
 import sys
 from asyncio import sleep
 
+from tenacity import AttemptManager
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
 from tenacity import DoSleep
@@ -49,6 +50,24 @@ class AsyncRetrying(BaseRetrying):
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):
                 retry_state.prepare_for_next_attempt()
+                await self.sleep(do)
+            else:
+                return do
+
+    def __aiter__(self):
+        self.begin(None)
+        self._retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
+        return self
+
+    async def __anext__(self):
+        while True:
+            do = self.iter(retry_state=self._retry_state)
+            if do is None:
+                raise StopAsyncIteration
+            elif isinstance(do, DoAttempt):
+                return AttemptManager(retry_state=self._retry_state)
+            elif isinstance(do, DoSleep):
+                self._retry_state.prepare_for_next_attempt()
                 await self.sleep(do)
             else:
                 return do

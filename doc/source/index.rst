@@ -620,6 +620,20 @@ context. The trick is to combine a for loop and a context manager.
 You can configure every details of retry policy by configuring the Retrying
 object.
 
+With async code you can use AsyncRetrying.
+
+.. testcode::
+
+   from tenacity import AsyncRetrying, RetryError, stop_after_attempt
+
+   async def function():
+      try:
+          async for attempt in AsyncRetrying(stop=stop_after_attempt(3)):
+              with attempt:
+                  raise Exception('My code is failing!')
+      except RetryError:
+          pass
+
 Async and retry
 ~~~~~~~~~~~~~~~
 
