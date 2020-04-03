@@ -29,6 +29,7 @@ except ImportError:
 
 import sys
 import threading
+import typing as t
 from concurrent import futures
 
 import six
@@ -85,7 +86,24 @@ from .before_sleep import before_sleep_log  # noqa
 from .before_sleep import before_sleep_nothing  # noqa
 
 
-def retry(*dargs, **dkw):
+WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable)
+
+
+@t.overload
+def retry(fn):
+    # type: (WrappedFn) -> WrappedFn
+    """Type signature for @retry as a raw decorator."""
+    pass
+
+
+@t.overload
+def retry(*dargs, **dkw):  # noqa
+    # type: (...) -> t.Callable[[WrappedFn], WrappedFn]
+    """Type signature for the @retry() decorator constructor."""
+    pass
+
+
+def retry(*dargs, **dkw):  # noqa
     """Wrap a function with a new `Retrying` object.
 
     :param dargs: positional arguments passed to Retrying object
