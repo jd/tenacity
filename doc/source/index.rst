@@ -484,7 +484,7 @@ Here's an example with a custom ``before_sleep`` function:
    varying parameter sets and none of those provided full state. The old way is
    deprecated, but kept for backward compatibility.
 
-   .. function:: my_stop(previous_attempt_number, delay_since_first_attempt)
+   .. function:: my_deprecated_stop(previous_attempt_number, delay_since_first_attempt)
 
       *deprecated*
 
@@ -495,7 +495,7 @@ Here's an example with a custom ``before_sleep`` function:
       :type delay_since_first_attempt: float
       :rtype: bool
 
-   .. function:: my_wait(previous_attempt_number, delay_since_first_attempt [, last_result])
+   .. function:: my_deprecated_wait(previous_attempt_number, delay_since_first_attempt [, last_result])
 
       *deprecated*
 
@@ -509,7 +509,7 @@ Here's an example with a custom ``before_sleep`` function:
       :return: number of seconds to wait before next retry
       :rtype: float
 
-   .. function:: my_retry(attempt)
+   .. function:: my_deprecated_retry(attempt)
 
       *deprecated*
 
@@ -517,14 +517,14 @@ Here's an example with a custom ``before_sleep`` function:
       :return: whether or not retrying should continue
       :rtype: bool
 
-   .. function:: my_before(func, trial_number)
+   .. function:: my_deprecated_before(func, trial_number)
 
       *deprecated*
 
       :param callable func: function whose outcome is to be retried
       :param int trial_number: the number of current attempt
 
-   .. function:: my_after(func, trial_number, trial_time_taken)
+   .. function:: my_deprecated_after(func, trial_number, trial_time_taken)
 
       *deprecated*
 
@@ -533,7 +533,7 @@ Here's an example with a custom ``before_sleep`` function:
       :param float trial_time_taken: interval in seconds between the beginning
          of first attempt and current time
 
-   .. function:: my_before_sleep(func, sleep, last_result)
+   .. function:: my_deprecated_before_sleep(func, sleep, last_result)
 
       *deprecated*
 
