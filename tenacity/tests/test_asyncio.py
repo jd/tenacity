@@ -21,7 +21,8 @@ import six
 from tenacity import RetryError
 from tenacity import _asyncio as tasyncio
 from tenacity import retry, stop_after_attempt
-from tenacity.tests.test_tenacity import NoIOErrorAfterCount
+from tenacity.tests.test_tenacity import NoIOErrorAfterCount, current_time_ms
+from tenacity.wait import wait_fixed
 
 
 def asynctest(callable_):
@@ -91,5 +92,51 @@ class TestAsync(unittest.TestCase):
         assert list(attempt_nos2) == [1, 2, 3]
 
 
-if __name__ == '__main__':
+class TestContextManager(unittest.TestCase):
+    @asynctest
+    async def test_do_max_attempts(self):
+        attempts = 0
+        retrying = tasyncio.AsyncRetrying(stop=stop_after_attempt(3))
+        try:
+            async for attempt in retrying:
+                with attempt:
+                    attempts += 1
+                    raise Exception
+        except RetryError:
+            pass
+
+        assert attempts == 3
+
+    @asynctest
+    async def test_reraise(self):
+        class CustomError(Exception):
+            pass
+
+        try:
+            async for attempt in tasyncio.AsyncRetrying(
+                stop=stop_after_attempt(1), reraise=True
+            ):
+                with attempt:
+                    raise CustomError()
+        except CustomError:
+            pass
+        else:
+            raise Exception
+
+    @asynctest
+    async def test_sleeps(self):
+        start = current_time_ms()
+        try:
+            async for attempt in tasyncio.AsyncRetrying(
+                stop=stop_after_attempt(1), wait=wait_fixed(1)
+            ):
+                with attempt:
+                    raise Exception()
+        except RetryError:
+            pass
+        t = current_time_ms() - start
+        self.assertLess(t, 1.1)
+
+
+if __name__ == "__main__":
     unittest.main()
