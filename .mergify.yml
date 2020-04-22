@@ -12,7 +12,21 @@ pull_request_rules:
     actions:
       merge:
         strict: "smart"
-        method: merge
+        method: squash
+  - name: automatic merge for jd
+    conditions:
+      - author=jd
+      - "status-success=ci/circleci: pep8"
+      - "status-success=ci/circleci: py27"
+      - "status-success=ci/circleci: py35"
+      - "status-success=ci/circleci: py36"
+      - "status-success=ci/circleci: py37"
+      - "status-success=ci/circleci: py38"
+      - label!=work-in-progress
+    actions:
+      merge:
+        strict: "smart"
+        method: squash
   - name: dismiss reviews
     conditions: []
     actions:

@@ -16,51 +16,58 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-try:
-    import asyncio
-except ImportError:
-    asyncio = None
-
 import sys
+from asyncio import sleep
 
+from tenacity import AttemptManager
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import RetryCallState
 
 
-if asyncio:
-    class AsyncRetrying(BaseRetrying):
+class AsyncRetrying(BaseRetrying):
 
-        def __init__(self,
-                     sleep=asyncio.sleep,
-                     **kwargs):
-            super(AsyncRetrying, self).__init__(**kwargs)
-            self.sleep = sleep
+    def __init__(self,
+                 sleep=sleep,
+                 **kwargs):
+        super(AsyncRetrying, self).__init__(**kwargs)
+        self.sleep = sleep
 
-        def wraps(self, fn):
-            fn = super().wraps(fn)
-            # Ensure wrapper is recognized as a coroutine function.
-            fn._is_coroutine = asyncio.coroutines._is_coroutine
-            return fn
+    async def call(self, fn, *args, **kwargs):
+        self.begin(fn)
 
-        @asyncio.coroutine
-        def call(self, fn, *args, **kwargs):
-            self.begin(fn)
-
-            retry_state = RetryCallState(
-                retry_object=self, fn=fn, args=args, kwargs=kwargs)
-            while True:
-                do = self.iter(retry_state=retry_state)
-                if isinstance(do, DoAttempt):
-                    try:
-                        result = yield from fn(*args, **kwargs)
-                    except BaseException:
-                        retry_state.set_exception(sys.exc_info())
-                    else:
-                        retry_state.set_result(result)
-                elif isinstance(do, DoSleep):
-                    retry_state.prepare_for_next_attempt()
-                    yield from self.sleep(do)
+        retry_state = RetryCallState(
+            retry_object=self, fn=fn, args=args, kwargs=kwargs)
+        while True:
+            do = self.iter(retry_state=retry_state)
+            if isinstance(do, DoAttempt):
+                try:
+                    result = await fn(*args, **kwargs)
+                except BaseException:
+                    retry_state.set_exception(sys.exc_info())
                 else:
-                    return do
+                    retry_state.set_result(result)
+            elif isinstance(do, DoSleep):
+                retry_state.prepare_for_next_attempt()
+                await self.sleep(do)
+            else:
+                return do
+
+    def __aiter__(self):
+        self.begin(None)
+        self._retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
+        return self
+
+    async def __anext__(self):
+        while True:
+            do = self.iter(retry_state=self._retry_state)
+            if do is None:
+                raise StopAsyncIteration
+            elif isinstance(do, DoAttempt):
+                return AttemptManager(retry_state=self._retry_state)
+            elif isinstance(do, DoSleep):
+                self._retry_state.prepare_for_next_attempt()
+                await self.sleep(do)
+            else:
+                return do

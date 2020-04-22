@@ -14,7 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import sys
 import time
+import typing
 import unittest
 import warnings
 from contextlib import contextmanager
@@ -1393,6 +1395,42 @@ class TestRetryException(unittest.TestCase):
         pickled = pickle.dumps(expected)
         actual = pickle.loads(pickled)
         self.assertEqual(expected.last_attempt, actual.last_attempt)
+
+
+class TestRetryTyping(unittest.TestCase):
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 0),
+        reason="typeguard not supported for python 2"
+    )
+    def test_retry_type_annotations(self):
+        """The decorator should maintain types of decorated functions."""
+        # Just in case this is run with unit-test, return early for py2
+        if sys.version_info < (3, 0):
+            return
+
+        # Function-level import because we can't install this for python 2.
+        from typeguard import check_type
+
+        def num_to_str(number):
+            # type: (int) -> str
+            return str(number)
+
+        # equivalent to a raw @retry decoration
+        with_raw = retry(num_to_str)
+        with_raw_result = with_raw(1)
+
+        # equivalent to a @retry(...) decoration
+        with_constructor = retry()(num_to_str)
+        with_constructor_result = with_raw(1)
+
+        # These raise TypeError exceptions if they fail
+        check_type("with_raw", with_raw, typing.Callable[[int], str])
+        check_type("with_raw_result", with_raw_result, str)
+        check_type(
+            "with_constructor", with_constructor, typing.Callable[[int], str]
+        )
+        check_type("with_constructor_result", with_constructor_result, str)
 
 
 @contextmanager

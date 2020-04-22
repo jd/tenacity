@@ -18,9 +18,9 @@
 # limitations under the License.
 
 try:
-    import asyncio
+    from inspect import iscoroutinefunction
 except ImportError:
-    asyncio = None
+    iscoroutinefunction = None
 
 try:
     import tornado
@@ -29,6 +29,7 @@ except ImportError:
 
 import sys
 import threading
+import typing as t
 from concurrent import futures
 
 import six
@@ -85,7 +86,24 @@ from .before_sleep import before_sleep_log  # noqa
 from .before_sleep import before_sleep_nothing  # noqa
 
 
-def retry(*dargs, **dkw):
+WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable)
+
+
+@t.overload
+def retry(fn):
+    # type: (WrappedFn) -> WrappedFn
+    """Type signature for @retry as a raw decorator."""
+    pass
+
+
+@t.overload
+def retry(*dargs, **dkw):  # noqa
+    # type: (...) -> t.Callable[[WrappedFn], WrappedFn]
+    """Type signature for the @retry() decorator constructor."""
+    pass
+
+
+def retry(*dargs, **dkw):  # noqa
     """Wrap a function with a new `Retrying` object.
 
     :param dargs: positional arguments passed to Retrying object
@@ -96,7 +114,7 @@ def retry(*dargs, **dkw):
         return retry()(dargs[0])
     else:
         def wrap(f):
-            if asyncio and asyncio.iscoroutinefunction(f):
+            if iscoroutinefunction is not None and iscoroutinefunction(f):
                 r = AsyncRetrying(*dargs, **dkw)
             elif tornado and hasattr(tornado.gen, 'is_coroutine_function') \
                     and tornado.gen.is_coroutine_function(f):
@@ -479,7 +497,7 @@ class RetryCallState(object):
         self.outcome, self.outcome_timestamp = fut, ts
 
 
-if asyncio:
+if iscoroutinefunction:
     from tenacity._asyncio import AsyncRetrying
 
 if tornado:
