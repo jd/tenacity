@@ -1157,7 +1157,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         finally:
             logger.removeHandler(handler)
 
-        etalon_re = r'Retrying .* in 0\.01 seconds as it raised .*\.'
+        etalon_re = r"^Retrying .* in 0\.01 seconds as it raised Hi there, I'm an IOError\.$"
         self.assertEqual(len(handler.records), 2)
         self.assertRegexpMatches(handler.records[0].getMessage(), etalon_re)
         self.assertRegexpMatches(handler.records[1].getMessage(), etalon_re)
@@ -1180,7 +1180,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
             logger.removeHandler(handler)
 
         self.assertEqual(len(handler.records), 2)
-        etalon_re = r'Retrying .* in 0\.01 seconds as it returned None'
+        etalon_re = r'^Retrying .* in 0\.01 seconds as it returned None\.$'
         self.assertRegexpMatches(handler.records[0].getMessage(), etalon_re)
         self.assertRegexpMatches(handler.records[1].getMessage(), etalon_re)
 
