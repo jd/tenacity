@@ -303,6 +303,8 @@ def retry_error_callback_accept_retry_state(fn):
 
 def get_exc_info_from_future(future):
     """
+    Get an exc_info value from a Future.
+
     Given a a Future instance, retrieve an exc_info value suitable for passing
     in as the exc_info parameter to logging.Logger.log() and related methods.
 
