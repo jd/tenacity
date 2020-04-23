@@ -1,0 +1,3 @@
+---
+features:
+  - Add an ``exc_info`` option to the ``before_sleep_log()`` strategy.
