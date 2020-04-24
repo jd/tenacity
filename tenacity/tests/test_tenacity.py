@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import os
+import re
 import sys
 import time
 import typing
@@ -1157,12 +1159,42 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         finally:
             logger.removeHandler(handler)
 
-        etalon_re = r'Retrying .* in 0\.01 seconds as it raised .*\.'
+        etalon_re = (r"^Retrying .* in 0\.01 seconds as it raised "
+                     r"(IO|OS)Error: Hi there, I'm an IOError\.$")
         self.assertEqual(len(handler.records), 2)
-        self.assertRegexpMatches(handler.records[0].getMessage(), etalon_re)
-        self.assertRegexpMatches(handler.records[1].getMessage(), etalon_re)
+        fmt = logging.Formatter().format
+        self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
+        self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
 
-    def test_before_sleep_log_returns(self):
+    def test_before_sleep_log_raises_with_exc_info(self):
+        thing = NoIOErrorAfterCount(2)
+        logger = logging.getLogger(self.id())
+        logger.propagate = False
+        logger.setLevel(logging.INFO)
+        handler = CapturingHandler()
+        logger.addHandler(handler)
+        try:
+            _before_sleep = tenacity.before_sleep_log(logger,
+                                                      logging.INFO,
+                                                      exc_info=True)
+            retrying = Retrying(wait=tenacity.wait_fixed(0.01),
+                                stop=tenacity.stop_after_attempt(3),
+                                before_sleep=_before_sleep)
+            retrying.call(thing.go)
+        finally:
+            logger.removeHandler(handler)
+
+        etalon_re = re.compile(r"^Retrying .* in 0\.01 seconds as it raised "
+                               r"(IO|OS)Error: Hi there, I'm an IOError\.{0}"
+                               r"Traceback \(most recent call last\):{0}"
+                               r".*$".format(os.linesep),
+                               flags=re.MULTILINE)
+        self.assertEqual(len(handler.records), 2)
+        fmt = logging.Formatter().format
+        self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
+        self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
+
+    def test_before_sleep_log_returns(self, exc_info=False):
         thing = NoneReturnUntilAfterCount(2)
         logger = logging.getLogger(self.id())
         logger.propagate = False
@@ -1170,7 +1202,9 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         handler = CapturingHandler()
         logger.addHandler(handler)
         try:
-            _before_sleep = tenacity.before_sleep_log(logger, logging.INFO)
+            _before_sleep = tenacity.before_sleep_log(logger,
+                                                      logging.INFO,
+                                                      exc_info=exc_info)
             _retry = tenacity.retry_if_result(lambda result: result is None)
             retrying = Retrying(wait=tenacity.wait_fixed(0.01),
                                 stop=tenacity.stop_after_attempt(3),
@@ -1179,10 +1213,14 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         finally:
             logger.removeHandler(handler)
 
+        etalon_re = r'^Retrying .* in 0\.01 seconds as it returned None\.$'
         self.assertEqual(len(handler.records), 2)
-        etalon_re = r'Retrying .* in 0\.01 seconds as it returned None'
-        self.assertRegexpMatches(handler.records[0].getMessage(), etalon_re)
-        self.assertRegexpMatches(handler.records[1].getMessage(), etalon_re)
+        fmt = logging.Formatter().format
+        self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
+        self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
+
+    def test_before_sleep_log_returns_with_exc_info(self):
+        self.test_before_sleep_log_returns(exc_info=True)
 
 
 class TestReraiseExceptions(unittest.TestCase):
