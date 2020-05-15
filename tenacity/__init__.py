@@ -267,7 +267,7 @@ class BaseRetrying(object):
 
     def copy(self, sleep=_unset, stop=_unset, wait=_unset,
              retry=_unset, before=_unset, after=_unset, before_sleep=_unset,
-             reraise=_unset):
+             reraise=_unset, retry_error_callback=_unset):
         """Copy this object with some parameters changed if needed."""
         if before_sleep is _unset:
             before_sleep = self.before_sleep
@@ -279,7 +279,9 @@ class BaseRetrying(object):
             before=self.before if before is _unset else before,
             after=self.after if after is _unset else after,
             before_sleep=before_sleep,
-            reraise=self.reraise if after is _unset else reraise,
+            reraise=self.reraise if reraise is _unset else reraise,
+            retry_error_callback=self.retry_error_callback \
+                if retry_error_callback is _unset else retry_error_callback,
         )
 
     def __repr__(self):
