@@ -280,8 +280,8 @@ class BaseRetrying(object):
             after=self.after if after is _unset else after,
             before_sleep=before_sleep,
             reraise=self.reraise if reraise is _unset else reraise,
-            retry_error_callback=self.retry_error_callback \
-                if retry_error_callback is _unset else retry_error_callback,
+            retry_error_callback=self.retry_error_callback
+            if retry_error_callback is _unset else retry_error_callback,
         )
 
     def __repr__(self):
