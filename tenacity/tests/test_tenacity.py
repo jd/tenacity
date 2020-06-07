@@ -1479,5 +1479,50 @@ def reports_deprecation_warning():
         warnings.filters = oldfilters
 
 
+class TestMockingSleep():
+    RETRY_ARGS = dict(
+        wait=tenacity.wait_fixed(0.1),
+        stop=tenacity.stop_after_attempt(5),
+    )
+
+    def _fail(self):
+        raise NotImplementedError()
+
+    @retry(**RETRY_ARGS)
+    def _decorated_fail(self):
+        self._fail()
+
+    @pytest.fixture()
+    def mock_sleep(self, monkeypatch):
+        class MockSleep(object):
+            call_count = 0
+
+            def __call__(self, seconds):
+                self.call_count += 1
+
+        sleep = MockSleep()
+        monkeypatch.setattr(tenacity.nap.time, "sleep", sleep)
+        yield sleep
+
+    def test_call(self, mock_sleep):
+        retrying = Retrying(**self.RETRY_ARGS)
+        with pytest.raises(RetryError):
+            retrying.call(self._fail)
+        assert mock_sleep.call_count == 4
+
+    def test_decorated(self, mock_sleep):
+        with pytest.raises(RetryError):
+            self._decorated_fail()
+        assert mock_sleep.call_count == 4
+
+    def test_decorated_retry_with(self, mock_sleep):
+        fail_faster = self._decorated_fail.retry_with(
+            stop=tenacity.stop_after_attempt(2),
+        )
+        with pytest.raises(RetryError):
+            fail_faster()
+        assert mock_sleep.call_count == 1
+
+
 if __name__ == '__main__':
     unittest.main()
