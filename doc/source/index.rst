@@ -83,6 +83,10 @@ Basic Retry
 .. testsetup:: *
 
     import logging
+    #
+    # Note the following import is used for demonstration convenience only.
+    # Production code should always explicitly import the names it needs.
+    #
     from tenacity import *
 
     class MyException(Exception):
