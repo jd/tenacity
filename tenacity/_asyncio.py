@@ -71,3 +71,5 @@ class AsyncRetrying(BaseRetrying):
                 await self.sleep(do)
             else:
                 return do
+
+    __call__ = call
