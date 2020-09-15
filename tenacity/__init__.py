@@ -16,7 +16,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from abc import abstractmethod, ABCMeta
 
 try:
     from inspect import iscoroutinefunction
@@ -31,6 +30,7 @@ except ImportError:
 import sys
 import threading
 import typing as t
+from abc import ABCMeta, abstractmethod
 from concurrent import futures
 
 import six
