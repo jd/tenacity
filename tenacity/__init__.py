@@ -16,7 +16,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from abc import abstractmethod, ABC
+from abc import abstractmethod, ABCMeta
 
 try:
     from inspect import iscoroutinefunction
@@ -209,7 +209,8 @@ class AttemptManager(object):
             self.retry_state.set_result(None)
 
 
-class BaseRetrying(ABC):
+class BaseRetrying(object):
+    __metaclass__ = ABCMeta
 
     def __init__(self,
                  sleep=sleep,
