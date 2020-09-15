@@ -18,7 +18,7 @@ import unittest
 
 import six
 
-from tenacity import RetryError, AsyncRetrying
+from tenacity import AsyncRetrying, RetryError
 from tenacity import _asyncio as tasyncio
 from tenacity import retry, stop_after_attempt
 from tenacity.tests.test_tenacity import NoIOErrorAfterCount, current_time_ms
