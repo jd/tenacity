@@ -34,8 +34,13 @@ from tenacity.compat import make_retry_state
 
 
 class TestBase(unittest.TestCase):
+
     def test_repr(self):
-        repr(tenacity.BaseRetrying())
+        class ConcreteRetrying(tenacity.BaseRetrying):
+            def __call__(self):
+                pass
+
+        repr(ConcreteRetrying())
 
 
 class TestStopConditions(unittest.TestCase):
@@ -135,7 +140,7 @@ class TestStopConditions(unittest.TestCase):
         def failing():
             raise NotImplementedError()
         with pytest.raises(RetryError):
-            retrying.call(failing)
+            retrying(failing)
 
     def test_stop_func_with_retry_state(self):
         def stop_func(retry_state):
@@ -283,7 +288,7 @@ class TestWaitConditions(unittest.TestCase):
                      stop=tenacity.stop_after_attempt(r_attempts),
                      reraise=True)
         with reports_deprecation_warning():
-            self.assertRaises(Exception, r.call, dying)
+            self.assertRaises(Exception, r, dying)
         self.assertEqual(r_attempts - 1, len(captures))
         self.assertTrue(all([r.failed for r in captures]))
 
@@ -451,14 +456,14 @@ class TestWaitConditions(unittest.TestCase):
 
         retrying1 = Retrying(wait=wait1, stop=tenacity.stop_after_attempt(4))
         with reports_deprecation_warning():
-            self.assertRaises(Exception, lambda: retrying1.call(dying))
+            self.assertRaises(Exception, lambda: retrying1(dying))
         self.assertEqual([t[0] for t in wait1.calls], [1, 2, 3])
         # This assumes that 3 iterations complete within 1 second.
         self.assertTrue(all(t[1] < 1 for t in wait1.calls))
 
         retrying2 = Retrying(wait=wait2, stop=tenacity.stop_after_attempt(4))
         with reports_deprecation_warning():
-            self.assertRaises(Exception, lambda: retrying2.call(dying))
+            self.assertRaises(Exception, lambda: retrying2(dying))
         self.assertEqual([t[0] for t in wait2.calls], [1, 2, 3])
         # This assumes that 3 iterations complete within 1 second.
         self.assertTrue(all(t[1] < 1 for t in wait2.calls))
@@ -494,7 +499,7 @@ class TestWaitConditions(unittest.TestCase):
         def returnval():
             return 123
         try:
-            retrying.call(returnval)
+            retrying(returnval)
         except ExtractCallState as err:
             retry_state = err.args[0]
         self.assertIs(retry_state.fn, returnval)
@@ -508,7 +513,7 @@ class TestWaitConditions(unittest.TestCase):
         def dying():
             raise Exception("Broken")
         try:
-            retrying.call(dying)
+            retrying(dying)
         except ExtractCallState as err:
             retry_state = err.args[0]
         self.assertIs(retry_state.fn, dying)
@@ -598,7 +603,7 @@ class TestRetryConditions(unittest.TestCase):
     def test_retry_try_again(self):
         self._attempts = 0
         Retrying(stop=tenacity.stop_after_attempt(5),
-                 retry=tenacity.retry_never).call(self._raise_try_again)
+                 retry=tenacity.retry_never)(self._raise_try_again)
         self.assertEqual(3, self._attempts)
 
     def test_retry_try_again_forever(self):
@@ -608,7 +613,7 @@ class TestRetryConditions(unittest.TestCase):
         r = Retrying(stop=tenacity.stop_after_attempt(5),
                      retry=tenacity.retry_never)
         self.assertRaises(tenacity.RetryError,
-                          r.call,
+                          r,
                           _r)
         self.assertEqual(5, r.statistics['attempt_number'])
 
@@ -1048,7 +1053,7 @@ class TestDecoratorWrapper(unittest.TestCase):
         def failing():
             raise NotImplementedError()
         with pytest.raises(RetryError):
-            retrying.call(failing)
+            retrying(failing)
 
 
 class TestBeforeAfterAttempts(unittest.TestCase):
@@ -1155,7 +1160,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
             retrying = Retrying(wait=tenacity.wait_fixed(0.01),
                                 stop=tenacity.stop_after_attempt(3),
                                 before_sleep=_before_sleep)
-            retrying.call(thing.go)
+            retrying(thing.go)
         finally:
             logger.removeHandler(handler)
 
@@ -1180,7 +1185,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
             retrying = Retrying(wait=tenacity.wait_fixed(0.01),
                                 stop=tenacity.stop_after_attempt(3),
                                 before_sleep=_before_sleep)
-            retrying.call(thing.go)
+            retrying(thing.go)
         finally:
             logger.removeHandler(handler)
 
@@ -1209,7 +1214,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
             retrying = Retrying(wait=tenacity.wait_fixed(0.01),
                                 stop=tenacity.stop_after_attempt(3),
                                 retry=_retry, before_sleep=_before_sleep)
-            retrying.call(thing.go)
+            retrying(thing.go)
         finally:
             logger.removeHandler(handler)
 

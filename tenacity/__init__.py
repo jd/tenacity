@@ -16,6 +16,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from abc import abstractmethod, ABC
 
 try:
     from inspect import iscoroutinefunction
@@ -208,7 +209,7 @@ class AttemptManager(object):
             self.retry_state.set_result(None)
 
 
-class BaseRetrying(object):
+class BaseRetrying(ABC):
 
     def __init__(self,
                  sleep=sleep,
@@ -326,7 +327,7 @@ class BaseRetrying(object):
         """
         @_utils.wraps(f)
         def wrapped_f(*args, **kw):
-            return self.call(f, *args, **kw)
+            return self(f, *args, **kw)
 
         def retry_with(*args, **kwargs):
             return self.copy(*args, **kwargs).wraps(f)
@@ -396,11 +397,15 @@ class BaseRetrying(object):
             else:
                 break
 
+    @abstractmethod
+    def __call__(self, *args, **kwargs):
+        pass
+
 
 class Retrying(BaseRetrying):
     """Retrying controller."""
 
-    def call(self, fn, *args, **kwargs):
+    def __call__(self, fn, *args, **kwargs):
         self.begin(fn)
 
         retry_state = RetryCallState(
@@ -419,8 +424,6 @@ class Retrying(BaseRetrying):
                 self.sleep(do)
             else:
                 return do
-
-    __call__ = call
 
 
 class Future(futures.Future):
