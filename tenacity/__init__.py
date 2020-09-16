@@ -30,7 +30,10 @@ except ImportError:
 import sys
 import threading
 import typing as t
+import warnings
+from abc import ABCMeta, abstractmethod
 from concurrent import futures
+
 
 import six
 
@@ -209,6 +212,7 @@ class AttemptManager(object):
 
 
 class BaseRetrying(object):
+    __metaclass__ = ABCMeta
 
     def __init__(self,
                  sleep=sleep,
@@ -326,7 +330,7 @@ class BaseRetrying(object):
         """
         @_utils.wraps(f)
         def wrapped_f(*args, **kw):
-            return self.call(f, *args, **kw)
+            return self(f, *args, **kw)
 
         def retry_with(*args, **kwargs):
             return self.copy(*args, **kwargs).wraps(f)
@@ -396,11 +400,15 @@ class BaseRetrying(object):
             else:
                 break
 
+    @abstractmethod
+    def __call__(self, *args, **kwargs):
+        pass
+
 
 class Retrying(BaseRetrying):
     """Retrying controller."""
 
-    def call(self, fn, *args, **kwargs):
+    def __call__(self, fn, *args, **kwargs):
         self.begin(fn)
 
         retry_state = RetryCallState(
@@ -420,7 +428,11 @@ class Retrying(BaseRetrying):
             else:
                 return do
 
-    __call__ = call
+    def call(self, *args, **kwargs):
+        """Use ``__call__`` instead because this method is deprecated."""
+        warnings.warn("'Retrying.call()' method is deprecated. " +
+                      "Use 'Retrying.__call__()' instead")
+        self.__call__(self, *args, **kwargs)
 
 
 class Future(futures.Future):
