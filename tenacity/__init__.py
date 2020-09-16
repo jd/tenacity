@@ -16,7 +16,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import warnings
 
 try:
     from inspect import iscoroutinefunction
@@ -31,8 +30,10 @@ except ImportError:
 import sys
 import threading
 import typing as t
+import warnings
 from abc import ABCMeta, abstractmethod
 from concurrent import futures
+
 
 import six
 
@@ -428,8 +429,9 @@ class Retrying(BaseRetrying):
                 return do
 
     def call(self, *args, **kwargs):
-        """Deprecated. Use ``__call__`` instead"""
-        warnings.warn("'Retrying.call()' method is deprecated. Use 'Retrying.__call__()' instead")
+        """Use ``__call__`` instead because this method is deprecated."""
+        warnings.warn("'Retrying.call()' method is deprecated. " +
+                      "Use 'Retrying.__call__()' instead")
         self.__call__(self, *args, **kwargs)
 
 
