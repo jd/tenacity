@@ -16,6 +16,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import warnings
 
 try:
     from inspect import iscoroutinefunction
@@ -425,6 +426,11 @@ class Retrying(BaseRetrying):
                 self.sleep(do)
             else:
                 return do
+
+    def call(self, *args, **kwargs):
+        """Deprecated. Use ``__call__`` instead"""
+        warnings.warn("'Retrying.call()' method is deprecated. Use 'Retrying.__call__()' instead")
+        self.__call__(self, *args, **kwargs)
 
 
 class Future(futures.Future):

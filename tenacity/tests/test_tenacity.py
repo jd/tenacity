@@ -1148,7 +1148,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
 
         self.assertEqual(self.slept, 2)
 
-    def test_before_sleep_log_raises(self):
+    def _before_sleep_log_raises(self, get_call_fn):
         thing = NoIOErrorAfterCount(2)
         logger = logging.getLogger(self.id())
         logger.propagate = False
@@ -1160,7 +1160,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
             retrying = Retrying(wait=tenacity.wait_fixed(0.01),
                                 stop=tenacity.stop_after_attempt(3),
                                 before_sleep=_before_sleep)
-            retrying(thing.go)
+            get_call_fn(retrying)(thing.go)
         finally:
             logger.removeHandler(handler)
 
@@ -1170,6 +1170,12 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         fmt = logging.Formatter().format
         self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
         self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
+
+    def test_before_sleep_log_raises(self):
+        self._before_sleep_log_raises(lambda x: x)
+
+    def test_before_sleep_log_raises_deprecated_call(self):
+        self._before_sleep_log_raises(lambda x: x.call)
 
     def test_before_sleep_log_raises_with_exc_info(self):
         thing = NoIOErrorAfterCount(2)
