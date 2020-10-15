@@ -59,6 +59,10 @@ class TestAsync(unittest.TestCase):
         assert thing.counter == thing.count
 
     @asynctest
+    async def test_iscoroutinefunction(self):
+        assert asyncio.iscoroutinefunction(_retryable_coroutine)
+
+    @asynctest
     async def test_retry_using_async_retying(self):
         thing = NoIOErrorAfterCount(5)
         retrying = AsyncRetrying()
