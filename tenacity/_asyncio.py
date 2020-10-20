@@ -34,7 +34,7 @@ class AsyncRetrying(BaseRetrying):
         super(AsyncRetrying, self).__init__(**kwargs)
         self.sleep = sleep
 
-    async def __call__(self, fn, *args, **kwargs):
+    async def call(self, fn, *args, **kwargs):
         self.begin(fn)
 
         retry_state = RetryCallState(

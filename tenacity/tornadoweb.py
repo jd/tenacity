@@ -32,7 +32,7 @@ class TornadoRetrying(BaseRetrying):
         self.sleep = sleep
 
     @gen.coroutine
-    def __call__(self, fn, *args, **kwargs):
+    def call(self, fn, *args, **kwargs):
         self.begin(fn)
 
         retry_state = RetryCallState(
