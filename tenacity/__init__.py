@@ -432,7 +432,7 @@ class Retrying(BaseRetrying):
         """Use ``__call__`` instead because this method is deprecated."""
         warnings.warn("'Retrying.call()' method is deprecated. " +
                       "Use 'Retrying.__call__()' instead")
-        self.__call__(self, *args, **kwargs)
+        return self.__call__(*args, **kwargs)
 
 
 class Future(futures.Future):
