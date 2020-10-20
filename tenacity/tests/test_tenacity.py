@@ -1504,8 +1504,7 @@ class TestInvokeViaLegacyCallMethod(TestInvokeAsCallable):
 
     @staticmethod
     def invoke(retry, f):
-        # TODO: Should raise a DeprecationWarning rather than UserWarning
-        # with reports_deprecation_warning():
+        with reports_deprecation_warning():
             return retry.call(f)
 
 
