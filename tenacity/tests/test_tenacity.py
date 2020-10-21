@@ -1433,14 +1433,15 @@ class TestContextManager(unittest.TestCase):
 
 
 class TestInvokeAsCallable:
-    """
-    Test the same scenarios as TestContextManager, but invoking tenacity via
-    the Retry.__call__() mechanism.
-    """
+    """Test direct invocation of Retrying as a callable."""
 
     @staticmethod
     def invoke(retry, f):
-        """Allows testing of different call mechanisms in test sub-classes."""
+        """
+        Invoke Retrying logic.
+
+        Wrapper allows testing different call mechanisms in test sub-classes.
+        """
         return retry(f)
 
     def test_retry_one(self):
@@ -1498,9 +1499,7 @@ class TestInvokeAsCallable:
 
 
 class TestInvokeViaLegacyCallMethod(TestInvokeAsCallable):
-    """
-    Legacy Retrying.call() method should work the same as Retrying.__call__().
-    """
+    """Retrying.call() method should work the same as Retrying.__call__()."""
 
     @staticmethod
     def invoke(retry, f):
