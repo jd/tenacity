@@ -1432,6 +1432,81 @@ class TestContextManager(unittest.TestCase):
         self.assertRaises(CustomError, test)
 
 
+class TestInvokeAsCallable:
+    """Test direct invocation of Retrying as a callable."""
+
+    @staticmethod
+    def invoke(retry, f):
+        """
+        Invoke Retrying logic.
+
+        Wrapper allows testing different call mechanisms in test sub-classes.
+        """
+        return retry(f)
+
+    def test_retry_one(self):
+        def f():
+            f.calls.append(len(f.calls) + 1)
+            if len(f.calls) <= 1:
+                raise Exception("Retry it!")
+            return 42
+        f.calls = []
+
+        retry = Retrying()
+        assert self.invoke(retry, f) == 42
+        assert f.calls == [1, 2]
+
+    def test_on_error(self):
+        class CustomError(Exception):
+            pass
+
+        def f():
+            f.calls.append(len(f.calls) + 1)
+            if len(f.calls) <= 1:
+                raise CustomError("Don't retry!")
+            return 42
+        f.calls = []
+
+        retry = Retrying(retry=tenacity.retry_if_exception_type(IOError))
+        with pytest.raises(CustomError):
+            self.invoke(retry, f)
+        assert f.calls == [1]
+
+    def test_retry_error(self):
+        def f():
+            f.calls.append(len(f.calls) + 1)
+            raise Exception("Retry it!")
+        f.calls = []
+
+        retry = Retrying(stop=tenacity.stop_after_attempt(2))
+        with pytest.raises(RetryError):
+            self.invoke(retry, f)
+        assert f.calls == [1, 2]
+
+    def test_reraise(self):
+        class CustomError(Exception):
+            pass
+
+        def f():
+            f.calls.append(len(f.calls) + 1)
+            raise CustomError("Retry it!")
+        f.calls = []
+
+        retry = Retrying(reraise=True, stop=tenacity.stop_after_attempt(2))
+        with pytest.raises(CustomError):
+            self.invoke(retry, f)
+        assert f.calls == [1, 2]
+
+
+class TestInvokeViaLegacyCallMethod(TestInvokeAsCallable):
+    """Retrying.call() method should work the same as Retrying.__call__()."""
+
+    @staticmethod
+    def invoke(retry, f):
+        with reports_deprecation_warning():
+            return retry.call(f)
+
+
 class TestRetryException(unittest.TestCase):
 
     def test_retry_error_is_pickleable(self):
