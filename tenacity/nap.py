@@ -18,8 +18,14 @@
 
 import time
 
-#: Default sleep strategy.
-sleep = time.sleep
+
+def sleep(seconds):
+    """
+    Sleep strategy that delays execution for a given number of seconds.
+
+    This is the default strategy, and may be mocked out for unit testing.
+    """
+    time.sleep(seconds)
 
 
 class sleep_using_event(object):
