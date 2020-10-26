@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-import os
 import re
 import sys
 import time
@@ -507,8 +506,8 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(retry_state.kwargs, {})
         self.assertEqual(retry_state.outcome.result(), 123)
         self.assertEqual(retry_state.attempt_number, 1)
-        self.assertGreater(retry_state.outcome_timestamp,
-                           retry_state.start_time)
+        self.assertGreaterEqual(retry_state.outcome_timestamp,
+                                retry_state.start_time)
 
         def dying():
             raise Exception("Broken")
@@ -521,8 +520,8 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(retry_state.kwargs, {})
         self.assertEqual(str(retry_state.outcome.exception()), 'Broken')
         self.assertEqual(retry_state.attempt_number, 1)
-        self.assertGreater(retry_state.outcome_timestamp,
-                           retry_state.start_time)
+        self.assertGreaterEqual(retry_state.outcome_timestamp,
+                                retry_state.start_time)
 
 
 class TestRetryConditions(unittest.TestCase):
@@ -1198,7 +1197,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         etalon_re = re.compile(r"^Retrying .* in 0\.01 seconds as it raised "
                                r"(IO|OS)Error: Hi there, I'm an IOError\.{0}"
                                r"Traceback \(most recent call last\):{0}"
-                               r".*$".format(os.linesep),
+                               r".*$".format('\n'),
                                flags=re.MULTILINE)
         self.assertEqual(len(handler.records), 2)
         fmt = logging.Formatter().format
