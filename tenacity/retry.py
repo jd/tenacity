@@ -67,6 +67,8 @@ class retry_if_exception(retry_base):
     def __call__(self, retry_state):
         if retry_state.outcome.failed:
             return self.predicate(retry_state.outcome.exception())
+        else:
+            return False
 
 
 class retry_if_exception_type(retry_if_exception):
@@ -104,6 +106,8 @@ class retry_if_result(retry_base):
     def __call__(self, retry_state):
         if not retry_state.outcome.failed:
             return self.predicate(retry_state.outcome.result())
+        else:
+            return False
 
 
 class retry_if_not_result(retry_base):
@@ -116,6 +120,8 @@ class retry_if_not_result(retry_base):
     def __call__(self, retry_state):
         if not retry_state.outcome.failed:
             return not self.predicate(retry_state.outcome.result())
+        else:
+            return False
 
 
 class retry_if_exception_message(retry_if_exception):
