@@ -15,7 +15,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import asyncio
 import sys
 from asyncio import sleep
 
@@ -71,3 +71,9 @@ class AsyncRetrying(BaseRetrying):
                 await self.sleep(do)
             else:
                 return do
+
+    def wraps(self, fn):
+        fn = super().wraps(fn)
+        # Ensure wrapper is recognized as a coroutine function.
+        fn._is_coroutine = asyncio.coroutines._is_coroutine
+        return fn
