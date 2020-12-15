@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import inspect
 import unittest
 
 import six
@@ -61,6 +62,7 @@ class TestAsync(unittest.TestCase):
     @asynctest
     async def test_iscoroutinefunction(self):
         assert asyncio.iscoroutinefunction(_retryable_coroutine)
+        assert inspect.iscoroutinefunction(_retryable_coroutine)
 
     @asynctest
     async def test_retry_using_async_retying(self):
@@ -79,6 +81,10 @@ class TestAsync(unittest.TestCase):
 
     def test_repr(self):
         repr(tasyncio.AsyncRetrying())
+
+    def test_retry_attributes(self):
+        assert hasattr(_retryable_coroutine, 'retry')
+        assert hasattr(_retryable_coroutine, 'retry_with')
 
     @asynctest
     async def test_attempt_number_is_correct_for_interleaved_coroutines(self):
