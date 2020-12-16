@@ -404,6 +404,12 @@ class BaseRetrying(object):
     def __call__(self, *args, **kwargs):
         pass
 
+    def call(self, *args, **kwargs):
+        """Use ``__call__`` instead because this method is deprecated."""
+        warnings.warn("'call()' method is deprecated. " +
+                      "Use '__call__()' instead", DeprecationWarning)
+        return self.__call__(*args, **kwargs)
+
 
 class Retrying(BaseRetrying):
     """Retrying controller."""
@@ -427,12 +433,6 @@ class Retrying(BaseRetrying):
                 self.sleep(do)
             else:
                 return do
-
-    def call(self, *args, **kwargs):
-        """Use ``__call__`` instead because this method is deprecated."""
-        warnings.warn("'Retrying.call()' method is deprecated. " +
-                      "Use 'Retrying.__call__()' instead", DeprecationWarning)
-        return self.__call__(*args, **kwargs)
 
 
 class Future(futures.Future):
