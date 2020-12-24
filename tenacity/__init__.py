@@ -41,6 +41,7 @@ from tenacity import _utils
 from tenacity import compat as _compat
 
 # Import all built-in retry strategies for easier usage.
+from .retry import retry_base  # noqa
 from .retry import retry_all  # noqa
 from .retry import retry_always  # noqa
 from .retry import retry_any  # noqa
@@ -117,6 +118,8 @@ def retry(*dargs, **dkw):  # noqa
         return retry()(dargs[0])
     else:
         def wrap(f):
+            if isinstance(f, retry_base):
+                warnings.warn("Got retry_base instance ({cls}) as callable argument, this will probably hang indefinitely (did you mean retry={cls}(...)?)".format(cls=f.__class__.__name__))
             if iscoroutinefunction is not None and iscoroutinefunction(f):
                 r = AsyncRetrying(*dargs, **dkw)
             elif tornado and hasattr(tornado.gen, 'is_coroutine_function') \
