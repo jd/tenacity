@@ -38,7 +38,6 @@ from concurrent import futures
 import six
 
 from tenacity import _utils
-from tenacity import compat as _compat
 
 # Import all built-in retry strategies for easier usage.
 from .retry import retry_all  # noqa
@@ -225,49 +224,20 @@ class BaseRetrying(object):
                  retry_error_cls=RetryError,
                  retry_error_callback=None):
         self.sleep = sleep
-        self._stop = stop
-        self._wait = wait
-        self._retry = retry
-        self._before = before
-        self._after = after
-        self._before_sleep = before_sleep
+        self.stop = stop
+        self.wait = wait
+        self.retry = retry
+        self.before = before
+        self.after = after
+        self.before_sleep = before_sleep
         self.reraise = reraise
         self._local = threading.local()
         self.retry_error_cls = retry_error_cls
-        self._retry_error_callback = retry_error_callback
+        self.retry_error_callback = retry_error_callback
 
         # This attribute was moved to RetryCallState and is deprecated on
         # Retrying objects but kept for backward compatibility.
         self.fn = None
-
-    @_utils.cached_property
-    def stop(self):
-        return _compat.stop_func_accept_retry_state(self._stop)
-
-    @_utils.cached_property
-    def wait(self):
-        return _compat.wait_func_accept_retry_state(self._wait)
-
-    @_utils.cached_property
-    def retry(self):
-        return _compat.retry_func_accept_retry_state(self._retry)
-
-    @_utils.cached_property
-    def before(self):
-        return _compat.before_func_accept_retry_state(self._before)
-
-    @_utils.cached_property
-    def after(self):
-        return _compat.after_func_accept_retry_state(self._after)
-
-    @_utils.cached_property
-    def before_sleep(self):
-        return _compat.before_sleep_func_accept_retry_state(self._before_sleep)
-
-    @_utils.cached_property
-    def retry_error_callback(self):
-        return _compat.retry_error_callback_accept_retry_state(
-            self._retry_error_callback)
 
     def copy(self, sleep=_unset, stop=_unset, wait=_unset,
              retry=_unset, before=_unset, after=_unset, before_sleep=_unset,
