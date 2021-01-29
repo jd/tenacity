@@ -42,7 +42,7 @@ class TornadoRetrying(BaseRetrying):
             if isinstance(do, DoAttempt):
                 try:
                     result = yield fn(*args, **kwargs)
-                except BaseException:
+                except BaseException:  # noqa: B902
                     retry_state.set_exception(sys.exc_info())
                 else:
                     retry_state.set_result(result)

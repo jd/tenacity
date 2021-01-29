@@ -382,36 +382,36 @@ RetryCallState
 
    Constant attributes:
 
-   .. autoinstanceattribute:: start_time(float)
+   .. autoattribute:: start_time(float)
       :annotation:
 
-   .. autoinstanceattribute:: retry_object(BaseRetrying)
+   .. autoattribute:: retry_object(BaseRetrying)
       :annotation:
 
-   .. autoinstanceattribute:: fn(callable)
+   .. autoattribute:: fn(callable)
       :annotation:
 
-   .. autoinstanceattribute:: args(tuple)
+   .. autoattribute:: args(tuple)
       :annotation:
 
-   .. autoinstanceattribute:: kwargs(dict)
+   .. autoattribute:: kwargs(dict)
       :annotation:
 
    Variable attributes:
 
-   .. autoinstanceattribute:: attempt_number(int)
+   .. autoattribute:: attempt_number(int)
       :annotation:
 
-   .. autoinstanceattribute:: outcome(tenacity.Future or None)
+   .. autoattribute:: outcome(tenacity.Future or None)
       :annotation:
 
-   .. autoinstanceattribute:: outcome_timestamp(float or None)
+   .. autoattribute:: outcome_timestamp(float or None)
       :annotation:
 
-   .. autoinstanceattribute:: idle_for(float)
+   .. autoattribute:: idle_for(float)
       :annotation:
 
-   .. autoinstanceattribute:: next_action(tenacity.RetryAction or None)
+   .. autoattribute:: next_action(tenacity.RetryAction or None)
       :annotation:
 
 Other Custom Callbacks
