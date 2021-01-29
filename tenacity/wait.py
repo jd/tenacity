@@ -67,9 +67,9 @@ class wait_random(wait_base):
         self.wait_random_max = max
 
     def __call__(self, retry_state):
-        return (self.wait_random_min +
-                (random.random() *
-                 (self.wait_random_max - self.wait_random_min)))
+        return self.wait_random_min + (
+            random.random() * (self.wait_random_max - self.wait_random_min)
+        )
 
 
 class wait_combine(wait_base):
@@ -102,8 +102,7 @@ class wait_chain(wait_base):
         self.strategies = strategies
 
     def __call__(self, retry_state):
-        wait_func_no = min(max(retry_state.attempt_number, 1),
-                           len(self.strategies))
+        wait_func_no = min(max(retry_state.attempt_number, 1), len(self.strategies))
         wait_func = self.strategies[wait_func_no - 1]
         return wait_func(retry_state=retry_state)
 
@@ -121,9 +120,7 @@ class wait_incrementing(wait_base):
         self.max = max
 
     def __call__(self, retry_state):
-        result = self.start + (
-            self.increment * (retry_state.attempt_number - 1)
-        )
+        result = self.start + (self.increment * (retry_state.attempt_number - 1))
         return max(0, min(result, self.max))
 
 
@@ -182,6 +179,5 @@ class wait_random_exponential(wait_exponential):
     """
 
     def __call__(self, retry_state):
-        high = super(wait_random_exponential, self).__call__(
-            retry_state=retry_state)
+        high = super(wait_random_exponential, self).__call__(retry_state=retry_state)
         return random.uniform(0, high)

@@ -115,11 +115,15 @@ def retry(*dargs, **dkw):  # noqa
     if len(dargs) == 1 and callable(dargs[0]):
         return retry()(dargs[0])
     else:
+
         def wrap(f):
             if iscoroutinefunction is not None and iscoroutinefunction(f):
                 r = AsyncRetrying(*dargs, **dkw)
-            elif tornado and hasattr(tornado.gen, 'is_coroutine_function') \
-                    and tornado.gen.is_coroutine_function(f):
+            elif (
+                tornado
+                and hasattr(tornado.gen, "is_coroutine_function")
+                and tornado.gen.is_coroutine_function(f)
+            ):
                 r = TornadoRetrying(*dargs, **dkw)
             else:
                 r = Retrying(*dargs, **dkw)
@@ -157,17 +161,18 @@ class BaseAction(object):
     NAME = None
 
     def __repr__(self):
-        state_str = ', '.join('%s=%r' % (field, getattr(self, field))
-                              for field in self.REPR_FIELDS)
-        return '%s(%s)' % (type(self).__name__, state_str)
+        state_str = ", ".join(
+            "%s=%r" % (field, getattr(self, field)) for field in self.REPR_FIELDS
+        )
+        return "%s(%s)" % (type(self).__name__, state_str)
 
     def __str__(self):
         return repr(self)
 
 
 class RetryAction(BaseAction):
-    REPR_FIELDS = ('sleep',)
-    NAME = 'retry'
+    REPR_FIELDS = ("sleep",)
+    NAME = "retry"
 
     def __init__(self, sleep):
         self.sleep = float(sleep)
@@ -213,16 +218,19 @@ class AttemptManager(object):
 class BaseRetrying(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self,
-                 sleep=sleep,
-                 stop=stop_never, wait=wait_none(),
-                 retry=retry_if_exception_type(),
-                 before=before_nothing,
-                 after=after_nothing,
-                 before_sleep=None,
-                 reraise=False,
-                 retry_error_cls=RetryError,
-                 retry_error_callback=None):
+    def __init__(
+        self,
+        sleep=sleep,
+        stop=stop_never,
+        wait=wait_none(),
+        retry=retry_if_exception_type(),
+        before=before_nothing,
+        after=after_nothing,
+        before_sleep=None,
+        reraise=False,
+        retry_error_cls=RetryError,
+        retry_error_callback=None,
+    ):
         self.sleep = sleep
         self.stop = stop
         self.wait = wait
@@ -239,9 +247,17 @@ class BaseRetrying(object):
         # Retrying objects but kept for backward compatibility.
         self.fn = None
 
-    def copy(self, sleep=_unset, stop=_unset, wait=_unset,
-             retry=_unset, before=_unset, after=_unset, before_sleep=_unset,
-             reraise=_unset):
+    def copy(
+        self,
+        sleep=_unset,
+        stop=_unset,
+        wait=_unset,
+        retry=_unset,
+        before=_unset,
+        after=_unset,
+        before_sleep=_unset,
+        reraise=_unset,
+    ):
         """Copy this object with some parameters changed if needed."""
         if before_sleep is _unset:
             before_sleep = self.before_sleep
@@ -258,12 +274,14 @@ class BaseRetrying(object):
 
     def __repr__(self):
         attrs = dict(
-            _utils.visible_attrs(self, attrs={'me': id(self)}),
+            _utils.visible_attrs(self, attrs={"me": id(self)}),
             __class__=self.__class__.__name__,
         )
-        return ("<%(__class__)s object at 0x%(me)x (stop=%(stop)s, "
-                "wait=%(wait)s, sleep=%(sleep)s, retry=%(retry)s, "
-                "before=%(before)s, after=%(after)s)>") % (attrs)
+        return (
+            "<%(__class__)s object at 0x%(me)x (stop=%(stop)s, "
+            "wait=%(wait)s, sleep=%(sleep)s, retry=%(retry)s, "
+            "before=%(before)s, after=%(after)s)>"
+        ) % (attrs)
 
     @property
     def statistics(self):
@@ -298,6 +316,7 @@ class BaseRetrying(object):
 
         :param f: A function to wraps for retrying.
         """
+
         @_utils.wraps(f)
         def wrapped_f(*args, **kw):
             return self(f, *args, **kw)
@@ -312,9 +331,9 @@ class BaseRetrying(object):
 
     def begin(self, fn):
         self.statistics.clear()
-        self.statistics['start_time'] = _utils.now()
-        self.statistics['attempt_number'] = 1
-        self.statistics['idle_for'] = 0
+        self.statistics["start_time"] = _utils.now()
+        self.statistics["attempt_number"] = 1
+        self.statistics["idle_for"] = 0
         self.fn = fn
 
     def iter(self, retry_state):  # noqa
@@ -324,16 +343,16 @@ class BaseRetrying(object):
                 self.before(retry_state)
             return DoAttempt()
 
-        is_explicit_retry = retry_state.outcome.failed \
-            and isinstance(retry_state.outcome.exception(), TryAgain)
+        is_explicit_retry = retry_state.outcome.failed and isinstance(
+            retry_state.outcome.exception(), TryAgain
+        )
         if not (is_explicit_retry or self.retry(retry_state=retry_state)):
             return fut.result()
 
         if self.after is not None:
             self.after(retry_state=retry_state)
 
-        self.statistics['delay_since_first_attempt'] = \
-            retry_state.seconds_since_start
+        self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start
         if self.stop(retry_state=retry_state):
             if self.retry_error_callback:
                 return self.retry_error_callback(retry_state=retry_state)
@@ -348,8 +367,8 @@ class BaseRetrying(object):
             sleep = 0.0
         retry_state.next_action = RetryAction(sleep)
         retry_state.idle_for += sleep
-        self.statistics['idle_for'] += sleep
-        self.statistics['attempt_number'] += 1
+        self.statistics["idle_for"] += sleep
+        self.statistics["attempt_number"] += 1
 
         if self.before_sleep is not None:
             self.before_sleep(retry_state=retry_state)
@@ -376,8 +395,10 @@ class BaseRetrying(object):
 
     def call(self, *args, **kwargs):
         """Use ``__call__`` instead because this method is deprecated."""
-        warnings.warn("'call()' method is deprecated. " +
-                      "Use '__call__()' instead", DeprecationWarning)
+        warnings.warn(
+            "'call()' method is deprecated. " + "Use '__call__()' instead",
+            DeprecationWarning,
+        )
         return self.__call__(*args, **kwargs)
 
 
@@ -387,8 +408,7 @@ class Retrying(BaseRetrying):
     def __call__(self, fn, *args, **kwargs):
         self.begin(fn)
 
-        retry_state = RetryCallState(
-            retry_object=self, fn=fn, args=args, kwargs=kwargs)
+        retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
         while True:
             do = self.iter(retry_state=retry_state)
             if isinstance(do, DoAttempt):
