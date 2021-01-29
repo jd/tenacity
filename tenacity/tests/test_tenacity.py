@@ -1317,7 +1317,7 @@ class TestStatistics(unittest.TestCase):
         self.assertEqual({}, _foobar.retry.statistics)
         try:
             _foobar()
-        except Exception:
+        except Exception:       # noqa: B902
             pass
         self.assertEqual(2, _foobar.retry.statistics['attempt_number'])
 
