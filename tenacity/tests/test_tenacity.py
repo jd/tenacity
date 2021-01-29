@@ -882,15 +882,6 @@ class TestDecoratorWrapper(unittest.TestCase):
         self.assertGreaterEqual(t, 250)
         self.assertTrue(result)
 
-    def test_retry_with(self):
-        start = current_time_ms()
-        result = _retryable_test_with_wait.retry_with(wait=tenacity.wait_fixed(0.1))(
-            NoneReturnUntilAfterCount(5)
-        )
-        t = current_time_ms() - start
-        self.assertGreaterEqual(t, 500)
-        self.assertTrue(result)
-
     def test_with_stop_on_return_value(self):
         try:
             _retryable_test_with_stop(NoneReturnUntilAfterCount(5))
@@ -1039,6 +1030,53 @@ class TestDecoratorWrapper(unittest.TestCase):
         )
         h = retrying.wraps(Hello())
         self.assertEqual(h(), "Hello")
+
+
+class TestRetryWith(unittest.TestCase):
+    def test_redefine_wait(self):
+        start = current_time_ms()
+        result = _retryable_test_with_wait.retry_with(wait=tenacity.wait_fixed(0.1))(
+            NoneReturnUntilAfterCount(5)
+        )
+        t = current_time_ms() - start
+        self.assertGreaterEqual(t, 500)
+        self.assertTrue(result)
+
+    def test_redefine_stop(self):
+        result = _retryable_test_with_stop.retry_with(
+            stop=tenacity.stop_after_attempt(5)
+        )(NoneReturnUntilAfterCount(4))
+        self.assertTrue(result)
+
+    def test_retry_error_cls_should_be_preserved(self):
+        @retry(stop=tenacity.stop_after_attempt(10), retry_error_cls=ValueError)
+        def _retryable():
+            raise Exception("raised for test purposes")
+
+        try:
+            _retryable.retry_with(stop=tenacity.stop_after_attempt(2))()
+            self.fail("Expected ValueError")
+        except Exception as exc:  # noqa: B902
+            self.assertIsInstance(
+                exc, ValueError, "Should remap to specific exception type"
+            )
+            print(exc)
+
+    def test_retry_error_callback_should_be_preserved(self):
+        def return_text(retry_state):
+            return "Calling %s keeps raising errors after %s attempts" % (
+                retry_state.fn.__name__,
+                retry_state.attempt_number,
+            )
+
+        @retry(stop=tenacity.stop_after_attempt(10), retry_error_callback=return_text)
+        def _retryable():
+            raise Exception("raised for test purposes")
+
+        result = _retryable.retry_with(stop=tenacity.stop_after_attempt(5))()
+        self.assertEqual(
+            result, "Calling _retryable keeps raising errors after 5 attempts"
+        )
 
 
 class TestBeforeAfterAttempts(unittest.TestCase):

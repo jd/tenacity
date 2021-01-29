@@ -257,19 +257,27 @@ class BaseRetrying(object):
         after=_unset,
         before_sleep=_unset,
         reraise=_unset,
+        retry_error_cls=_unset,
+        retry_error_callback=_unset,
     ):
         """Copy this object with some parameters changed if needed."""
-        if before_sleep is _unset:
-            before_sleep = self.before_sleep
+
+        def first_set(first, second):
+            return second if first is _unset else first
+
         return self.__class__(
-            sleep=self.sleep if sleep is _unset else sleep,
-            stop=self.stop if stop is _unset else stop,
-            wait=self.wait if wait is _unset else wait,
-            retry=self.retry if retry is _unset else retry,
-            before=self.before if before is _unset else before,
-            after=self.after if after is _unset else after,
-            before_sleep=before_sleep,
-            reraise=self.reraise if after is _unset else reraise,
+            sleep=first_set(sleep, self.sleep),
+            stop=first_set(stop, self.stop),
+            wait=first_set(wait, self.wait),
+            retry=first_set(retry, self.retry),
+            before=first_set(before, self.before),
+            after=first_set(after, self.after),
+            before_sleep=first_set(before_sleep, self.before_sleep),
+            reraise=first_set(reraise, self.reraise),
+            retry_error_cls=first_set(retry_error_cls, self.retry_error_cls),
+            retry_error_callback=first_set(
+                retry_error_callback, self.retry_error_callback
+            ),
         )
 
     def __repr__(self):
