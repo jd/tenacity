@@ -181,6 +181,10 @@ class RetryAction(BaseAction):
 _unset = object()
 
 
+def _first_set(first, second):
+    return second if first is _unset else first
+
+
 class RetryError(Exception):
     """Encapsulates the last attempt instance right before giving up."""
 
@@ -257,19 +261,23 @@ class BaseRetrying(object):
         after=_unset,
         before_sleep=_unset,
         reraise=_unset,
+        retry_error_cls=_unset,
+        retry_error_callback=_unset,
     ):
         """Copy this object with some parameters changed if needed."""
-        if before_sleep is _unset:
-            before_sleep = self.before_sleep
         return self.__class__(
-            sleep=self.sleep if sleep is _unset else sleep,
-            stop=self.stop if stop is _unset else stop,
-            wait=self.wait if wait is _unset else wait,
-            retry=self.retry if retry is _unset else retry,
-            before=self.before if before is _unset else before,
-            after=self.after if after is _unset else after,
-            before_sleep=before_sleep,
-            reraise=self.reraise if after is _unset else reraise,
+            sleep=_first_set(sleep, self.sleep),
+            stop=_first_set(stop, self.stop),
+            wait=_first_set(wait, self.wait),
+            retry=_first_set(retry, self.retry),
+            before=_first_set(before, self.before),
+            after=_first_set(after, self.after),
+            before_sleep=_first_set(before_sleep, self.before_sleep),
+            reraise=_first_set(reraise, self.reraise),
+            retry_error_cls=_first_set(retry_error_cls, self.retry_error_cls),
+            retry_error_callback=_first_set(
+                retry_error_callback, self.retry_error_callback
+            ),
         )
 
     def __repr__(self):
