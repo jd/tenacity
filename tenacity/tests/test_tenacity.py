@@ -1032,35 +1032,31 @@ class TestDecoratorWrapper(unittest.TestCase):
         self.assertEqual(h(), "Hello")
 
 
-class TestRetryWith(unittest.TestCase):
+class TestRetryWith:
     def test_redefine_wait(self):
         start = current_time_ms()
         result = _retryable_test_with_wait.retry_with(wait=tenacity.wait_fixed(0.1))(
             NoneReturnUntilAfterCount(5)
         )
         t = current_time_ms() - start
-        self.assertGreaterEqual(t, 500)
-        self.assertTrue(result)
+        assert t >= 500
+        assert result is True
 
     def test_redefine_stop(self):
         result = _retryable_test_with_stop.retry_with(
             stop=tenacity.stop_after_attempt(5)
         )(NoneReturnUntilAfterCount(4))
-        self.assertTrue(result)
+        assert result is True
 
     def test_retry_error_cls_should_be_preserved(self):
         @retry(stop=tenacity.stop_after_attempt(10), retry_error_cls=ValueError)
         def _retryable():
             raise Exception("raised for test purposes")
 
-        try:
+        with pytest.raises(Exception) as exc_ctx:
             _retryable.retry_with(stop=tenacity.stop_after_attempt(2))()
-            self.fail("Expected ValueError")
-        except Exception as exc:  # noqa: B902
-            self.assertIsInstance(
-                exc, ValueError, "Should remap to specific exception type"
-            )
-            print(exc)
+
+        assert exc_ctx.type is ValueError, "Should remap to specific exception type"
 
     def test_retry_error_callback_should_be_preserved(self):
         def return_text(retry_state):
@@ -1074,9 +1070,7 @@ class TestRetryWith(unittest.TestCase):
             raise Exception("raised for test purposes")
 
         result = _retryable.retry_with(stop=tenacity.stop_after_attempt(5))()
-        self.assertEqual(
-            result, "Calling _retryable keeps raising errors after 5 attempts"
-        )
+        assert result == "Calling _retryable keeps raising errors after 5 attempts"
 
 
 class TestBeforeAfterAttempts(unittest.TestCase):
