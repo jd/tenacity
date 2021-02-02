@@ -119,7 +119,13 @@ def retry(*dargs, **dkw):  # noqa
 
         def wrap(f):
             if isinstance(f, retry_base):
-                warnings.warn("Got retry_base instance ({cls}) as callable argument, this will probably hang indefinitely (did you mean retry={cls}(...)?)".format(cls=f.__class__.__name__))
+                warnings.warn(
+                    (
+                        "Got retry_base instance ({cls}) as callable argument, "
+                        + "this will probably hang indefinitely (did you mean "
+                        + "retry={cls}(...)?)"
+                    ).format(cls=f.__class__.__name__)
+                )
             if iscoroutinefunction is not None and iscoroutinefunction(f):
                 r = AsyncRetrying(*dargs, **dkw)
             elif (
