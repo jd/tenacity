@@ -67,9 +67,10 @@ class TestTornado(testing.AsyncTestCase):
             @retry
             def retryable(thing):
                 pass
+
         finally:
             gen.is_coroutine_function = old_attr
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

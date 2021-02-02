@@ -19,16 +19,16 @@
 import os
 import sys
 
-master_doc = 'index'
+master_doc = "index"
 project = "Tenacity"
 
 # Add tenacity to the path, so sphinx can find the functions for autodoc.
-sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath("../.."))
 
 extensions = [
-    'sphinx.ext.doctest',
-    'sphinx.ext.autodoc',
-    'reno.sphinxext',
+    "sphinx.ext.doctest",
+    "sphinx.ext.autodoc",
+    "reno.sphinxext",
 ]
 
 # -- Options for sphinx.ext.doctest  -----------------------------------------

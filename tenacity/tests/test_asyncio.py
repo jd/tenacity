@@ -93,8 +93,8 @@ class TestAsync(unittest.TestCase):
         repr(tasyncio.AsyncRetrying())
 
     def test_retry_attributes(self):
-        assert hasattr(_retryable_coroutine, 'retry')
-        assert hasattr(_retryable_coroutine, 'retry_with')
+        assert hasattr(_retryable_coroutine, "retry")
+        assert hasattr(_retryable_coroutine, "retry_with")
 
     @asynctest
     async def test_attempt_number_is_correct_for_interleaved_coroutines(self):
@@ -109,7 +109,8 @@ class TestAsync(unittest.TestCase):
 
         await asyncio.gather(
             _retryable_coroutine.retry_with(after=after)(thing1),
-            _retryable_coroutine.retry_with(after=after)(thing2))
+            _retryable_coroutine.retry_with(after=after)(thing2),
+        )
 
         # There's no waiting on retry, only a wait in the coroutine, so the
         # executions should be interleaved.
