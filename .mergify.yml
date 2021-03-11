@@ -3,6 +3,7 @@ pull_request_rules:
     conditions:
       - -files~=^releasenotes/notes/
       - label!=no-changelog
+      - -closed
     actions:
       comment:
         message: >
