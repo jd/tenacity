@@ -1,4 +1,7 @@
 ---
+upgrade:
+  - |
+    If you use the ``sum`` function to add stop strategies, you must initialize the sum with ``wait_none()``.
 fixes:
   - |
     Fixes #211.
