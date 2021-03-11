@@ -343,7 +343,7 @@ class TestWaitConditions(unittest.TestCase):
                     tenacity.wait_fixed(5),
                     tenacity.wait_none(),
                 ],
-                tenacity.wait_none()
+                tenacity.wait_none(),
             )
         )
         # Test it a few time since it's random
