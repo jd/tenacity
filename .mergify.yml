@@ -5,7 +5,7 @@ pull_request_rules:
       - label!=no-changelog
     actions:
       comment:
-        message: |
+        message: >
           ⚠️ No release notes detected. Please make sure to use
           [reno](https://docs.openstack.org/reno/latest/user/usage.html) to add
           a changelog entry.
