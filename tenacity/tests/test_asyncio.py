@@ -14,11 +14,14 @@
 # limitations under the License.
 
 import asyncio
+import inspect
 import unittest
+
+import pytest
 
 import six
 
-from tenacity import RetryError
+from tenacity import AsyncRetrying, RetryError
 from tenacity import _asyncio as tasyncio
 from tenacity import retry, stop_after_attempt
 from tenacity.tests.test_tenacity import NoIOErrorAfterCount, current_time_ms
@@ -32,6 +35,11 @@ def asynctest(callable_):
         return loop.run_until_complete(callable_(*a, **kw))
 
     return wrapper
+
+
+async def _async_function(thing):
+    await asyncio.sleep(0.00001)
+    return thing.go()
 
 
 @retry
@@ -54,6 +62,26 @@ class TestAsync(unittest.TestCase):
         assert thing.counter == thing.count
 
     @asynctest
+    async def test_iscoroutinefunction(self):
+        assert asyncio.iscoroutinefunction(_retryable_coroutine)
+        assert inspect.iscoroutinefunction(_retryable_coroutine)
+
+    @asynctest
+    async def test_retry_using_async_retying(self):
+        thing = NoIOErrorAfterCount(5)
+        retrying = AsyncRetrying()
+        await retrying(_async_function, thing)
+        assert thing.counter == thing.count
+
+    @asynctest
+    async def test_retry_using_async_retying_legacy_method(self):
+        thing = NoIOErrorAfterCount(5)
+        retrying = AsyncRetrying()
+        with pytest.warns(DeprecationWarning):
+            await retrying.call(_async_function, thing)
+        assert thing.counter == thing.count
+
+    @asynctest
     async def test_stop_after_attempt(self):
         thing = NoIOErrorAfterCount(2)
         try:
@@ -63,6 +91,10 @@ class TestAsync(unittest.TestCase):
 
     def test_repr(self):
         repr(tasyncio.AsyncRetrying())
+
+    def test_retry_attributes(self):
+        assert hasattr(_retryable_coroutine, "retry")
+        assert hasattr(_retryable_coroutine, "retry_with")
 
     @asynctest
     async def test_attempt_number_is_correct_for_interleaved_coroutines(self):
@@ -77,7 +109,8 @@ class TestAsync(unittest.TestCase):
 
         await asyncio.gather(
             _retryable_coroutine.retry_with(after=after)(thing1),
-            _retryable_coroutine.retry_with(after=after)(thing2))
+            _retryable_coroutine.retry_with(after=after)(thing2),
+        )
 
         # There's no waiting on retry, only a wait in the coroutine, so the
         # executions should be interleaved.

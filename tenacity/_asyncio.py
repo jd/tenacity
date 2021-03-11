@@ -15,7 +15,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import sys
 from asyncio import sleep
 
@@ -27,24 +26,20 @@ from tenacity import RetryCallState
 
 
 class AsyncRetrying(BaseRetrying):
-
-    def __init__(self,
-                 sleep=sleep,
-                 **kwargs):
+    def __init__(self, sleep=sleep, **kwargs):
         super(AsyncRetrying, self).__init__(**kwargs)
         self.sleep = sleep
 
-    async def call(self, fn, *args, **kwargs):
+    async def __call__(self, fn, *args, **kwargs):
         self.begin(fn)
 
-        retry_state = RetryCallState(
-            retry_object=self, fn=fn, args=args, kwargs=kwargs)
+        retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
         while True:
             do = self.iter(retry_state=retry_state)
             if isinstance(do, DoAttempt):
                 try:
                     result = await fn(*args, **kwargs)
-                except BaseException:
+                except BaseException:  # noqa: B902
                     retry_state.set_exception(sys.exc_info())
                 else:
                     retry_state.set_result(result)
@@ -71,3 +66,16 @@ class AsyncRetrying(BaseRetrying):
                 await self.sleep(do)
             else:
                 return do
+
+    def wraps(self, fn):
+        fn = super().wraps(fn)
+        # Ensure wrapper is recognized as a coroutine function.
+
+        async def async_wrapped(*args, **kwargs):
+            return await fn(*args, **kwargs)
+
+        # Preserve attributes
+        async_wrapped.retry = fn.retry
+        async_wrapped.retry_with = fn.retry_with
+
+        return async_wrapped

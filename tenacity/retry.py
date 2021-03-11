@@ -1,4 +1,6 @@
-# Copyright 2016 Julien Danjou
+# -*- encoding: utf-8 -*-
+#
+# Copyright 2016–2021 Julien Danjou
 # Copyright 2016 Joshua Harlow
 # Copyright 2013-2014 Ray Holder
 #
@@ -18,8 +20,6 @@ import abc
 import re
 
 import six
-
-from tenacity import compat as _compat
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -63,10 +63,11 @@ class retry_if_exception(retry_base):
     def __init__(self, predicate):
         self.predicate = predicate
 
-    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         if retry_state.outcome.failed:
             return self.predicate(retry_state.outcome.exception())
+        else:
+            return False
 
 
 class retry_if_exception_type(retry_if_exception):
@@ -75,7 +76,8 @@ class retry_if_exception_type(retry_if_exception):
     def __init__(self, exception_types=Exception):
         self.exception_types = exception_types
         super(retry_if_exception_type, self).__init__(
-            lambda e: isinstance(e, exception_types))
+            lambda e: isinstance(e, exception_types)
+        )
 
 
 class retry_unless_exception_type(retry_if_exception):
@@ -84,9 +86,9 @@ class retry_unless_exception_type(retry_if_exception):
     def __init__(self, exception_types=Exception):
         self.exception_types = exception_types
         super(retry_unless_exception_type, self).__init__(
-            lambda e: not isinstance(e, exception_types))
+            lambda e: not isinstance(e, exception_types)
+        )
 
-    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         # always retry if no exception was raised
         if not retry_state.outcome.failed:
@@ -100,10 +102,11 @@ class retry_if_result(retry_base):
     def __init__(self, predicate):
         self.predicate = predicate
 
-    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         if not retry_state.outcome.failed:
             return self.predicate(retry_state.outcome.result())
+        else:
+            return False
 
 
 class retry_if_not_result(retry_base):
@@ -112,10 +115,11 @@ class retry_if_not_result(retry_base):
     def __init__(self, predicate):
         self.predicate = predicate
 
-    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         if not retry_state.outcome.failed:
             return not self.predicate(retry_state.outcome.result())
+        else:
+            return False
 
 
 class retry_if_exception_message(retry_if_exception):
@@ -125,23 +129,30 @@ class retry_if_exception_message(retry_if_exception):
         if message and match:
             raise TypeError(
                 "{}() takes either 'message' or 'match', not both".format(
-                    self.__class__.__name__))
+                    self.__class__.__name__
+                )
+            )
 
         # set predicate
         if message:
+
             def message_fnc(exception):
                 return message == str(exception)
+
             predicate = message_fnc
         elif match:
             prog = re.compile(match)
 
             def match_fnc(exception):
                 return prog.match(str(exception))
+
             predicate = match_fnc
         else:
             raise TypeError(
-                "{}() missing 1 required argument 'message' or 'match'".
-                format(self.__class__.__name__))
+                "{}() missing 1 required argument 'message' or 'match'".format(
+                    self.__class__.__name__
+                )
+            )
 
         super(retry_if_exception_message, self).__init__(predicate)
 
@@ -153,10 +164,8 @@ class retry_if_not_exception_message(retry_if_exception_message):
         super(retry_if_not_exception_message, self).__init__(*args, **kwargs)
         # invert predicate
         if_predicate = self.predicate
-        self.predicate = lambda *args_, **kwargs_: not if_predicate(
-            *args_, **kwargs_)
+        self.predicate = lambda *args_, **kwargs_: not if_predicate(*args_, **kwargs_)
 
-    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         if not retry_state.outcome.failed:
             return True
@@ -167,10 +176,8 @@ class retry_any(retry_base):
     """Retries if any of the retries condition is valid."""
 
     def __init__(self, *retries):
-        self.retries = tuple(_compat.retry_func_accept_retry_state(r)
-                             for r in retries)
+        self.retries = retries
 
-    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return any(r(retry_state) for r in self.retries)
 
@@ -179,9 +186,7 @@ class retry_all(retry_base):
     """Retries if all the retries condition are valid."""
 
     def __init__(self, *retries):
-        self.retries = tuple(_compat.retry_func_accept_retry_state(r)
-                             for r in retries)
+        self.retries = retries
 
-    @_compat.retry_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return all(r(retry_state) for r in self.retries)

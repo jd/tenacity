@@ -6,9 +6,6 @@ Tenacity
 .. image:: https://circleci.com/gh/jd/tenacity.svg?style=svg
     :target: https://circleci.com/gh/jd/tenacity
 
-.. image:: https://img.shields.io/badge/SayThanks.io-%E2%98%BC-1EAEDB.svg
-    :target: https://saythanks.io/to/jd
-
 .. image:: https://img.shields.io/endpoint.svg?url=https://dashboard.mergify.io/badges/jd/tenacity&style=flat
    :target: https://mergify.io
    :alt: Mergify Status
@@ -83,6 +80,10 @@ Basic Retry
 .. testsetup:: *
 
     import logging
+    #
+    # Note the following import is used for demonstration convenience only.
+    # Production code should always explicitly import the names it needs.
+    #
     from tenacity import *
 
     class MyException(Exception):
@@ -366,12 +367,6 @@ without raising an exception (or you can re-raise or do anything really)
     def eventually_return_false():
         return False
 
-.. note::
-
-   Calling the parameter ``retry_state`` is important, because this is how
-   *tenacity* internally distinguishes callbacks from their :ref:`deprecated
-   counterparts <deprecated-callbacks>`.
-
 RetryCallState
 ~~~~~~~~~~~~~~
 
@@ -381,36 +376,36 @@ RetryCallState
 
    Constant attributes:
 
-   .. autoinstanceattribute:: start_time(float)
+   .. autoattribute:: start_time(float)
       :annotation:
 
-   .. autoinstanceattribute:: retry_object(BaseRetrying)
+   .. autoattribute:: retry_object(BaseRetrying)
       :annotation:
 
-   .. autoinstanceattribute:: fn(callable)
+   .. autoattribute:: fn(callable)
       :annotation:
 
-   .. autoinstanceattribute:: args(tuple)
+   .. autoattribute:: args(tuple)
       :annotation:
 
-   .. autoinstanceattribute:: kwargs(dict)
+   .. autoattribute:: kwargs(dict)
       :annotation:
 
    Variable attributes:
 
-   .. autoinstanceattribute:: attempt_number(int)
+   .. autoattribute:: attempt_number(int)
       :annotation:
 
-   .. autoinstanceattribute:: outcome(tenacity.Future or None)
+   .. autoattribute:: outcome(tenacity.Future or None)
       :annotation:
 
-   .. autoinstanceattribute:: outcome_timestamp(float or None)
+   .. autoattribute:: outcome_timestamp(float or None)
       :annotation:
 
-   .. autoinstanceattribute:: idle_for(float)
+   .. autoattribute:: idle_for(float)
       :annotation:
 
-   .. autoinstanceattribute:: next_action(tenacity.RetryAction or None)
+   .. autoattribute:: next_action(tenacity.RetryAction or None)
       :annotation:
 
 Other Custom Callbacks
@@ -476,92 +471,6 @@ Here's an example with a custom ``before_sleep`` function:
     except RetryError:
         pass
 
-.. _deprecated-callbacks:
-
-.. note::
-
-   It was also possible to define custom callbacks before, but they accepted
-   varying parameter sets and none of those provided full state. The old way is
-   deprecated, but kept for backward compatibility.
-
-   .. function:: my_deprecated_stop(previous_attempt_number, delay_since_first_attempt)
-
-      *deprecated*
-
-      :param previous_attempt_number: the number of current attempt
-      :type previous_attempt_number: int
-      :param delay_since_first_attempt: interval in seconds between the
-           beginning of first attempt and current time
-      :type delay_since_first_attempt: float
-      :rtype: bool
-
-   .. function:: my_deprecated_wait(previous_attempt_number, delay_since_first_attempt [, last_result])
-
-      *deprecated*
-
-      :param previous_attempt_number: the number of current attempt
-      :type previous_attempt_number: int
-      :param delay_since_first_attempt: interval in seconds between the
-           beginning of first attempt and current time
-      :type delay_since_first_attempt: float
-      :param tenacity.Future last_result: current outcome
-
-      :return: number of seconds to wait before next retry
-      :rtype: float
-
-   .. function:: my_deprecated_retry(attempt)
-
-      *deprecated*
-
-      :param tenacity.Future attempt: current outcome
-      :return: whether or not retrying should continue
-      :rtype: bool
-
-   .. function:: my_deprecated_before(func, trial_number)
-
-      *deprecated*
-
-      :param callable func: function whose outcome is to be retried
-      :param int trial_number: the number of current attempt
-
-   .. function:: my_deprecated_after(func, trial_number, trial_time_taken)
-
-      *deprecated*
-
-      :param callable func: function whose outcome is to be retried
-      :param int trial_number: the number of current attempt
-      :param float trial_time_taken: interval in seconds between the beginning
-         of first attempt and current time
-
-   .. function:: my_deprecated_before_sleep(func, sleep, last_result)
-
-      *deprecated*
-
-      :param callable func: function whose outcome is to be retried
-      :param float sleep: number of seconds to wait until next retry
-      :param tenacity.Future last_result: current outcome
-
-.. testcode::
-
-    import logging
-
-    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
-
-    logger = logging.getLogger(__name__)
-
-    def my_before_sleep(retry_object, sleep, last_result):
-        logger.warning(
-            'Retrying %s: last_result=%s, retrying in %s seconds...',
-            retry_object.fn, last_result, sleep)
-
-    @retry(stop=stop_after_attempt(3), before_sleep=my_before_sleep)
-    def raise_my_exception():
-        raise MyException("Fail")
-
-    try:
-        raise_my_exception()
-    except RetryError:
-        pass
 
 Changing Arguments at Run Time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

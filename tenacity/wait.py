@@ -1,4 +1,6 @@
-# Copyright 2016 Julien Danjou
+# -*- encoding: utf-8 -*-
+#
+# Copyright 2016–2021 Julien Danjou
 # Copyright 2016 Joshua Harlow
 # Copyright 2013-2014 Ray Holder
 #
@@ -20,7 +22,6 @@ import random
 import six
 
 from tenacity import _utils
-from tenacity import compat as _compat
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -44,7 +45,6 @@ class wait_fixed(wait_base):
     def __init__(self, wait):
         self.wait_fixed = wait
 
-    @_compat.wait_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return self.wait_fixed
 
@@ -63,11 +63,10 @@ class wait_random(wait_base):
         self.wait_random_min = min
         self.wait_random_max = max
 
-    @_compat.wait_dunder_call_accept_old_params
     def __call__(self, retry_state):
-        return (self.wait_random_min +
-                (random.random() *
-                 (self.wait_random_max - self.wait_random_min)))
+        return self.wait_random_min + (
+            random.random() * (self.wait_random_max - self.wait_random_min)
+        )
 
 
 class wait_combine(wait_base):
@@ -77,10 +76,8 @@ class wait_combine(wait_base):
         # check that all strategies are instance of wait_base
         if any(map(lambda strategy: not isinstance(strategy, wait_base), strategies)):  # noqa: E501
             raise ValueError("can only combine instances of " + wait_base.__name__)     # noqa: E501
-        self.wait_funcs = tuple(_compat.wait_func_accept_retry_state(strategy)
-                                for strategy in strategies)
+        self.wait_funcs = strategies
 
-    @_compat.wait_dunder_call_accept_old_params
     def __call__(self, retry_state):
         return sum(x(retry_state=retry_state) for x in self.wait_funcs)
 
@@ -102,13 +99,10 @@ class wait_chain(wait_base):
     """
 
     def __init__(self, *strategies):
-        self.strategies = [_compat.wait_func_accept_retry_state(strategy)
-                           for strategy in strategies]
+        self.strategies = strategies
 
-    @_compat.wait_dunder_call_accept_old_params
     def __call__(self, retry_state):
-        wait_func_no = min(max(retry_state.attempt_number, 1),
-                           len(self.strategies))
+        wait_func_no = min(max(retry_state.attempt_number, 1), len(self.strategies))
         wait_func = self.strategies[wait_func_no - 1]
         return wait_func(retry_state=retry_state)
 
@@ -125,11 +119,8 @@ class wait_incrementing(wait_base):
         self.increment = increment
         self.max = max
 
-    @_compat.wait_dunder_call_accept_old_params
     def __call__(self, retry_state):
-        result = self.start + (
-            self.increment * (retry_state.attempt_number - 1)
-        )
+        result = self.start + (self.increment * (retry_state.attempt_number - 1))
         return max(0, min(result, self.max))
 
 
@@ -152,7 +143,6 @@ class wait_exponential(wait_base):
         self.max = max
         self.exp_base = exp_base
 
-    @_compat.wait_dunder_call_accept_old_params
     def __call__(self, retry_state):
         try:
             exp = self.exp_base ** (retry_state.attempt_number - 1)
@@ -188,8 +178,6 @@ class wait_random_exponential(wait_exponential):
 
     """
 
-    @_compat.wait_dunder_call_accept_old_params
     def __call__(self, retry_state):
-        high = super(wait_random_exponential, self).__call__(
-            retry_state=retry_state)
+        high = super(wait_random_exponential, self).__call__(retry_state=retry_state)
         return random.uniform(0, high)

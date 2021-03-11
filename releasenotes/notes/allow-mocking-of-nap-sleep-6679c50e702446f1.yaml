@@ -1,0 +1,3 @@
+---
+other:
+  - Unit tests can now mock ``nap.sleep()`` for testing in all tenacity usage styles
