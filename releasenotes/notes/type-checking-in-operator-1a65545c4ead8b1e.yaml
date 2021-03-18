@@ -8,4 +8,4 @@ fixes:
 other:
   - |
     Operators and classes that combine stop strategies (namely ``&``, ``|``, ``stop_any`` and ``stop_all``) check that their operands are of type ``stop_base`` to avoid some weird constructions (see #211).
-    Similarly, operators and classes that combine wait strategies (namely ``+`` and ``wait_combine``) check that their operands are of type ``wait_base``.
+    Similarly, operators and classes that combine wait strategies (namely ``+``, ``wait_combine`` and ``wait_chain``) check that their operands are of type ``wait_base``.
