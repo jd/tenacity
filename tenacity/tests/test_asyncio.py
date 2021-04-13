@@ -124,6 +124,46 @@ class TestAsync(unittest.TestCase):
         assert len(set(things)) == 1
         assert list(attempt_nos2) == [1, 2, 3]
 
+    @asynctest
+    async def test_async_retry(self):
+        attempts = []
+
+        async def async_retry(retry_state):
+            if retry_state.outcome.failed:
+                attempts.append((retry_state.outcome, retry_state.attempt_number))
+                return True
+            else:
+                attempts.append((retry_state.outcome, retry_state.attempt_number))
+                return False
+
+        thing = NoIOErrorAfterCount(2)
+
+        await _retryable_coroutine.retry_with(retry=async_retry)(thing)
+
+        things, attempt_numbers = zip(*attempts)
+        assert len(attempts) == 3
+
+        for thing in things[:-1]:
+            with pytest.raises(IOError):
+                thing.result()
+
+        assert things[-1].result() is True
+
+    @asynctest
+    async def test_async_callback_error_retry(self):
+        async def async_return_text(retry_state):
+            await asyncio.sleep(0.00001)
+            return "Calling %s keeps raising errors after %s attempts" % (
+                retry_state.fn.__name__,
+                retry_state.attempt_number,
+            )
+
+        thing = NoIOErrorAfterCount(3)
+
+        result = await _retryable_coroutine_with_2_attempts.retry_with(retry_error_callback=async_return_text)(thing)
+
+        assert result == "Calling _retryable_coroutine_with_2_attempts keeps raising errors after 2 attempts"
+
 
 class TestContextManager(unittest.TestCase):
     @asynctest
@@ -147,7 +187,7 @@ class TestContextManager(unittest.TestCase):
 
         try:
             async for attempt in tasyncio.AsyncRetrying(
-                stop=stop_after_attempt(1), reraise=True
+                    stop=stop_after_attempt(1), reraise=True
             ):
                 with attempt:
                     raise CustomError()
@@ -161,7 +201,7 @@ class TestContextManager(unittest.TestCase):
         start = current_time_ms()
         try:
             async for attempt in tasyncio.AsyncRetrying(
-                stop=stop_after_attempt(1), wait=wait_fixed(1)
+                    stop=stop_after_attempt(1), wait=wait_fixed(1)
             ):
                 with attempt:
                     raise Exception()
