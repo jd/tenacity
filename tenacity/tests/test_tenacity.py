@@ -1174,7 +1174,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         logger.addHandler(handler)
         try:
             _before_sleep = tenacity.before_sleep_log(
-                logger, logging.INFO, exc_info=True
+                logger, logging.INFO, exc_info=True, stack_info=False,
             )
             retrying = Retrying(
                 wait=tenacity.wait_fixed(0.01),
@@ -1189,7 +1189,77 @@ class TestBeforeAfterAttempts(unittest.TestCase):
             r"^Retrying .* in 0\.01 seconds as it raised "
             r"(IO|OS)Error: Hi there, I'm an IOError\.{0}"
             r"Traceback \(most recent call last\):{0}"
-            r".*$".format("\n"),
+            r"(  File .+\n    .+\n)+"
+            r"(IO|OS)Error: Hi there, I'm an IOError\Z".format("\n"),
+            flags=re.MULTILINE,
+        )
+        self.assertEqual(len(handler.records), 2)
+        fmt = logging.Formatter().format
+        self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
+        self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
+
+    def test_before_sleep_log_raises_with_exc_info_stack_info(self):
+        thing = NoIOErrorAfterCount(2)
+        logger = logging.getLogger(self.id())
+        logger.propagate = False
+        logger.setLevel(logging.INFO)
+        handler = CapturingHandler()
+        logger.addHandler(handler)
+        try:
+            _before_sleep = tenacity.before_sleep_log(
+                logger, logging.INFO, exc_info=True, stack_info=True,
+            )
+            retrying = Retrying(
+                wait=tenacity.wait_fixed(0.01),
+                stop=tenacity.stop_after_attempt(3),
+                before_sleep=_before_sleep,
+            )
+            retrying(thing.go)
+        finally:
+            logger.removeHandler(handler)
+
+        etalon_re = re.compile(
+            r"^Retrying .* in 0\.01 seconds as it raised "
+            r"(IO|OS)Error: Hi there, I'm an IOError\.{0}"
+            r"Traceback \(most recent call last\):{0}"
+            r"(  File .+\n    .+\n)+"
+            r"(IO|OS)Error: Hi there, I'm an IOError{0}"
+            r"Stack \(most recent call last\):{0}"
+            r"(  File .+\n    .+\n)*"
+            r"  File .+\n    .+\Z".format("\n"),
+            flags=re.MULTILINE,
+        )
+        self.assertEqual(len(handler.records), 2)
+        fmt = logging.Formatter().format
+        self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
+        self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
+
+    def test_before_sleep_log_raises_with_stack_info(self):
+        thing = NoIOErrorAfterCount(2)
+        logger = logging.getLogger(self.id())
+        logger.propagate = False
+        logger.setLevel(logging.INFO)
+        handler = CapturingHandler()
+        logger.addHandler(handler)
+        try:
+            _before_sleep = tenacity.before_sleep_log(
+                logger, logging.INFO, exc_info=False, stack_info=True,
+            )
+            retrying = Retrying(
+                wait=tenacity.wait_fixed(0.01),
+                stop=tenacity.stop_after_attempt(3),
+                before_sleep=_before_sleep,
+            )
+            retrying(thing.go)
+        finally:
+            logger.removeHandler(handler)
+
+        etalon_re = re.compile(
+            r"^Retrying .* in 0\.01 seconds as it raised "
+            r"(IO|OS)Error: Hi there, I'm an IOError\.{0}"
+            r"Stack \(most recent call last\):{0}"
+            r"(  File .+\n    .+\n)*"
+            r"  File .+\n    .+\Z".format("\n"),
             flags=re.MULTILINE,
         )
         self.assertEqual(len(handler.records), 2)
@@ -1227,6 +1297,43 @@ class TestBeforeAfterAttempts(unittest.TestCase):
 
     def test_before_sleep_log_returns_with_exc_info(self):
         self.test_before_sleep_log_returns(exc_info=True)
+
+    def test_before_sleep_log_returns_with_stack_info(self, exc_info=False):
+        thing = NoneReturnUntilAfterCount(2)
+        logger = logging.getLogger(self.id())
+        logger.propagate = False
+        logger.setLevel(logging.INFO)
+        handler = CapturingHandler()
+        logger.addHandler(handler)
+        try:
+            _before_sleep = tenacity.before_sleep_log(
+                logger, logging.INFO, exc_info=exc_info, stack_info=True
+            )
+            _retry = tenacity.retry_if_result(lambda result: result is None)
+            retrying = Retrying(
+                wait=tenacity.wait_fixed(0.01),
+                stop=tenacity.stop_after_attempt(3),
+                retry=_retry,
+                before_sleep=_before_sleep,
+            )
+            retrying(thing.go)
+        finally:
+            logger.removeHandler(handler)
+
+        etalon_re = re.compile(
+            r"^Retrying .* in 0\.01 seconds as it returned None\.\n"
+            r"Stack \(most recent call last\):\n"
+            r"(  File .+\n    .+\n)*"
+            r"  File .+\n    .+\Z",
+            flags=re.MULTILINE,
+        )
+        self.assertEqual(len(handler.records), 2)
+        fmt = logging.Formatter().format
+        self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
+        self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
+
+    def test_before_sleep_log_returns_with_exc_info_stack_info(self):
+        self.test_before_sleep_log_returns_with_stack_info(exc_info=True)
 
 
 class TestReraiseExceptions(unittest.TestCase):

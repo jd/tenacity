@@ -22,7 +22,7 @@ def before_sleep_nothing(retry_state):
     """Before call strategy that does nothing."""
 
 
-def before_sleep_log(logger, log_level, exc_info=False):
+def before_sleep_log(logger, log_level, exc_info=False, stack_info=False):
     """Before call strategy that logs to some logger the attempt."""
 
     def log_it(retry_state):
@@ -46,6 +46,7 @@ def before_sleep_log(logger, log_level, exc_info=False):
             verb,
             value,
             exc_info=local_exc_info,
+            stack_info=stack_info,
         )
 
     return log_it
