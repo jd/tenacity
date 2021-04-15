@@ -152,7 +152,9 @@ class TestAsync(unittest.TestCase):
     @asynctest
     async def test_async_callback_error_retry(self):
         async def async_return_text(retry_state):
+
             await asyncio.sleep(0.00001)
+
             return "Calling %s keeps raising errors after %s attempts" % (
                 retry_state.fn.__name__,
                 retry_state.attempt_number,
@@ -160,9 +162,11 @@ class TestAsync(unittest.TestCase):
 
         thing = NoIOErrorAfterCount(3)
 
-        result = await _retryable_coroutine_with_2_attempts.retry_with(retry_error_callback=async_return_text)(thing)
-
-        assert result == "Calling _retryable_coroutine_with_2_attempts keeps raising errors after 2 attempts"
+        result = await _retryable_coroutine_with_2_attempts.retry_with(
+            retry_error_callback=async_return_text
+        )(thing)
+        message = "Calling _retryable_coroutine_with_2_attempts keeps raising errors after 2 attempts"
+        assert result == message
 
 
 class TestContextManager(unittest.TestCase):

@@ -15,8 +15,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import six
-
 try:
     from inspect import iscoroutinefunction
 except ImportError:
@@ -25,7 +23,9 @@ except ImportError:
 import sys
 from asyncio import sleep
 
-from tenacity import AttemptManager, TryAgain, RetryAction
+import six
+
+from tenacity import AttemptManager, RetryAction, TryAgain
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
 from tenacity import DoSleep
