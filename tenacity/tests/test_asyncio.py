@@ -152,7 +152,6 @@ class TestAsync(unittest.TestCase):
     @asynctest
     async def test_async_callback_error_retry(self):
         async def async_return_text(retry_state):
-
             await asyncio.sleep(0.00001)
 
             return "Calling %s keeps raising errors after %s attempts" % (
@@ -191,7 +190,7 @@ class TestContextManager(unittest.TestCase):
 
         try:
             async for attempt in tasyncio.AsyncRetrying(
-                    stop=stop_after_attempt(1), reraise=True
+                stop=stop_after_attempt(1), reraise=True
             ):
                 with attempt:
                     raise CustomError()
@@ -205,7 +204,7 @@ class TestContextManager(unittest.TestCase):
         start = current_time_ms()
         try:
             async for attempt in tasyncio.AsyncRetrying(
-                    stop=stop_after_attempt(1), wait=wait_fixed(1)
+                stop=stop_after_attempt(1), wait=wait_fixed(1)
             ):
                 with attempt:
                     raise Exception()
