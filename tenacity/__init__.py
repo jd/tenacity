@@ -102,7 +102,7 @@ def retry(fn):
 @t.overload
 def retry(*dargs, **dkw):  # noqa
     # type: (...) -> t.Callable[[WrappedFn], WrappedFn]
-    """Type signature for the @retry() decorator constructor."""
+    """Type signature for the @retry() decorator constructor."""  # noqa: D402
     pass
 
 
