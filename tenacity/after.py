@@ -31,8 +31,8 @@ def after_log(logger, log_level, sec_format="%0.3f"):
             "Finished call to '{0}' after {1}(s), this was the {2} time calling it.".format(
                 sec,
                 retry_state.seconds_since_start,
-                _utils.to_ordinal(retry_state.attempt_number)
-            )
+                _utils.to_ordinal(retry_state.attempt_number),
+            ),
         )
 
     return log_it

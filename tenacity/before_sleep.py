@@ -44,7 +44,7 @@ def before_sleep_log(logger, log_level, exc_info=False):
                 _utils.get_callback_name(retry_state.fn),
                 getattr(retry_state.next_action, "sleep"),
                 verb,
-                value
+                value,
             ),
             exc_info=local_exc_info,
         )
