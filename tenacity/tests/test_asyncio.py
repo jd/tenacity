@@ -17,6 +17,13 @@ import asyncio
 import inspect
 import unittest
 
+try:
+    import trio
+except ImportError:
+    have_trio = False
+else:
+    have_trio = True
+
 import pytest
 
 import six
@@ -54,7 +61,7 @@ async def _retryable_coroutine_with_2_attempts(thing):
     thing.go()
 
 
-class TestAsync(unittest.TestCase):
+class TestAsyncio(unittest.TestCase):
     @asynctest
     async def test_retry(self):
         thing = NoIOErrorAfterCount(5)
@@ -123,6 +130,21 @@ class TestAsync(unittest.TestCase):
         things, attempt_nos2 = zip(*odd_thing_attempts)
         assert len(set(things)) == 1
         assert list(attempt_nos2) == [1, 2, 3]
+
+
+@unittest.skipIf(not have_trio, "trio not installed")
+class TestTrio(unittest.TestCase):
+    def test_trio_basic(self):
+        thing = NoIOErrorAfterCount(5)
+
+        @retry
+        async def trio_function():
+            await trio.sleep(0.00001)
+            return thing.go()
+
+        trio.run(trio_function)
+
+        assert thing.counter == thing.count
 
 
 class TestContextManager(unittest.TestCase):
