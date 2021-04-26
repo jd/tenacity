@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    Use str.format to format the logs internally to make logging compatible with other logger such as loguru.

@@ -27,9 +27,10 @@ def before_log(logger, log_level):
     def log_it(retry_state):
         logger.log(
             log_level,
-            "Starting call to '%s', this is the %s time calling it.",
-            _utils.get_callback_name(retry_state.fn),
-            _utils.to_ordinal(retry_state.attempt_number),
+            "Starting call to '{0}', this is the {1} time calling it.".format(
+                _utils.get_callback_name(retry_state.fn),
+                _utils.to_ordinal(retry_state.attempt_number),
+            ),
         )
 
     return log_it
