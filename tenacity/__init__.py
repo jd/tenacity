@@ -95,14 +95,12 @@ WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable)
 @t.overload
 def retry(fn):
     # type: (WrappedFn) -> WrappedFn
-    """Type signature for @retry as a raw decorator."""
     pass
 
 
 @t.overload
 def retry(*dargs, **dkw):  # noqa
     # type: (...) -> t.Callable[[WrappedFn], WrappedFn]
-    """Type signature for the @retry() decorator constructor."""
     pass
 
 

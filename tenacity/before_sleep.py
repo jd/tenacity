@@ -28,7 +28,7 @@ def before_sleep_log(logger, log_level, exc_info=False, stack_info=False):
     def log_it(retry_state):
         if retry_state.outcome.failed:
             ex = retry_state.outcome.exception()
-            verb, value = "raised", "%s: %s" % (type(ex).__name__, ex)
+            verb, value = "raised", "{0}: {1}".format(type(ex).__name__, ex)
 
             if exc_info:
                 local_exc_info = get_exc_info_from_future(retry_state.outcome)
@@ -40,11 +40,12 @@ def before_sleep_log(logger, log_level, exc_info=False, stack_info=False):
 
         logger.log(
             log_level,
-            "Retrying %s in %s seconds as it %s %s.",
-            _utils.get_callback_name(retry_state.fn),
-            getattr(retry_state.next_action, "sleep"),
-            verb,
-            value,
+            "Retrying {0} in {1} seconds as it {2} {3}.".format(
+                _utils.get_callback_name(retry_state.fn),
+                getattr(retry_state.next_action, "sleep"),
+                verb,
+                value,
+            ),
             exc_info=local_exc_info,
             stack_info=stack_info,
         )
