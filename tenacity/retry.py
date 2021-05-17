@@ -80,6 +80,16 @@ class retry_if_exception_type(retry_if_exception):
         )
 
 
+class retry_except_exception_type(retry_if_exception):
+    """Retries excpet an exception has been raised of one or more types."""
+
+    def __init__(self, exception_types=Exception):
+        self.exception_types = exception_types
+        super(retry_except_exception_type, self).__init__(
+            lambda e: not isinstance(e, exception_types)
+        )
+
+
 class retry_unless_exception_type(retry_if_exception):
     """Retries until an exception is raised of one or more types."""
 

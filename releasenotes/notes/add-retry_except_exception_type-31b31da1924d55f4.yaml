@@ -1,0 +1,3 @@
+---
+features:
+  - Add ``retry_except_exception_type()`` that allows us to retry if a raised exception doesn't match given exceptions.
