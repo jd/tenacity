@@ -780,7 +780,7 @@ def _retryable_test_with_exception_type_io(thing):
     return thing.go()
 
 
-@retry(retry=tenacity.retry_except_exception_type(IOError))
+@retry(retry=tenacity.retry_if_not_exception_type(IOError))
 def _retryable_test_except_exception_type_io(thing):
     return thing.go()
 
