@@ -927,7 +927,9 @@ class TestDecoratorWrapper(unittest.TestCase):
             print(n)
 
     def test_retry_except_exception_of_type(self):
-        self.assertTrue(_retryable_test_except_exception_type_io(NoNameErrorAfterCount(5)))
+        self.assertTrue(
+            _retryable_test_except_exception_type_io(NoNameErrorAfterCount(5))
+        )
 
         try:
             _retryable_test_except_exception_type_io(NoIOErrorAfterCount(5))
