@@ -780,6 +780,11 @@ def _retryable_test_with_exception_type_io(thing):
     return thing.go()
 
 
+@retry(retry=tenacity.retry_if_not_exception_type(IOError))
+def _retryable_test_if_not_exception_type_io(thing):
+    return thing.go()
+
+
 @retry(
     stop=tenacity.stop_after_attempt(3), retry=tenacity.retry_if_exception_type(IOError)
 )
@@ -920,6 +925,18 @@ class TestDecoratorWrapper(unittest.TestCase):
         except NameError as n:
             self.assertTrue(isinstance(n, NameError))
             print(n)
+
+    def test_retry_except_exception_of_type(self):
+        self.assertTrue(
+            _retryable_test_if_not_exception_type_io(NoNameErrorAfterCount(5))
+        )
+
+        try:
+            _retryable_test_if_not_exception_type_io(NoIOErrorAfterCount(5))
+            self.fail("Expected IOError")
+        except IOError as err:
+            self.assertTrue(isinstance(err, IOError))
+            print(err)
 
     def test_retry_until_exception_of_type_attempt_number(self):
         try:
