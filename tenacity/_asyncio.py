@@ -16,7 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import sys
-from asyncio import sleep
 
 from tenacity import AttemptManager
 from tenacity import BaseRetrying
@@ -25,8 +24,23 @@ from tenacity import DoSleep
 from tenacity import RetryCallState
 
 
+async def _portable_async_sleep(seconds):
+    # If trio is already imported, then importing it is cheap.
+    # If trio isn't already imported, then it's definitely not running, so we
+    # can skip further checks.
+    if "trio" in sys.modules:
+        # If trio is available, then sniffio is too
+        import trio, sniffio
+        if sniffio.current_async_library() == "trio":
+            await trio.sleep(seconds)
+            return
+    # Otherwise, assume asyncio
+    import asyncio
+    await asyncio.sleep(seconds)
+
+
 class AsyncRetrying(BaseRetrying):
-    def __init__(self, sleep=sleep, **kwargs):
+    def __init__(self, sleep=_portable_async_sleep, **kwargs):
         super(AsyncRetrying, self).__init__(**kwargs)
         self.sleep = sleep
 

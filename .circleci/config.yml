@@ -64,6 +64,15 @@ jobs:
           command: |
             sudo pip install tox
             tox -e py39
+  py39-notrio:
+    docker:
+      - image: circleci/python:3.9
+    steps:
+      - checkout
+      - run:
+          command: |
+            sudo pip install tox
+            tox -e py39-notrio
   deploy:
     docker:
       - image: circleci/python:3.9
@@ -100,6 +109,7 @@ workflows:
       - py37
       - py38
       - py39
+      - py39-notrio
       - deploy:
           filters:
             tags:
