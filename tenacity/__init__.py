@@ -516,21 +516,19 @@ class RetryCallState(object):
 
     def __repr__(self):
         if self.outcome is None:
-            result = 'none'
+            result = "none"
         elif self.outcome.failed:
-            result = 'failed ({})'.format(self.outcome.exception())
+            result = "failed ({})".format(self.outcome.exception())
         else:
-            result = 'returned ({})'.format(self.outcome.result())
+            result = "returned ({})".format(self.outcome.result())
 
-        return '<{cls} {id}: attempt #{attempt}; slept for {slept}; last result: {result}>'.format(
+        return "<{cls} {id}: attempt #{attempt}; slept for {slept}; last result: {result}>".format(
             cls=self.__class__.__name__,
             id=id(self),
             attempt=self.attempt_number,
             slept=round(self.idle_for, 2),
             result=result,
         )
-
-
 
 
 if iscoroutinefunction:
