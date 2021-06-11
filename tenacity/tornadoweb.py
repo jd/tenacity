@@ -25,7 +25,7 @@ from tornado import gen
 
 class TornadoRetrying(BaseRetrying):
     def __init__(self, sleep=gen.sleep, **kwargs):
-        super(TornadoRetrying, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.sleep = sleep
 
     @gen.coroutine

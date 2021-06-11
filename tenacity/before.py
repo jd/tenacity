@@ -14,17 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
+
 from tenacity import _utils
 
+if typing.TYPE_CHECKING:
+    import logging
 
-def before_nothing(retry_state):
+    from tenacity import RetryCallState
+
+
+def before_nothing(retry_state: "RetryCallState") -> None:
     """Before call strategy that does nothing."""
 
 
-def before_log(logger, log_level):
+def before_log(logger: "logging.Logger", log_level: int) -> typing.Callable[["RetryCallState"], None]:  # noqa:BLK100
     """Before call strategy that logs to some logger the attempt."""
 
-    def log_it(retry_state):
+    def log_it(retry_state: "RetryCallState") -> None:
         logger.log(
             log_level,
             "Starting call to '{0}', this is the {1} time calling it.".format(
