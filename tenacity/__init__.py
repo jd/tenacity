@@ -527,7 +527,7 @@ class RetryCallState(object):
             cls=self.__class__.__name__,
             id=id(self),
             attempt=self.attempt_number,
-            slept=round(self.idle_for, 2),
+            slept=float(round(self.idle_for, 2)),
             result=result,
         )
 
