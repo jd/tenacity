@@ -92,11 +92,15 @@ class TestBase(unittest.TestCase):
     def test_callstate_repr(self):
         rs = RetryCallState(None, None, (), {})
         rs.idle_for = 1.1111111
-        assert repr(rs).endswith('attempt #1; slept for 1.11; last result: none yet>')
+        assert repr(rs).endswith("attempt #1; slept for 1.11; last result: none yet>")
         rs = make_retry_state(2, 5)
-        assert repr(rs).endswith('attempt #2; slept for 0; last result: returned None>')
-        rs = make_retry_state(0, 0, last_result=tenacity.Future.construct(1, ValueError("aaa"), True))
-        assert repr(rs).endswith('attempt #0; slept for 0; last result: failed (ValueError aaa)>')
+        assert repr(rs).endswith("attempt #2; slept for 0; last result: returned None>")
+        rs = make_retry_state(
+            0, 0, last_result=tenacity.Future.construct(1, ValueError("aaa"), True)
+        )
+        assert repr(rs).endswith(
+            "attempt #0; slept for 0; last result: failed (ValueError aaa)>"
+        )
 
 
 class TestStopConditions(unittest.TestCase):
