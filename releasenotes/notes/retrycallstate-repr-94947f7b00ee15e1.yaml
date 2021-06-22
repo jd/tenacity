@@ -1,0 +1,3 @@
+---
+features:
+  - Add a ``__repr__`` method to ``RetryCallState`` objects for easier debugging.
