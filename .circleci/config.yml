@@ -10,24 +10,6 @@ jobs:
           command: |
             sudo pip install tox
             tox -e pep8
-  py27:
-    docker:
-      - image: circleci/python:2.7
-    steps:
-      - checkout
-      - run:
-          command: |
-            sudo pip install tox
-            tox -e py27
-  py35:
-    docker:
-      - image: circleci/python:3.5
-    steps:
-      - checkout
-      - run:
-          command: |
-            sudo pip install tox
-            tox -e py35
   py36:
     docker:
       - image: circleci/python:3.6
@@ -94,8 +76,6 @@ workflows:
   test:
     jobs:
       - pep8
-      - py27
-      - py35
       - py36
       - py37
       - py38
