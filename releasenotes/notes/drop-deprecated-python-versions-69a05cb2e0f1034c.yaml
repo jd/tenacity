@@ -1,0 +1,4 @@
+---
+other:
+  - |
+    Drop support for deprecated Python versions (2.7 and 3.5)
