@@ -145,9 +145,7 @@ class TestContextManager(unittest.TestCase):
             pass
 
         try:
-            async for attempt in tasyncio.AsyncRetrying(
-                stop=stop_after_attempt(1), reraise=True
-            ):
+            async for attempt in tasyncio.AsyncRetrying(stop=stop_after_attempt(1), reraise=True):
                 with attempt:
                     raise CustomError()
         except CustomError:
@@ -159,9 +157,7 @@ class TestContextManager(unittest.TestCase):
     async def test_sleeps(self):
         start = current_time_ms()
         try:
-            async for attempt in tasyncio.AsyncRetrying(
-                stop=stop_after_attempt(1), wait=wait_fixed(1)
-            ):
+            async for attempt in tasyncio.AsyncRetrying(stop=stop_after_attempt(1), wait=wait_fixed(1)):
                 with attempt:
                     raise Exception()
         except RetryError:

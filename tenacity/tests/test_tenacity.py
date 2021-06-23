@@ -52,16 +52,12 @@ def _set_delay_since_start(retry_state, delay):
     assert retry_state.seconds_since_start == delay
 
 
-def make_retry_state(
-    previous_attempt_number, delay_since_first_attempt, last_result=None
-):
+def make_retry_state(previous_attempt_number, delay_since_first_attempt, last_result=None):
     """Construct RetryCallState for given attempt number & delay.
 
     Only used in testing and thus is extra careful about timestamp arithmetics.
     """
-    required_parameter_unset = (
-        previous_attempt_number is _unset or delay_since_first_attempt is _unset
-    )
+    required_parameter_unset = previous_attempt_number is _unset or delay_since_first_attempt is _unset
     if required_parameter_unset:
         raise _make_unset_exception(
             "wait/stop",
@@ -94,9 +90,7 @@ class TestStopConditions(unittest.TestCase):
         self.assertFalse(r.stop(make_retry_state(3, 6546)))
 
     def test_stop_any(self):
-        stop = tenacity.stop_any(
-            tenacity.stop_after_delay(1), tenacity.stop_after_attempt(4)
-        )
+        stop = tenacity.stop_any(tenacity.stop_after_delay(1), tenacity.stop_after_attempt(4))
 
         def s(*args):
             return stop(make_retry_state(*args))
@@ -109,9 +103,7 @@ class TestStopConditions(unittest.TestCase):
         self.assertTrue(s(4, 1.8))
 
     def test_stop_all(self):
-        stop = tenacity.stop_all(
-            tenacity.stop_after_delay(1), tenacity.stop_after_attempt(4)
-        )
+        stop = tenacity.stop_all(tenacity.stop_after_delay(1), tenacity.stop_after_attempt(4))
 
         def s(*args):
             return stop(make_retry_state(*args))
@@ -301,11 +293,7 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(make_retry_state(10, 100)), 1000)
 
     def test_wait_combine(self):
-        r = Retrying(
-            wait=tenacity.wait_combine(
-                tenacity.wait_random(0, 3), tenacity.wait_fixed(5)
-            )
-        )
+        r = Retrying(wait=tenacity.wait_combine(tenacity.wait_random(0, 3), tenacity.wait_fixed(5)))
         # Test it a few time since it's random
         for i in range(1000):
             w = r.wait(make_retry_state(1, 5))
@@ -321,11 +309,7 @@ class TestWaitConditions(unittest.TestCase):
             self.assertGreaterEqual(w, 5)
 
     def test_wait_triple_sum(self):
-        r = Retrying(
-            wait=tenacity.wait_fixed(1)
-            + tenacity.wait_random(0, 3)
-            + tenacity.wait_fixed(5)
-        )
+        r = Retrying(wait=tenacity.wait_fixed(1) + tenacity.wait_random(0, 3) + tenacity.wait_fixed(5))
         # Test it a few time since it's random
         for i in range(1000):
             w = r.wait(make_retry_state(1, 5))
@@ -455,10 +439,7 @@ class TestWaitConditions(unittest.TestCase):
 
         retrying = Retrying(
             wait=waitfunc,
-            retry=(
-                tenacity.retry_if_exception_type()
-                | tenacity.retry_if_result(lambda result: result == 123)
-            ),
+            retry=(tenacity.retry_if_exception_type() | tenacity.retry_if_result(lambda result: result == 123)),
         )
 
         def returnval():
@@ -542,9 +523,7 @@ class TestRetryConditions(unittest.TestCase):
         self.assertFalse(r(tenacity.Future.construct(1, 1, True)))
 
     def test_retry_and(self):
-        retry = tenacity.retry_if_result(lambda x: x == 1) & tenacity.retry_if_result(
-            lambda x: isinstance(x, int)
-        )
+        retry = tenacity.retry_if_result(lambda x: x == 1) & tenacity.retry_if_result(lambda x: isinstance(x, int))
 
         def r(fut):
             retry_state = make_retry_state(1, 1.0, last_result=fut)
@@ -556,9 +535,7 @@ class TestRetryConditions(unittest.TestCase):
         self.assertFalse(r(tenacity.Future.construct(1, 1, True)))
 
     def test_retry_or(self):
-        retry = tenacity.retry_if_result(
-            lambda x: x == "foo"
-        ) | tenacity.retry_if_result(lambda x: isinstance(x, int))
+        retry = tenacity.retry_if_result(lambda x: x == "foo") | tenacity.retry_if_result(lambda x: isinstance(x, int))
 
         def r(fut):
             retry_state = make_retry_state(1, 1.0, last_result=fut)
@@ -576,9 +553,7 @@ class TestRetryConditions(unittest.TestCase):
 
     def test_retry_try_again(self):
         self._attempts = 0
-        Retrying(stop=tenacity.stop_after_attempt(5), retry=tenacity.retry_never)(
-            self._raise_try_again
-        )
+        Retrying(stop=tenacity.stop_after_attempt(5), retry=tenacity.retry_never)(self._raise_try_again)
         self.assertEqual(3, self._attempts)
 
     def test_retry_try_again_forever(self):
@@ -781,9 +756,7 @@ def _retryable_test_if_not_exception_type_io(thing):
     return thing.go()
 
 
-@retry(
-    stop=tenacity.stop_after_attempt(3), retry=tenacity.retry_if_exception_type(IOError)
-)
+@retry(stop=tenacity.stop_after_attempt(3), retry=tenacity.retry_if_exception_type(IOError))
 def _retryable_test_with_exception_type_io_attempt_limit(thing):
     return thing.go()
 
@@ -808,46 +781,28 @@ def _retryable_test_with_unless_exception_type_no_input(thing):
 
 @retry(
     stop=tenacity.stop_after_attempt(5),
-    retry=tenacity.retry_if_exception_message(
-        message=NoCustomErrorAfterCount.derived_message
-    ),
+    retry=tenacity.retry_if_exception_message(message=NoCustomErrorAfterCount.derived_message),
 )
 def _retryable_test_if_exception_message_message(thing):
     return thing.go()
 
 
-@retry(
-    retry=tenacity.retry_if_not_exception_message(
-        message=NoCustomErrorAfterCount.derived_message
-    )
-)
+@retry(retry=tenacity.retry_if_not_exception_message(message=NoCustomErrorAfterCount.derived_message))
 def _retryable_test_if_not_exception_message_message(thing):
     return thing.go()
 
 
-@retry(
-    retry=tenacity.retry_if_exception_message(
-        match=NoCustomErrorAfterCount.derived_message[:3] + ".*"
-    )
-)
+@retry(retry=tenacity.retry_if_exception_message(match=NoCustomErrorAfterCount.derived_message[:3] + ".*"))
 def _retryable_test_if_exception_message_match(thing):
     return thing.go()
 
 
-@retry(
-    retry=tenacity.retry_if_not_exception_message(
-        match=NoCustomErrorAfterCount.derived_message[:3] + ".*"
-    )
-)
+@retry(retry=tenacity.retry_if_not_exception_message(match=NoCustomErrorAfterCount.derived_message[:3] + ".*"))
 def _retryable_test_if_not_exception_message_match(thing):
     return thing.go()
 
 
-@retry(
-    retry=tenacity.retry_if_not_exception_message(
-        message=NameErrorUntilCount.derived_message
-    )
-)
+@retry(retry=tenacity.retry_if_not_exception_message(message=NameErrorUntilCount.derived_message))
 def _retryable_test_not_exception_message_delay(thing):
     return thing.go()
 
@@ -911,9 +866,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.assertTrue(isinstance(n, NameError))
             print(n)
 
-        self.assertTrue(
-            _retryable_test_with_exception_type_custom(NoCustomErrorAfterCount(5))
-        )
+        self.assertTrue(_retryable_test_with_exception_type_custom(NoCustomErrorAfterCount(5)))
 
         try:
             _retryable_test_with_exception_type_custom(NoNameErrorAfterCount(5))
@@ -923,9 +876,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             print(n)
 
     def test_retry_except_exception_of_type(self):
-        self.assertTrue(
-            _retryable_test_if_not_exception_type_io(NoNameErrorAfterCount(5))
-        )
+        self.assertTrue(_retryable_test_if_not_exception_type_io(NoNameErrorAfterCount(5)))
 
         try:
             _retryable_test_if_not_exception_type_io(NoIOErrorAfterCount(5))
@@ -936,9 +887,7 @@ class TestDecoratorWrapper(unittest.TestCase):
 
     def test_retry_until_exception_of_type_attempt_number(self):
         try:
-            self.assertTrue(
-                _retryable_test_with_unless_exception_type_name(NameErrorUntilCount(5))
-            )
+            self.assertTrue(_retryable_test_with_unless_exception_type_name(NameErrorUntilCount(5)))
         except NameError as e:
             s = _retryable_test_with_unless_exception_type_name.retry.statistics
             self.assertTrue(s["attempt_number"] == 6)
@@ -949,11 +898,7 @@ class TestDecoratorWrapper(unittest.TestCase):
     def test_retry_until_exception_of_type_no_type(self):
         try:
             # no input should catch all subclasses of Exception
-            self.assertTrue(
-                _retryable_test_with_unless_exception_type_no_input(
-                    NameErrorUntilCount(5)
-                )
-            )
+            self.assertTrue(_retryable_test_with_unless_exception_type_no_input(NameErrorUntilCount(5)))
         except NameError as e:
             s = _retryable_test_with_unless_exception_type_no_input.retry.statistics
             self.assertTrue(s["attempt_number"] == 6)
@@ -964,9 +909,7 @@ class TestDecoratorWrapper(unittest.TestCase):
     def test_retry_until_exception_of_type_wrong_exception(self):
         try:
             # two iterations with IOError, one that returns True
-            _retryable_test_with_unless_exception_type_name_attempt_limit(
-                IOErrorUntilCount(2)
-            )
+            _retryable_test_with_unless_exception_type_name_attempt_limit(IOErrorUntilCount(2))
             self.fail("Expected RetryError")
         except RetryError as e:
             self.assertTrue(isinstance(e, RetryError))
@@ -974,29 +917,21 @@ class TestDecoratorWrapper(unittest.TestCase):
 
     def test_retry_if_exception_message(self):
         try:
-            self.assertTrue(
-                _retryable_test_if_exception_message_message(NoCustomErrorAfterCount(3))
-            )
+            self.assertTrue(_retryable_test_if_exception_message_message(NoCustomErrorAfterCount(3)))
         except CustomError:
             print(_retryable_test_if_exception_message_message.retry.statistics)
             self.fail("CustomError should've been retried from errormessage")
 
     def test_retry_if_not_exception_message(self):
         try:
-            self.assertTrue(
-                _retryable_test_if_not_exception_message_message(
-                    NoCustomErrorAfterCount(2)
-                )
-            )
+            self.assertTrue(_retryable_test_if_not_exception_message_message(NoCustomErrorAfterCount(2)))
         except CustomError:
             s = _retryable_test_if_not_exception_message_message.retry.statistics
             self.assertTrue(s["attempt_number"] == 1)
 
     def test_retry_if_not_exception_message_delay(self):
         try:
-            self.assertTrue(
-                _retryable_test_not_exception_message_delay(NameErrorUntilCount(3))
-            )
+            self.assertTrue(_retryable_test_not_exception_message_delay(NameErrorUntilCount(3)))
         except NameError:
             s = _retryable_test_not_exception_message_delay.retry.statistics
             print(s["attempt_number"])
@@ -1004,19 +939,13 @@ class TestDecoratorWrapper(unittest.TestCase):
 
     def test_retry_if_exception_message_match(self):
         try:
-            self.assertTrue(
-                _retryable_test_if_exception_message_match(NoCustomErrorAfterCount(3))
-            )
+            self.assertTrue(_retryable_test_if_exception_message_match(NoCustomErrorAfterCount(3)))
         except CustomError:
             self.fail("CustomError should've been retried from errormessage")
 
     def test_retry_if_not_exception_message_match(self):
         try:
-            self.assertTrue(
-                _retryable_test_if_not_exception_message_message(
-                    NoCustomErrorAfterCount(2)
-                )
-            )
+            self.assertTrue(_retryable_test_if_not_exception_message_message(NoCustomErrorAfterCount(2)))
         except CustomError:
             s = _retryable_test_if_not_exception_message_message.retry.statistics
             self.assertTrue(s["attempt_number"] == 1)
@@ -1038,9 +967,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             def __call__(self):
                 return "Hello"
 
-        retrying = Retrying(
-            wait=tenacity.wait_fixed(0.01), stop=tenacity.stop_after_attempt(3)
-        )
+        retrying = Retrying(wait=tenacity.wait_fixed(0.01), stop=tenacity.stop_after_attempt(3))
         h = retrying.wraps(Hello())
         self.assertEqual(h(), "Hello")
 
@@ -1048,17 +975,13 @@ class TestDecoratorWrapper(unittest.TestCase):
 class TestRetryWith:
     def test_redefine_wait(self):
         start = current_time_ms()
-        result = _retryable_test_with_wait.retry_with(wait=tenacity.wait_fixed(0.1))(
-            NoneReturnUntilAfterCount(5)
-        )
+        result = _retryable_test_with_wait.retry_with(wait=tenacity.wait_fixed(0.1))(NoneReturnUntilAfterCount(5))
         t = current_time_ms() - start
         assert t >= 500
         assert result is True
 
     def test_redefine_stop(self):
-        result = _retryable_test_with_stop.retry_with(
-            stop=tenacity.stop_after_attempt(5)
-        )(NoneReturnUntilAfterCount(4))
+        result = _retryable_test_with_stop.retry_with(stop=tenacity.stop_after_attempt(5))(NoneReturnUntilAfterCount(4))
         assert result is True
 
     def test_retry_error_cls_should_be_preserved(self):
@@ -1163,10 +1086,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         finally:
             logger.removeHandler(handler)
 
-        etalon_re = (
-            r"^Retrying .* in 0\.01 seconds as it raised "
-            r"(IO|OS)Error: Hi there, I'm an IOError\.$"
-        )
+        etalon_re = r"^Retrying .* in 0\.01 seconds as it raised " r"(IO|OS)Error: Hi there, I'm an IOError\.$"
         self.assertEqual(len(handler.records), 2)
         fmt = logging.Formatter().format
         self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
@@ -1186,9 +1106,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         handler = CapturingHandler()
         logger.addHandler(handler)
         try:
-            _before_sleep = tenacity.before_sleep_log(
-                logger, logging.INFO, exc_info=True
-            )
+            _before_sleep = tenacity.before_sleep_log(logger, logging.INFO, exc_info=True)
             retrying = Retrying(
                 wait=tenacity.wait_fixed(0.01),
                 stop=tenacity.stop_after_attempt(3),
@@ -1218,9 +1136,7 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         handler = CapturingHandler()
         logger.addHandler(handler)
         try:
-            _before_sleep = tenacity.before_sleep_log(
-                logger, logging.INFO, exc_info=exc_info
-            )
+            _before_sleep = tenacity.before_sleep_log(logger, logging.INFO, exc_info=exc_info)
             _retry = tenacity.retry_if_result(lambda result: result is None)
             retrying = Retrying(
                 wait=tenacity.wait_fixed(0.01),
@@ -1512,9 +1428,7 @@ class TestRetryException(unittest.TestCase):
 
 
 class TestRetryTyping(unittest.TestCase):
-    @pytest.mark.skipif(
-        sys.version_info < (3, 0), reason="typeguard not supported for python 2"
-    )
+    @pytest.mark.skipif(sys.version_info < (3, 0), reason="typeguard not supported for python 2")
     def test_retry_type_annotations(self):
         """The decorator should maintain types of decorated functions."""
         # Just in case this is run with unit-test, return early for py2

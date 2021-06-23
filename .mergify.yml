@@ -13,6 +13,7 @@ pull_request_rules:
   - name: automatic merge without changelog
     conditions:
       - "status-success=ci/circleci: pep8"
+      - "status-success=ci/circleci: black"
       - "status-success=ci/circleci: py36"
       - "status-success=ci/circleci: py37"
       - "status-success=ci/circleci: py38"
@@ -26,6 +27,7 @@ pull_request_rules:
   - name: automatic merge with changelog
     conditions:
       - "status-success=ci/circleci: pep8"
+      - "status-success=ci/circleci: black"
       - "status-success=ci/circleci: py36"
       - "status-success=ci/circleci: py37"
       - "status-success=ci/circleci: py38"
@@ -40,6 +42,7 @@ pull_request_rules:
     conditions:
       - author=jd
       - "status-success=ci/circleci: pep8"
+      - "status-success=ci/circleci: black"
       - "status-success=ci/circleci: py36"
       - "status-success=ci/circleci: py37"
       - "status-success=ci/circleci: py38"
@@ -53,6 +56,7 @@ pull_request_rules:
     conditions:
       - author=jd
       - "status-success=ci/circleci: pep8"
+      - "status-success=ci/circleci: black"
       - "status-success=ci/circleci: py36"
       - "status-success=ci/circleci: py37"
       - "status-success=ci/circleci: py38"
