@@ -10,6 +10,15 @@ jobs:
           command: |
             sudo pip install tox
             tox -e pep8
+  black:
+    docker:
+      - image: circleci/python:3.9
+    steps:
+      - checkout
+      - run:
+          command: |
+            sudo pip install tox
+            tox -e black-ci
   py36:
     docker:
       - image: circleci/python:3.6
@@ -76,6 +85,7 @@ workflows:
   test:
     jobs:
       - pep8
+      - black
       - py36
       - py37
       - py38

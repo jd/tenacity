@@ -126,11 +126,7 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Union[WrappedFn, t.Callable[[Wrapped
                 )
             if iscoroutinefunction is not None and iscoroutinefunction(f):
                 r: "BaseRetrying" = AsyncRetrying(*dargs, **dkw)
-            elif (
-                tornado
-                and hasattr(tornado.gen, "is_coroutine_function")
-                and tornado.gen.is_coroutine_function(f)
-            ):
+            elif tornado and hasattr(tornado.gen, "is_coroutine_function") and tornado.gen.is_coroutine_function(f):
                 r = TornadoRetrying(*dargs, **dkw)
             else:
                 r = Retrying(*dargs, **dkw)
@@ -168,9 +164,7 @@ class BaseAction:
     NAME: t.Optional[str] = None
 
     def __repr__(self) -> str:
-        state_str = ", ".join(
-            "%s=%r" % (field, getattr(self, field)) for field in self.REPR_FIELDS
-        )
+        state_str = ", ".join("%s=%r" % (field, getattr(self, field)) for field in self.REPR_FIELDS)
         return "%s(%s)" % (type(self).__name__, state_str)
 
     def __str__(self) -> str:
@@ -218,10 +212,10 @@ class AttemptManager:
         pass
 
     def __exit__(
-            self,  # noqa:BLK100
-            exc_type: t.Optional[t.Type[BaseException]],
-            exc_value: t.Optional[BaseException],
-            traceback: t.Optional["types.TracebackType"],
+        self,
+        exc_type: t.Optional[t.Type[BaseException]],
+        exc_value: t.Optional[BaseException],
+        traceback: t.Optional["types.TracebackType"],
     ) -> t.Optional[bool]:
         if isinstance(exc_value, BaseException):
             self.retry_state.set_exception((exc_type, exc_value, traceback))
@@ -233,7 +227,6 @@ class AttemptManager:
 
 
 class BaseRetrying(metaclass=ABCMeta):
-
     def __init__(
         self,
         sleep: t.Callable[[t.Union[int, float]], None] = sleep,
@@ -287,9 +280,7 @@ class BaseRetrying(metaclass=ABCMeta):
             before_sleep=_first_set(before_sleep, self.before_sleep),
             reraise=_first_set(reraise, self.reraise),
             retry_error_cls=_first_set(retry_error_cls, self.retry_error_cls),
-            retry_error_callback=_first_set(
-                retry_error_callback, self.retry_error_callback
-            ),
+            retry_error_callback=_first_set(retry_error_callback, self.retry_error_callback),
         )
 
     def __repr__(self) -> str:
@@ -363,9 +354,7 @@ class BaseRetrying(metaclass=ABCMeta):
                 self.before(retry_state)
             return DoAttempt()
 
-        is_explicit_retry = retry_state.outcome.failed and isinstance(
-            retry_state.outcome.exception(), TryAgain
-        )
+        is_explicit_retry = retry_state.outcome.failed and isinstance(retry_state.outcome.exception(), TryAgain)
         if not (is_explicit_retry or self.retry(retry_state=retry_state)):
             return fut.result()
 
@@ -472,11 +461,11 @@ class RetryCallState:
     """State related to a single call wrapped with Retrying."""
 
     def __init__(
-            self,
-            retry_object: BaseRetrying,
-            fn: t.Optional[WrappedFn],
-            args: t.Any,
-            kwargs: t.Any,
+        self,
+        retry_object: BaseRetrying,
+        fn: t.Optional[WrappedFn],
+        args: t.Any,
+        kwargs: t.Any,
     ) -> None:
         #: Retry call start timestamp
         self.start_time = time.monotonic()
@@ -496,7 +485,7 @@ class RetryCallState:
         #: Timestamp of the last outcome
         self.outcome_timestamp: t.Optional[float] = None
         #: Time spent sleeping in retries
-        self.idle_for: float = 0.
+        self.idle_for: float = 0.0
         #: Next action as decided by the retry manager
         self.next_action: t.Optional[RetryAction] = None
 
