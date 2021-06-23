@@ -16,10 +16,9 @@
 import asyncio
 import inspect
 import unittest
+from functools import wraps
 
 import pytest
-
-import six
 
 from tenacity import AsyncRetrying, RetryError
 from tenacity import _asyncio as tasyncio
@@ -29,7 +28,7 @@ from tenacity.wait import wait_fixed
 
 
 def asynctest(callable_):
-    @six.wraps(callable_)
+    @wraps(callable_)
     def wrapper(*a, **kw):
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(callable_(*a, **kw))

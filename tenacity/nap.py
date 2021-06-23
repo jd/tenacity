@@ -17,9 +17,13 @@
 # limitations under the License.
 
 import time
+import typing
+
+if typing.TYPE_CHECKING:
+    import threading
 
 
-def sleep(seconds):
+def sleep(seconds: float) -> None:
     """
     Sleep strategy that delays execution for a given number of seconds.
 
@@ -28,13 +32,13 @@ def sleep(seconds):
     time.sleep(seconds)
 
 
-class sleep_using_event(object):
+class sleep_using_event:
     """Sleep strategy that waits on an event to be set."""
 
-    def __init__(self, event):
+    def __init__(self, event: "threading.Event") -> None:
         self.event = event
 
-    def __call__(self, timeout):
+    def __call__(self, timeout: typing.Optional[float]) -> None:
         # NOTE(harlowja): this may *not* actually wait for timeout
         # seconds if the event is set (ie this may eject out early).
         self.event.wait(timeout=timeout)
