@@ -1,0 +1,4 @@
+---
+other:
+  - "Use `black` for code formatting and validate using `black --check`. Code compatibility: py26-py39."
+  - "Enforce maximal line length to 120 symbols"

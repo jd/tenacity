@@ -79,7 +79,7 @@ class retry_if_exception_type(retry_if_exception):
         exception_types: typing.Union[
             typing.Type[BaseException],
             typing.Tuple[typing.Type[BaseException], ...],
-        ] = Exception,  # noqa:BLK100
+        ] = Exception,
     ) -> None:
         self.exception_types = exception_types
         super().__init__(lambda e: isinstance(e, exception_types))
@@ -89,11 +89,11 @@ class retry_if_not_exception_type(retry_if_exception):
     """Retries except an exception has been raised of one or more types."""
 
     def __init__(
-            self,  # noqa:BLK100
-            exception_types: typing.Union[
-                typing.Type[BaseException],
-                typing.Tuple[typing.Type[BaseException], ...],
-            ] = Exception,
+        self,
+        exception_types: typing.Union[
+            typing.Type[BaseException],
+            typing.Tuple[typing.Type[BaseException], ...],
+        ] = Exception,
     ) -> None:
         self.exception_types = exception_types
         super().__init__(lambda e: not isinstance(e, exception_types))
@@ -103,11 +103,11 @@ class retry_unless_exception_type(retry_if_exception):
     """Retries until an exception is raised of one or more types."""
 
     def __init__(
-            self,
-            exception_types: typing.Union[
-                typing.Type[BaseException],
-                typing.Tuple[typing.Type[BaseException], ...],
-            ] = Exception
+        self,
+        exception_types: typing.Union[
+            typing.Type[BaseException],
+            typing.Tuple[typing.Type[BaseException], ...],
+        ] = Exception,
     ) -> None:
         self.exception_types = exception_types
         super().__init__(lambda e: not isinstance(e, exception_types))
@@ -154,11 +154,7 @@ class retry_if_exception_message(retry_if_exception):
         match: typing.Optional[str] = None,
     ) -> None:
         if message and match:
-            raise TypeError(
-                "{}() takes either 'message' or 'match', not both".format(
-                    self.__class__.__name__
-                )
-            )
+            raise TypeError("{}() takes either 'message' or 'match', not both".format(self.__class__.__name__))
 
         # set predicate
         if message:
@@ -175,11 +171,7 @@ class retry_if_exception_message(retry_if_exception):
 
             predicate = match_fnc
         else:
-            raise TypeError(
-                "{}() missing 1 required argument 'message' or 'match'".format(
-                    self.__class__.__name__
-                )
-            )
+            raise TypeError("{}() missing 1 required argument 'message' or 'match'".format(self.__class__.__name__))
 
         super().__init__(predicate)
 
@@ -188,9 +180,9 @@ class retry_if_not_exception_message(retry_if_exception_message):
     """Retries until an exception message equals or matches."""
 
     def __init__(
-            self,
-            message: typing.Optional[str] = None,
-            match: typing.Optional[str] = None,
+        self,
+        message: typing.Optional[str] = None,
+        match: typing.Optional[str] = None,
     ) -> None:
         super().__init__(message, match)
         # invert predicate

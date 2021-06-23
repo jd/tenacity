@@ -68,9 +68,7 @@ class wait_random(wait_base):
         self.wait_random_max = max
 
     def __call__(self, retry_state: "RetryCallState") -> float:
-        return self.wait_random_min + (
-            random.random() * (self.wait_random_max - self.wait_random_min)
-        )
+        return self.wait_random_min + (random.random() * (self.wait_random_max - self.wait_random_min))
 
 
 class wait_combine(wait_base):
