@@ -14,24 +14,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
+
 from tenacity import _utils
-from tenacity.compat import get_exc_info_from_future
+
+if typing.TYPE_CHECKING:
+    import logging
+
+    from tenacity import RetryCallState
 
 
-def before_sleep_nothing(retry_state):
+def before_sleep_nothing(retry_state: "RetryCallState") -> None:
     """Before call strategy that does nothing."""
 
 
-def before_sleep_log(logger, log_level, exc_info=False):
+def before_sleep_log(
+    logger: "logging.Logger",
+    log_level: int,
+    exc_info: bool = False,
+) -> typing.Callable[["RetryCallState"], None]:
     """Before call strategy that logs to some logger the attempt."""
 
-    def log_it(retry_state):
+    def log_it(retry_state: "RetryCallState") -> None:
         if retry_state.outcome.failed:
             ex = retry_state.outcome.exception()
             verb, value = "raised", "{0}: {1}".format(type(ex).__name__, ex)
 
             if exc_info:
-                local_exc_info = get_exc_info_from_future(retry_state.outcome)
+                local_exc_info = retry_state.outcome.exception()
             else:
                 local_exc_info = False
         else:

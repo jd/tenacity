@@ -27,7 +27,7 @@ from tenacity import RetryCallState
 
 class AsyncRetrying(BaseRetrying):
     def __init__(self, sleep=sleep, **kwargs):
-        super(AsyncRetrying, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.sleep = sleep
 
     async def __call__(self, fn, *args, **kwargs):
