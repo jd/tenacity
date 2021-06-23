@@ -18,8 +18,6 @@ import inspect
 import unittest
 from functools import wraps
 
-import pytest
-
 from tenacity import AsyncRetrying, RetryError
 from tenacity import _asyncio as tasyncio
 from tenacity import retry, stop_after_attempt
@@ -71,14 +69,6 @@ class TestAsync(unittest.TestCase):
         thing = NoIOErrorAfterCount(5)
         retrying = AsyncRetrying()
         await retrying(_async_function, thing)
-        assert thing.counter == thing.count
-
-    @asynctest
-    async def test_retry_using_async_retying_legacy_method(self):
-        thing = NoIOErrorAfterCount(5)
-        retrying = AsyncRetrying()
-        with pytest.warns(DeprecationWarning):
-            await retrying.call(_async_function, thing)
         assert thing.counter == thing.count
 
     @asynctest

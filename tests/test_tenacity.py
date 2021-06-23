@@ -1093,9 +1093,6 @@ class TestBeforeAfterAttempts(unittest.TestCase):
     def test_before_sleep_log_raises(self):
         self._before_sleep_log_raises(lambda x: x)
 
-    def test_before_sleep_log_raises_deprecated_call(self):
-        self._before_sleep_log_raises(lambda x: x.call)
-
     def test_before_sleep_log_raises_with_exc_info(self):
         thing = NoIOErrorAfterCount(2)
         logger = logging.getLogger(self.id())
@@ -1406,15 +1403,6 @@ class TestInvokeAsCallable:
         assert f.calls == [1, 2]
 
 
-class TestInvokeViaLegacyCallMethod(TestInvokeAsCallable):
-    """Retrying.call() method should work the same as Retrying.__call__()."""
-
-    @staticmethod
-    def invoke(retry, f):
-        with reports_deprecation_warning():
-            return retry.call(f)
-
-
 class TestRetryException(unittest.TestCase):
     def test_retry_error_is_pickleable(self):
         import pickle
@@ -1491,12 +1479,6 @@ class TestMockingSleep:
         sleep = MockSleep()
         monkeypatch.setattr(tenacity.nap.time, "sleep", sleep)
         yield sleep
-
-    def test_call(self, mock_sleep):
-        retrying = Retrying(**self.RETRY_ARGS)
-        with pytest.raises(RetryError):
-            retrying.call(self._fail)
-        assert mock_sleep.call_count == 4
 
     def test_decorated(self, mock_sleep):
         with pytest.raises(RetryError):
