@@ -17,10 +17,11 @@ import unittest
 
 from tenacity import RetryError, retry, stop_after_attempt
 from tenacity import tornadoweb
-from tenacity.tests.test_tenacity import NoIOErrorAfterCount
 
 from tornado import gen
 from tornado import testing
+
+from .test_tenacity import NoIOErrorAfterCount
 
 
 @retry
