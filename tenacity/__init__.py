@@ -246,10 +246,6 @@ class BaseRetrying(ABC):
         self.retry_error_cls = retry_error_cls
         self.retry_error_callback = retry_error_callback
 
-        # This attribute was moved to RetryCallState and is deprecated on
-        # Retrying objects but kept for backward compatibility.
-        self.fn: t.Optional[WrappedFn] = None
-
     def copy(
         self,
         sleep: t.Union[t.Callable[[t.Union[int, float]], None], object] = _unset,
@@ -334,12 +330,11 @@ class BaseRetrying(ABC):
 
         return wrapped_f
 
-    def begin(self, fn: t.Optional[WrappedFn]) -> None:
+    def begin(self) -> None:
         self.statistics.clear()
         self.statistics["start_time"] = time.monotonic()
         self.statistics["attempt_number"] = 1
         self.statistics["idle_for"] = 0
-        self.fn = fn
 
     def iter(self, retry_state: "RetryCallState") -> t.Union[DoAttempt, DoSleep, t.Any]:  # noqa
         fut = retry_state.outcome
@@ -379,7 +374,7 @@ class BaseRetrying(ABC):
         return DoSleep(sleep)
 
     def __iter__(self) -> t.Generator[AttemptManager, None, None]:
-        self.begin(None)
+        self.begin()
 
         retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
         while True:
@@ -396,20 +391,12 @@ class BaseRetrying(ABC):
     def __call__(self, fn: WrappedFn, *args: t.Any, **kwargs: t.Any) -> t.Any:
         pass
 
-    def call(self, *args: t.Any, **kwargs: t.Any) -> t.Union[DoAttempt, DoSleep, t.Any]:
-        """Use ``__call__`` instead because this method is deprecated."""
-        warnings.warn(
-            "'call()' method is deprecated. " + "Use '__call__()' instead",
-            DeprecationWarning,
-        )
-        return self.__call__(*args, **kwargs)
-
 
 class Retrying(BaseRetrying):
     """Retrying controller."""
 
     def __call__(self, fn: WrappedFn, *args: t.Any, **kwargs: t.Any) -> t.Any:
-        self.begin(fn)
+        self.begin()
 
         retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
         while True:
