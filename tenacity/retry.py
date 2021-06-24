@@ -154,7 +154,7 @@ class retry_if_exception_message(retry_if_exception):
         match: typing.Optional[str] = None,
     ) -> None:
         if message and match:
-            raise TypeError("{}() takes either 'message' or 'match', not both".format(self.__class__.__name__))
+            raise TypeError(f"{self.__class__.__name__}() takes either 'message' or 'match', not both")
 
         # set predicate
         if message:
@@ -171,7 +171,7 @@ class retry_if_exception_message(retry_if_exception):
 
             predicate = match_fnc
         else:
-            raise TypeError("{}() missing 1 required argument 'message' or 'match'".format(self.__class__.__name__))
+            raise TypeError(f"{self.__class__.__name__}() missing 1 required argument 'message' or 'match'")
 
         super().__init__(predicate)
 

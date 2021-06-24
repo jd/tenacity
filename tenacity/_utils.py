@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 import sys
 import typing
 
@@ -22,19 +21,6 @@ import typing
 # sys.maxsize:
 # An integer giving the maximum value a variable of type Py_ssize_t can take.
 MAX_WAIT = sys.maxsize / 2
-
-
-def visible_attrs(
-    obj: typing.Any,
-    attrs: typing.Optional[typing.Dict[str, typing.Any]] = None,
-) -> typing.Dict[str, typing.Any]:
-    if attrs is None:
-        attrs = {}
-    for attr_name, attr in inspect.getmembers(obj):
-        if attr_name.startswith("_"):
-            continue
-        attrs[attr_name] = attr
-    return attrs
 
 
 def find_ordinal(pos_num: int) -> str:
@@ -54,7 +40,7 @@ def find_ordinal(pos_num: int) -> str:
 
 
 def to_ordinal(pos_num: int) -> str:
-    return "%i%s" % (pos_num, find_ordinal(pos_num))
+    return f"{pos_num}{find_ordinal(pos_num)}"
 
 
 def get_callback_name(cb: typing.Callable[..., typing.Any]) -> str:
