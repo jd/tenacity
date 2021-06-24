@@ -24,7 +24,7 @@ if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
 
 
-class stop_base(metaclass=abc.ABCMeta):
+class stop_base(abc.ABC):
     """Abstract base class for stop strategies."""
 
     @abc.abstractmethod

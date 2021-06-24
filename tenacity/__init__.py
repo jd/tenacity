@@ -23,7 +23,7 @@ import threading
 import time
 import typing as t
 import warnings
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from concurrent import futures
 from inspect import iscoroutinefunction
 
@@ -226,7 +226,7 @@ class AttemptManager:
             return None
 
 
-class BaseRetrying(metaclass=ABCMeta):
+class BaseRetrying(ABC):
     def __init__(
         self,
         sleep: t.Callable[[t.Union[int, float]], None] = sleep,
