@@ -1,0 +1,16 @@
+---
+prelude: >
+    Example use cases:
+    - if we get logged out from the server
+    - if authentication tokens expire
+    We want to be able to automatically refresh our session by calling a specific
+    function. This function can be asynchronously defined.
+features:
+  - |
+    Asynchronous defined retry callbacks:
+    - retry
+    - retry_error_callback
+issues:
+  - |
+    #249
+
