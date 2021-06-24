@@ -24,7 +24,7 @@ if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
 
 
-class wait_base(metaclass=abc.ABCMeta):
+class wait_base(abc.ABC):
     """Abstract base class for wait strategies."""
 
     @abc.abstractmethod

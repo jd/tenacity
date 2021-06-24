@@ -22,7 +22,7 @@ if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
 
 
-class retry_base(metaclass=abc.ABCMeta):
+class retry_base(abc.ABC):
     """Abstract base class for retry strategies."""
 
     @abc.abstractmethod
