@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2016 Étienne Bersac
 # Copyright 2016 Julien Danjou
 # Copyright 2016 Joshua Harlow
