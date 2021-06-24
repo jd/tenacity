@@ -1,5 +1,3 @@
-# -*- encoding: utf-8 -*-
-#
 # Copyright 2016–2021 Julien Danjou
 # Copyright 2016 Joshua Harlow
 # Copyright 2013-2014 Ray Holder

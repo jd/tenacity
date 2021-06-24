@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2016-2018 Julien Danjou
 # Copyright 2017 Elisey Zanko
 # Copyright 2016 Étienne Bersac
