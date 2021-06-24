@@ -118,7 +118,7 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Union[WrappedFn, t.Callable[[Wrapped
                     f"Got retry_base instance ({f.__class__.__name__}) as callable argument, "
                     f"this will probably hang indefinitely (did you mean retry={f.__class__.__name__}(...)?)"
                 )
-            if iscoroutinefunction is not None and iscoroutinefunction(f):
+            if iscoroutinefunction(f):
                 r: "BaseRetrying" = AsyncRetrying(*dargs, **dkw)
             elif tornado and hasattr(tornado.gen, "is_coroutine_function") and tornado.gen.is_coroutine_function(f):
                 r = TornadoRetrying(*dargs, **dkw)
