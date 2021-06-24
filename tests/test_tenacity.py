@@ -1087,8 +1087,8 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         etalon_re = r"^Retrying .* in 0\.01 seconds as it raised " r"(IO|OS)Error: Hi there, I'm an IOError\.$"
         self.assertEqual(len(handler.records), 2)
         fmt = logging.Formatter().format
-        self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
-        self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
+        self.assertRegex(fmt(handler.records[0]), etalon_re)
+        self.assertRegex(fmt(handler.records[1]), etalon_re)
 
     def test_before_sleep_log_raises(self):
         self._before_sleep_log_raises(lambda x: x)
@@ -1123,8 +1123,8 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         )
         self.assertEqual(len(handler.records), 2)
         fmt = logging.Formatter().format
-        self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
-        self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
+        self.assertRegex(fmt(handler.records[0]), etalon_re)
+        self.assertRegex(fmt(handler.records[1]), etalon_re)
 
     def test_before_sleep_log_returns(self, exc_info=False):
         thing = NoneReturnUntilAfterCount(2)
@@ -1149,8 +1149,8 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         etalon_re = r"^Retrying .* in 0\.01 seconds as it returned None\.$"
         self.assertEqual(len(handler.records), 2)
         fmt = logging.Formatter().format
-        self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
-        self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
+        self.assertRegex(fmt(handler.records[0]), etalon_re)
+        self.assertRegex(fmt(handler.records[1]), etalon_re)
 
     def test_before_sleep_log_returns_with_exc_info(self):
         self.test_before_sleep_log_returns(exc_info=True)
