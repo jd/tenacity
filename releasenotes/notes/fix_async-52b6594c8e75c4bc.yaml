@@ -1,0 +1,3 @@
+---
+fixes:
+  - "Fix issue #288 : __name__ and other attributes for async functions"
