@@ -23,8 +23,9 @@ import pytest
 from tenacity import AsyncRetrying, RetryError
 from tenacity import _asyncio as tasyncio
 from tenacity import retry, stop_after_attempt
-from tenacity.tests.test_tenacity import NoIOErrorAfterCount, current_time_ms
 from tenacity.wait import wait_fixed
+
+from .test_tenacity import NoIOErrorAfterCount, current_time_ms
 
 
 def asynctest(callable_):
