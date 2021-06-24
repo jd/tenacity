@@ -26,8 +26,6 @@ from abc import ABC, abstractmethod
 from concurrent import futures
 from inspect import iscoroutinefunction
 
-from tenacity import _utils
-
 # Import all built-in retry strategies for easier usage.
 from .retry import retry_base  # noqa
 from .retry import retry_all  # noqa
@@ -117,11 +115,8 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Union[WrappedFn, t.Callable[[Wrapped
         def wrap(f: WrappedFn) -> WrappedFn:
             if isinstance(f, retry_base):
                 warnings.warn(
-                    (
-                        "Got retry_base instance ({cls}) as callable argument, "
-                        + "this will probably hang indefinitely (did you mean "
-                        + "retry={cls}(...)?)"
-                    ).format(cls=f.__class__.__name__)
+                    f"Got retry_base instance ({f.__class__.__name__}) as callable argument, "
+                    f"this will probably hang indefinitely (did you mean retry={f.__class__.__name__}(...)?)"
                 )
             if iscoroutinefunction is not None and iscoroutinefunction(f):
                 r: "BaseRetrying" = AsyncRetrying(*dargs, **dkw)
@@ -163,8 +158,8 @@ class BaseAction:
     NAME: t.Optional[str] = None
 
     def __repr__(self) -> str:
-        state_str = ", ".join("%s=%r" % (field, getattr(self, field)) for field in self.REPR_FIELDS)
-        return "%s(%s)" % (type(self).__name__, state_str)
+        state_str = ", ".join(f"{field}={getattr(self, field)!r}" for field in self.REPR_FIELDS)
+        return f"{self.__class__.__name__}({state_str})"
 
     def __str__(self) -> str:
         return repr(self)
@@ -198,7 +193,7 @@ class RetryError(Exception):
         raise self
 
     def __str__(self) -> str:
-        return "{0}[{1}]".format(self.__class__.__name__, self.last_attempt)
+        return f"{self.__class__.__name__}[{self.last_attempt}]"
 
 
 class AttemptManager:
@@ -283,15 +278,15 @@ class BaseRetrying(ABC):
         )
 
     def __repr__(self) -> str:
-        attrs = dict(
-            _utils.visible_attrs(self, attrs={"me": id(self)}),
-            __class__=self.__class__.__name__,
-        )
         return (
-            "<%(__class__)s object at 0x%(me)x (stop=%(stop)s, "
-            "wait=%(wait)s, sleep=%(sleep)s, retry=%(retry)s, "
-            "before=%(before)s, after=%(after)s)>"
-        ) % (attrs)
+            f"<{self.__class__.__name__} object at 0x{id(self):x} ("
+            f"stop={self.stop}, "
+            f"wait={self.wait}, "
+            f"sleep={self.sleep}, "
+            f"retry={self.retry}, "
+            f"before={self.before}, "
+            f"after={self.after})>"
+        )
 
     @property
     def statistics(self) -> t.Dict[str, t.Any]:
