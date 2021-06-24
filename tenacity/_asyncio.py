@@ -17,6 +17,7 @@
 
 import functools
 import sys
+import typing
 from asyncio import sleep
 
 from tenacity import AttemptManager
@@ -25,13 +26,21 @@ from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import RetryCallState
 
+WrappedFn = typing.TypeVar("WrappedFn", bound=typing.Callable)
+_RetValT = typing.TypeVar("_RetValT")
+
 
 class AsyncRetrying(BaseRetrying):
-    def __init__(self, sleep=sleep, **kwargs):
+    def __init__(self, sleep: typing.Callable[[float], typing.Awaitable] = sleep, **kwargs: typing.Any) -> None:
         super().__init__(**kwargs)
         self.sleep = sleep
 
-    async def __call__(self, fn, *args, **kwargs):
+    async def __call__(  # type: ignore  # Change signature from supertype
+        self,
+        fn: typing.Callable[..., typing.Awaitable[_RetValT]],
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> _RetValT:
         self.begin()
 
         retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
@@ -50,12 +59,12 @@ class AsyncRetrying(BaseRetrying):
             else:
                 return do
 
-    def __aiter__(self):
+    def __aiter__(self) -> "AsyncRetrying":
         self.begin()
         self._retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
         return self
 
-    async def __anext__(self):
+    async def __anext__(self) -> typing.Union[AttemptManager, typing.Any]:
         while True:
             do = self.iter(retry_state=self._retry_state)
             if do is None:
@@ -68,12 +77,12 @@ class AsyncRetrying(BaseRetrying):
             else:
                 return do
 
-    def wraps(self, fn):
+    def wraps(self, fn: WrappedFn) -> WrappedFn:
         fn = super().wraps(fn)
         # Ensure wrapper is recognized as a coroutine function.
 
         @functools.wraps(fn)
-        async def async_wrapped(*args, **kwargs):
+        async def async_wrapped(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
             return await fn(*args, **kwargs)
 
         # Preserve attributes

@@ -111,7 +111,12 @@ class wait_incrementing(wait_base):
     (and restricting the upper limit to some maximum value).
     """
 
-    def __init__(self, start=0, increment=100, max=_utils.MAX_WAIT):  # noqa
+    def __init__(
+        self,
+        start: typing.Union[int, float] = 0,
+        increment: typing.Union[int, float] = 100,
+        max: typing.Union[int, float] = _utils.MAX_WAIT,  # noqa
+    ) -> None:
         self.start = start
         self.increment = increment
         self.max = max
@@ -134,7 +139,13 @@ class wait_exponential(wait_base):
     wait_random_exponential for the latter case.
     """
 
-    def __init__(self, multiplier=1, max=_utils.MAX_WAIT, exp_base=2, min=0):  # noqa
+    def __init__(
+        self,
+        multiplier: typing.Union[int, float] = 1,
+        max: typing.Union[int, float] = _utils.MAX_WAIT,  # noqa
+        exp_base: typing.Union[int, float] = 2,
+        min: typing.Union[int, float] = 0,  # noqa
+    ) -> None:
         self.multiplier = multiplier
         self.min = min
         self.max = max

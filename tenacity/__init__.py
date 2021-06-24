@@ -89,6 +89,7 @@ if t.TYPE_CHECKING:
 
 
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable)
+_RetValT = t.TypeVar("_RetValT")
 
 
 @t.overload
@@ -388,14 +389,14 @@ class BaseRetrying(ABC):
                 break
 
     @abstractmethod
-    def __call__(self, fn: WrappedFn, *args: t.Any, **kwargs: t.Any) -> t.Any:
+    def __call__(self, fn: t.Callable[..., _RetValT], *args: t.Any, **kwargs: t.Any) -> _RetValT:
         pass
 
 
 class Retrying(BaseRetrying):
     """Retrying controller."""
 
-    def __call__(self, fn: WrappedFn, *args: t.Any, **kwargs: t.Any) -> t.Any:
+    def __call__(self, fn: t.Callable[..., _RetValT], *args: t.Any, **kwargs: t.Any) -> _RetValT:
         self.begin()
 
         retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
