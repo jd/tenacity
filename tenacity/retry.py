@@ -1,5 +1,3 @@
-# -*- encoding: utf-8 -*-
-#
 # Copyright 2016–2021 Julien Danjou
 # Copyright 2016 Joshua Harlow
 # Copyright 2013-2014 Ray Holder
@@ -24,7 +22,7 @@ if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
 
 
-class retry_base(metaclass=abc.ABCMeta):
+class retry_base(abc.ABC):
     """Abstract base class for retry strategies."""
 
     @abc.abstractmethod

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2016-2018 Julien Danjou
 # Copyright 2017 Elisey Zanko
 # Copyright 2016 Étienne Bersac
@@ -23,7 +22,7 @@ import threading
 import time
 import typing as t
 import warnings
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from concurrent import futures
 from inspect import iscoroutinefunction
 
@@ -221,7 +220,7 @@ class AttemptManager:
             return None
 
 
-class BaseRetrying(metaclass=ABCMeta):
+class BaseRetrying(ABC):
     def __init__(
         self,
         sleep: t.Callable[[t.Union[int, float]], None] = sleep,
