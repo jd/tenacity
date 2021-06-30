@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import sys
+import typing
 
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
@@ -21,14 +22,24 @@ from tenacity import RetryCallState
 
 from tornado import gen
 
+if typing.TYPE_CHECKING:
+    from tornado.concurrent import Future
+
+_RetValT = typing.TypeVar("_RetValT")
+
 
 class TornadoRetrying(BaseRetrying):
-    def __init__(self, sleep=gen.sleep, **kwargs):
+    def __init__(self, sleep: "typing.Callable[[float], Future[None]]" = gen.sleep, **kwargs: typing.Any) -> None:
         super().__init__(**kwargs)
         self.sleep = sleep
 
     @gen.coroutine
-    def __call__(self, fn, *args, **kwargs):
+    def __call__(  # type: ignore  # Change signature from supertype
+        self,
+        fn: "typing.Callable[..., typing.Union[typing.Generator[typing.Any, typing.Any, _RetValT], Future[_RetValT]]]",
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> "typing.Generator[typing.Any, typing.Any, _RetValT]":
         self.begin()
 
         retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
