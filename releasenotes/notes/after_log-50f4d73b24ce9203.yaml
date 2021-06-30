@@ -1,0 +1,3 @@
+---
+fixes:
+  - "Fix after_log logger format: function name was used with delay formatting."
