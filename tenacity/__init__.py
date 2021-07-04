@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2016-2018 Julien Danjou
 # Copyright 2017 Elisey Zanko
 # Copyright 2016 Étienne Bersac
@@ -23,11 +22,9 @@ import threading
 import time
 import typing as t
 import warnings
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from concurrent import futures
 from inspect import iscoroutinefunction
-
-from tenacity import _utils
 
 # Import all built-in retry strategies for easier usage.
 from .retry import retry_base  # noqa
@@ -92,6 +89,7 @@ if t.TYPE_CHECKING:
 
 
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable)
+_RetValT = t.TypeVar("_RetValT")
 
 
 @t.overload
@@ -118,13 +116,10 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Union[WrappedFn, t.Callable[[Wrapped
         def wrap(f: WrappedFn) -> WrappedFn:
             if isinstance(f, retry_base):
                 warnings.warn(
-                    (
-                        "Got retry_base instance ({cls}) as callable argument, "
-                        + "this will probably hang indefinitely (did you mean "
-                        + "retry={cls}(...)?)"
-                    ).format(cls=f.__class__.__name__)
+                    f"Got retry_base instance ({f.__class__.__name__}) as callable argument, "
+                    f"this will probably hang indefinitely (did you mean retry={f.__class__.__name__}(...)?)"
                 )
-            if iscoroutinefunction is not None and iscoroutinefunction(f):
+            if iscoroutinefunction(f):
                 r: "BaseRetrying" = AsyncRetrying(*dargs, **dkw)
             elif tornado and hasattr(tornado.gen, "is_coroutine_function") and tornado.gen.is_coroutine_function(f):
                 r = TornadoRetrying(*dargs, **dkw)
@@ -164,8 +159,8 @@ class BaseAction:
     NAME: t.Optional[str] = None
 
     def __repr__(self) -> str:
-        state_str = ", ".join("%s=%r" % (field, getattr(self, field)) for field in self.REPR_FIELDS)
-        return "%s(%s)" % (type(self).__name__, state_str)
+        state_str = ", ".join(f"{field}={getattr(self, field)!r}" for field in self.REPR_FIELDS)
+        return f"{self.__class__.__name__}({state_str})"
 
     def __str__(self) -> str:
         return repr(self)
@@ -199,7 +194,7 @@ class RetryError(Exception):
         raise self
 
     def __str__(self) -> str:
-        return "{0}[{1}]".format(self.__class__.__name__, self.last_attempt)
+        return f"{self.__class__.__name__}[{self.last_attempt}]"
 
 
 class AttemptManager:
@@ -226,7 +221,7 @@ class AttemptManager:
             return None
 
 
-class BaseRetrying(metaclass=ABCMeta):
+class BaseRetrying(ABC):
     def __init__(
         self,
         sleep: t.Callable[[t.Union[int, float]], None] = sleep,
@@ -251,10 +246,6 @@ class BaseRetrying(metaclass=ABCMeta):
         self._local = threading.local()
         self.retry_error_cls = retry_error_cls
         self.retry_error_callback = retry_error_callback
-
-        # This attribute was moved to RetryCallState and is deprecated on
-        # Retrying objects but kept for backward compatibility.
-        self.fn: t.Optional[WrappedFn] = None
 
     def copy(
         self,
@@ -284,15 +275,15 @@ class BaseRetrying(metaclass=ABCMeta):
         )
 
     def __repr__(self) -> str:
-        attrs = dict(
-            _utils.visible_attrs(self, attrs={"me": id(self)}),
-            __class__=self.__class__.__name__,
-        )
         return (
-            "<%(__class__)s object at 0x%(me)x (stop=%(stop)s, "
-            "wait=%(wait)s, sleep=%(sleep)s, retry=%(retry)s, "
-            "before=%(before)s, after=%(after)s)>"
-        ) % (attrs)
+            f"<{self.__class__.__name__} object at 0x{id(self):x} ("
+            f"stop={self.stop}, "
+            f"wait={self.wait}, "
+            f"sleep={self.sleep}, "
+            f"retry={self.retry}, "
+            f"before={self.before}, "
+            f"after={self.after})>"
+        )
 
     @property
     def statistics(self) -> t.Dict[str, t.Any]:
@@ -340,12 +331,11 @@ class BaseRetrying(metaclass=ABCMeta):
 
         return wrapped_f
 
-    def begin(self, fn: t.Optional[WrappedFn]) -> None:
+    def begin(self) -> None:
         self.statistics.clear()
         self.statistics["start_time"] = time.monotonic()
         self.statistics["attempt_number"] = 1
         self.statistics["idle_for"] = 0
-        self.fn = fn
 
     def iter(self, retry_state: "RetryCallState") -> t.Union[DoAttempt, DoSleep, t.Any]:  # noqa
         fut = retry_state.outcome
@@ -385,7 +375,7 @@ class BaseRetrying(metaclass=ABCMeta):
         return DoSleep(sleep)
 
     def __iter__(self) -> t.Generator[AttemptManager, None, None]:
-        self.begin(None)
+        self.begin()
 
         retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
         while True:
@@ -399,23 +389,15 @@ class BaseRetrying(metaclass=ABCMeta):
                 break
 
     @abstractmethod
-    def __call__(self, fn: WrappedFn, *args: t.Any, **kwargs: t.Any) -> t.Any:
+    def __call__(self, fn: t.Callable[..., _RetValT], *args: t.Any, **kwargs: t.Any) -> _RetValT:
         pass
-
-    def call(self, *args: t.Any, **kwargs: t.Any) -> t.Union[DoAttempt, DoSleep, t.Any]:
-        """Use ``__call__`` instead because this method is deprecated."""
-        warnings.warn(
-            "'call()' method is deprecated. " + "Use '__call__()' instead",
-            DeprecationWarning,
-        )
-        return self.__call__(*args, **kwargs)
 
 
 class Retrying(BaseRetrying):
     """Retrying controller."""
 
-    def __call__(self, fn: WrappedFn, *args: t.Any, **kwargs: t.Any) -> t.Any:
-        self.begin(fn)
+    def __call__(self, fn: t.Callable[..., _RetValT], *args: t.Any, **kwargs: t.Any) -> _RetValT:
+        self.begin()
 
         retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
         while True:

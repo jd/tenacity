@@ -34,10 +34,8 @@ def before_log(logger: "logging.Logger", log_level: int) -> typing.Callable[["Re
     def log_it(retry_state: "RetryCallState") -> None:
         logger.log(
             log_level,
-            "Starting call to '{0}', this is the {1} time calling it.".format(
-                _utils.get_callback_name(retry_state.fn),
-                _utils.to_ordinal(retry_state.attempt_number),
-            ),
+            f"Starting call to '{_utils.get_callback_name(retry_state.fn)}', "
+            f"this is the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
         )
 
     return log_it
