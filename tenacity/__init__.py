@@ -500,17 +500,13 @@ class RetryCallState:
             result = "none yet"
         elif self.outcome.failed:
             exception = self.outcome.exception()
-            result = "failed ({} {})".format(exception.__class__.__name__, exception)
+            result = f"failed ({exception.__class__.__name__} {exception})"
         else:
-            result = "returned {}".format(self.outcome.result())
+            result = f"returned {self.outcome.result()}"
 
-        return "<{cls} {id}: attempt #{attempt}; slept for {slept}; last result: {result}>".format(
-            cls=self.__class__.__name__,
-            id=id(self),
-            attempt=self.attempt_number,
-            slept=float(round(self.idle_for, 2)),
-            result=result,
-        )
+        slept = float(round(self.idle_for, 2))
+        clsname = self.__class__.__name__
+        return f"<{clsname} {id(self)}: attempt #{self.attempt_number}; slept for {slept}; last result: {result}>"
 
 
 from tenacity._asyncio import AsyncRetrying  # noqa:E402,I100
