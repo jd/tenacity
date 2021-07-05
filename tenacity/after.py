@@ -31,15 +31,15 @@ def after_nothing(retry_state: "RetryCallState") -> None:
 def after_log(
     logger: "logging.Logger",
     log_level: int,
-    sec_format: str = "%0.3f",
+    sec_format: str = "0.3f",
 ) -> typing.Callable[["RetryCallState"], None]:
     """After call strategy that logs to some logger the finished attempt."""
 
     def log_it(retry_state: "RetryCallState") -> None:
-        sec = sec_format % _utils.get_callback_name(retry_state.fn)
+        callback_name = _utils.get_callback_name(retry_state.fn)
         logger.log(
             log_level,
-            f"Finished call to '{sec}' after {retry_state.seconds_since_start}(s), "
+            f"Finished call to '{callback_name}' after {retry_state.seconds_since_start:{sec_format}}(s), "
             f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
         )
 
