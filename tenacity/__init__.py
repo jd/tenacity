@@ -151,7 +151,7 @@ class BaseAction:
 
     Concrete implementations must define:
     - __init__: to initialize all necessary fields
-    - REPR_ATTRS: class variable specifying attributes to include in repr(self)
+    - REPR_FIELDS: class variable specifying attributes to include in repr(self)
     - NAME: for identification in retry object methods and callbacks
     """
 
@@ -494,6 +494,19 @@ class RetryCallState:
         fut = Future(self.attempt_number)
         fut.set_exception(exc_info[1])
         self.outcome, self.outcome_timestamp = fut, ts
+
+    def __repr__(self):
+        if self.outcome is None:
+            result = "none yet"
+        elif self.outcome.failed:
+            exception = self.outcome.exception()
+            result = f"failed ({exception.__class__.__name__} {exception})"
+        else:
+            result = f"returned {self.outcome.result()}"
+
+        slept = float(round(self.idle_for, 2))
+        clsname = self.__class__.__name__
+        return f"<{clsname} {id(self)}: attempt #{self.attempt_number}; slept for {slept}; last result: {result}>"
 
 
 from tenacity._asyncio import AsyncRetrying  # noqa:E402,I100
