@@ -21,7 +21,7 @@ import typing
 from tenacity import _utils
 
 if typing.TYPE_CHECKING:
-    from tenacity import RetryCallState
+    from tenacity import RetryCallState, RetryCallStateCallable
 
 
 class wait_base(abc.ABC):
@@ -44,11 +44,15 @@ class wait_base(abc.ABC):
 class wait_fixed(wait_base):
     """Wait strategy that waits a fixed amount of time between each retry."""
 
-    def __init__(self, wait: float) -> None:
+    def __init__(self, wait: typing.Union[float, "RetryCallStateCallable"]) -> None:
         self.wait_fixed = wait
 
     def __call__(self, retry_state: "RetryCallState") -> float:
-        return self.wait_fixed
+        if isinstance(self.wait_fixed, typing.Callable):
+            wait_fixed = self.wait_fixed(retry_state)
+        else:
+            wait_fixed = self.wait_fixed
+        return wait_fixed
 
 
 class wait_none(wait_fixed):
@@ -61,12 +65,18 @@ class wait_none(wait_fixed):
 class wait_random(wait_base):
     """Wait strategy that waits a random amount of time between min/max."""
 
-    def __init__(self, min: typing.Union[int, float] = 0, max: typing.Union[int, float] = 1) -> None:  # noqa
+    def __init__(
+        self,
+        min: typing.Union[int, float, "RetryCallStateCallable"] = 0,
+        max: typing.Union[int, float, "RetryCallStateCallable"] = 1,
+    ) -> None:  # noqa
         self.wait_random_min = min
         self.wait_random_max = max
 
     def __call__(self, retry_state: "RetryCallState") -> float:
-        return self.wait_random_min + (random.random() * (self.wait_random_max - self.wait_random_min))
+        wait_random_min = _utils.call_if_callable(self.wait_random_min, retry_state)
+        wait_random_max = _utils.call_if_callable(self.wait_random_max, retry_state)
+        return wait_random_min + (random.random() * (wait_random_max - wait_random_min))
 
 
 class wait_combine(wait_base):
@@ -113,17 +123,20 @@ class wait_incrementing(wait_base):
 
     def __init__(
         self,
-        start: typing.Union[int, float] = 0,
-        increment: typing.Union[int, float] = 100,
-        max: typing.Union[int, float] = _utils.MAX_WAIT,  # noqa
+        start: typing.Union[int, float, "RetryCallStateCallable"] = 0,
+        increment: typing.Union[int, float, "RetryCallStateCallable"] = 100,
+        max: typing.Union[int, float, "RetryCallStateCallable"] = _utils.MAX_WAIT,  # noqa
     ) -> None:
         self.start = start
         self.increment = increment
         self.max = max
 
     def __call__(self, retry_state: "RetryCallState") -> float:
-        result = self.start + (self.increment * (retry_state.attempt_number - 1))
-        return max(0, min(result, self.max))
+        start = _utils.call_if_callable(self.start, retry_state)
+        increment = _utils.call_if_callable(self.increment, retry_state)
+        _max = _utils.call_if_callable(self.max, retry_state)
+        result = start + (increment * (retry_state.attempt_number - 1))
+        return max(0, min(result, _max))
 
 
 class wait_exponential(wait_base):
@@ -141,10 +154,10 @@ class wait_exponential(wait_base):
 
     def __init__(
         self,
-        multiplier: typing.Union[int, float] = 1,
-        max: typing.Union[int, float] = _utils.MAX_WAIT,  # noqa
-        exp_base: typing.Union[int, float] = 2,
-        min: typing.Union[int, float] = 0,  # noqa
+        multiplier: typing.Union[int, float, "RetryCallStateCallable"] = 1,
+        max: typing.Union[int, float, "RetryCallStateCallable"] = _utils.MAX_WAIT,  # noqa
+        exp_base: typing.Union[int, float, "RetryCallStateCallable"] = 2,
+        min: typing.Union[int, float, "RetryCallStateCallable"] = 0,  # noqa
     ) -> None:
         self.multiplier = multiplier
         self.min = min
@@ -152,12 +165,17 @@ class wait_exponential(wait_base):
         self.exp_base = exp_base
 
     def __call__(self, retry_state: "RetryCallState") -> float:
+        multiplier = _utils.call_if_callable(self.multiplier, retry_state)
+        _min = _utils.call_if_callable(self.min, retry_state)
+        _max = _utils.call_if_callable(self.max, retry_state)
+        exp_base = _utils.call_if_callable(self.exp_base, retry_state)
+
         try:
-            exp = self.exp_base ** (retry_state.attempt_number - 1)
-            result = self.multiplier * exp
+            exp = exp_base ** (retry_state.attempt_number - 1)
+            result = multiplier * exp
         except OverflowError:
-            return self.max
-        return max(max(0, self.min), min(result, self.max))
+            return _max
+        return max(max(0, _min), min(result, _max))
 
 
 class wait_random_exponential(wait_exponential):

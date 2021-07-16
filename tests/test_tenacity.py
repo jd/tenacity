@@ -684,6 +684,25 @@ class IOErrorUntilCount:
         raise IOError("Hi there, I'm an IOError")
 
 
+
+class RaiseIOErrorUntilCount:
+
+    def __init__(self, count):
+        self.counter = 0
+        self.tries = count + 1
+        self.count = count
+
+    def go(self):
+        """Raise IOError until after count threshold has been crossed.
+
+        Then return True
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            raise IOError("Hi there, I'm an IOError")
+        return True
+
+
 class CustomError(Exception):
     """This is a custom exception class.
 
@@ -778,6 +797,14 @@ def _retryable_test_with_unless_exception_type_name(thing):
     retry=tenacity.retry_unless_exception_type(NameError),
 )
 def _retryable_test_with_unless_exception_type_name_attempt_limit(thing):
+    return thing.go()
+
+
+@retry(
+    stop=tenacity.stop_after_attempt(tenacity.from_attr("tries")),
+    retry=tenacity.retry_if_exception_type(IOError),
+)
+def _retryable_test_with_dynamic_configuration(thing):
     return thing.go()
 
 
@@ -1450,6 +1477,13 @@ class TestRetryTyping(unittest.TestCase):
         check_type("with_raw_result", with_raw_result, str)
         check_type("with_constructor", with_constructor, typing.Callable[[int], str])
         check_type("with_constructor_result", with_constructor_result, str)
+
+
+class TestDynamicConfiguration(unittest.TestCase):
+    
+    def test_retry_with_dynamic_configuration_of_attempts(self):
+        # two iterations with IOError, one that returns True
+        _retryable_test_with_dynamic_configuration(RaiseIOErrorUntilCount(2))
 
 
 @contextmanager

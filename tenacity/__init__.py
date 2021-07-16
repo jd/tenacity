@@ -509,6 +509,37 @@ class RetryCallState:
         return f"<{clsname} {id(self)}: attempt #{self.attempt_number}; slept for {slept}; last result: {result}>"
 
 
+RetryCallStateCallable = t.Callable[[RetryCallState], t.Any]
+
+
+def from_attr(attr_name: str) -> RetryCallStateCallable:
+    """
+    Returns a callable that can use instance attributes to configure @retry
+
+    If we apply the @retry decorator to a class method, then with this function we
+    can use the attributes of this class as a source for configuring @retry.
+
+    Example:
+    >>>class Service:
+    >>>    def __init__(self, tries):
+    >>>        self.tries = tries
+
+    >>>    @retry(
+    >>>        retry=retry_if_exception_type(IOError),
+    >>>        stop=stop_after_attempts(attempts=from_attr("tries")),
+    >>>    )
+    >>>    def call_other_service(self):
+    >>>        ...
+
+    """
+
+    def accessor(retry_state: RetryCallState):
+        instance = retry_state.args[0]
+        return getattr(instance, attr_name)
+
+    return accessor
+
+
 from tenacity._asyncio import AsyncRetrying  # noqa:E402,I100
 
 if tornado:
