@@ -95,7 +95,7 @@ an exception is raised.
 .. testcode::
 
     @retry
-    def never_give_up_never_surrender():
+    def never_gonna_give_you_up():
         print("Retry forever ignoring Exceptions, don't wait between retries")
         raise Exception
 
