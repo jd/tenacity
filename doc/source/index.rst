@@ -222,6 +222,21 @@ We can also use the result of the function to alter the behavior of retrying.
     def might_return_none():
         print("Retry with no wait if return value is None")
 
+See also these methods:
+
+.. testcode::
+
+    retry_if_exception
+    retry_if_exception_type
+    retry_if_not_exception_type
+    retry_unless_exception_type
+    retry_if_result
+    retry_if_not_result
+    retry_if_exception_message
+    retry_if_not_exception_message
+    retry_any
+    retry_all
+
 We can also combine several conditions:
 
 .. testcode::
