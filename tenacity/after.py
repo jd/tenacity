@@ -36,11 +36,13 @@ def after_log(
     """After call strategy that logs to some logger the finished attempt."""
 
     def log_it(retry_state: "RetryCallState") -> None:
+        target = "block" if retry_state.fn is None else f"call to '{_utils.get_callback_name(retry_state.fn)}'"
+        verb = "running" if retry_state.fn is None else "calling"
+
         logger.log(
             log_level,
-            f"Finished call to '{_utils.get_callback_name(retry_state.fn)}' "
-            f"after {sec_format % retry_state.seconds_since_start}(s), "
-            f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
+            f"Finished {target} after {sec_format % retry_state.seconds_since_start}(s), "
+            f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time {verb} it.",
         )
 
     return log_it

@@ -61,3 +61,30 @@ class TestBeforeSleepLogFormat(unittest.TestCase):
             f"in {sleep} seconds as it returned {retry_state.outcome.result()}.",
             exc_info=False,
         )
+
+    def test_03_wrong_return_no_call_function(self):
+        """Test log formatting when there is no called function.
+
+        E.g. when using as context manager.
+        """
+        log = unittest.mock.MagicMock(spec="logging.Logger.log")
+        logger = unittest.mock.MagicMock(spec="logging.Logger", log=log)
+
+        delay_since_first_attempt = 0.1
+        sleep = 2
+
+        retry_state = test_tenacity.make_retry_state(self.previous_attempt_number, delay_since_first_attempt)
+        retry_state.fn = None
+        retry_state.next_action = unittest.mock.MagicMock(spec="tenacity.RetryAction", sleep=sleep)
+        retry_state.outcome = unittest.mock.MagicMock(
+            spec="tenacity.Future",
+            failed=False,
+            result=unittest.mock.Mock(return_value="infinity"),
+        )
+        fun = before_sleep_log(logger=logger, log_level=self.log_level)
+        fun(retry_state)
+        log.assert_called_once_with(
+            self.log_level,
+            f"Retrying block in {sleep} seconds as it returned {retry_state.outcome.result()}.",
+            exc_info=False,
+        )

@@ -48,10 +48,10 @@ def before_sleep_log(
             verb, value = "returned", retry_state.outcome.result()
             local_exc_info = False  # exc_info does not apply when no exception
 
+        target = "block" if retry_state.fn is None else _utils.get_callback_name(retry_state.fn)
         logger.log(
             log_level,
-            f"Retrying {_utils.get_callback_name(retry_state.fn)} "
-            f"in {retry_state.next_action.sleep} seconds as it {verb} {value}.",
+            f"Retrying {target} in {retry_state.next_action.sleep} seconds as it {verb} {value}.",
             exc_info=local_exc_info,
         )
 
