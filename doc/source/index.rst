@@ -210,6 +210,11 @@ exceptions, as in the cases here.
         print("Retry forever with no wait if an IOError occurs, raise any other errors")
         raise Exception
 
+    @retry(retry=retry_if_not_exception_type(ClientError))
+    def might_client_error():
+        print("Retry forever with no wait if any error other than ClientError occurs. Immediately raise ClientError.")
+        raise Exception
+
 We can also use the result of the function to alter the behavior of retrying.
 
 .. testcode::
