@@ -36,17 +36,26 @@ def before_sleep_log(
     """Before call strategy that logs to some logger the attempt."""
 
     def log_it(retry_state: "RetryCallState") -> None:
+        if retry_state.outcome is None:
+            return None
+
         if retry_state.outcome.failed:
             ex = retry_state.outcome.exception()
             verb, value = "raised", f"{ex.__class__.__name__}: {ex}"
 
             if exc_info:
-                local_exc_info = retry_state.outcome.exception()
+                local_exc_info = retry_state.outcome.exception() is not None
             else:
                 local_exc_info = False
         else:
             verb, value = "returned", retry_state.outcome.result()
             local_exc_info = False  # exc_info does not apply when no exception
+
+        if retry_state.next_action is None:
+            return None
+
+        if retry_state.fn is None:
+            return None
 
         logger.log(
             log_level,

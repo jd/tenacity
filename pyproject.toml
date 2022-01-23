@@ -13,4 +13,8 @@ line-length = 120
 safe = true
 target-version = ["py36", "py37", "py38", "py39"]
 
+[[tool.mypy.overrides]]
+module = "tornado.*"
+ignore_missing_imports = true
+
 [tool.setuptools_scm]

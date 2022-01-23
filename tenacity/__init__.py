@@ -213,7 +213,7 @@ class AttemptManager:
         traceback: t.Optional["types.TracebackType"],
     ) -> t.Optional[bool]:
         if isinstance(exc_value, BaseException):
-            self.retry_state.set_exception((exc_type, exc_value, traceback))
+            self.retry_state.set_exception((exc_type, exc_value, traceback))  # type: ignore
             return True  # Swallow exception.
         else:
             # We don't have the result, actually.
@@ -326,10 +326,10 @@ class BaseRetrying(ABC):
         def retry_with(*args: t.Any, **kwargs: t.Any) -> WrappedFn:
             return self.copy(*args, **kwargs).wraps(f)
 
-        wrapped_f.retry = self
-        wrapped_f.retry_with = retry_with
+        wrapped_f.retry = self  # type: ignore
+        wrapped_f.retry_with = retry_with  # type: ignore
 
-        return wrapped_f
+        return wrapped_f  # type: ignore
 
     def begin(self) -> None:
         self.statistics.clear()
@@ -344,7 +344,7 @@ class BaseRetrying(ABC):
                 self.before(retry_state)
             return DoAttempt()
 
-        is_explicit_retry = retry_state.outcome.failed and isinstance(retry_state.outcome.exception(), TryAgain)
+        is_explicit_retry = fut.failed and isinstance(fut.exception(), TryAgain)
         if not (is_explicit_retry or self.retry(retry_state=retry_state)):
             return fut.result()
 
@@ -406,7 +406,7 @@ class Retrying(BaseRetrying):
                 try:
                     result = fn(*args, **kwargs)
                 except BaseException:  # noqa: B902
-                    retry_state.set_exception(sys.exc_info())
+                    retry_state.set_exception(sys.exc_info())  # type: ignore
                 else:
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):

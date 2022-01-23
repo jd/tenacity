@@ -93,4 +93,6 @@ class stop_after_delay(stop_base):
         self.max_delay = max_delay
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
+        if retry_state.seconds_since_start is None:
+            return False
         return retry_state.seconds_since_start >= self.max_delay

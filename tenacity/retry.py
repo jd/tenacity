@@ -63,8 +63,11 @@ class retry_if_exception(retry_base):
         self.predicate = predicate
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
-        if retry_state.outcome.failed:
-            return self.predicate(retry_state.outcome.exception())
+        if retry_state.outcome is not None and retry_state.outcome.failed:
+            ex = retry_state.outcome.exception()
+            if ex is None:
+                return False
+            return self.predicate(ex)
         else:
             return False
 
@@ -112,9 +115,15 @@ class retry_unless_exception_type(retry_if_exception):
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
         # always retry if no exception was raised
+        if retry_state.outcome is None:
+            return True
         if not retry_state.outcome.failed:
             return True
-        return self.predicate(retry_state.outcome.exception())
+
+        ex = retry_state.outcome.exception()
+        if ex is None:
+            return True
+        return self.predicate(ex)
 
 
 class retry_if_result(retry_base):
@@ -124,7 +133,7 @@ class retry_if_result(retry_base):
         self.predicate = predicate
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
-        if not retry_state.outcome.failed:
+        if retry_state.outcome is not None and not retry_state.outcome.failed:
             return self.predicate(retry_state.outcome.result())
         else:
             return False
@@ -137,7 +146,7 @@ class retry_if_not_result(retry_base):
         self.predicate = predicate
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
-        if not retry_state.outcome.failed:
+        if retry_state.outcome is not None and not retry_state.outcome.failed:
             return not self.predicate(retry_state.outcome.result())
         else:
             return False
@@ -188,9 +197,14 @@ class retry_if_not_exception_message(retry_if_exception_message):
         self.predicate = lambda *args_, **kwargs_: not if_predicate(*args_, **kwargs_)
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
+        if retry_state.outcome is None:
+            return True
         if not retry_state.outcome.failed:
             return True
-        return self.predicate(retry_state.outcome.exception())
+        ex = retry_state.outcome.exception()
+        if ex is None:
+            return True
+        return self.predicate(ex)
 
 
 class retry_any(retry_base):

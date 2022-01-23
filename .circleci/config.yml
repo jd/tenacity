@@ -19,6 +19,15 @@ jobs:
           command: |
             sudo pip install tox
             tox -e black-ci
+  mypy:
+    docker:
+      - image: circleci/python:3.9
+    steps:
+      - checkout
+      - run:
+          command: |
+            sudo pip install tox
+            tox -e mypy
   py36:
     docker:
       - image: circleci/python:3.6
@@ -86,6 +95,7 @@ workflows:
     jobs:
       - pep8
       - black
+      - mypy
       - py36
       - py37
       - py38

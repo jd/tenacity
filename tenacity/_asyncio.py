@@ -26,6 +26,7 @@ from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import RetryCallState
 
+
 WrappedFn = typing.TypeVar("WrappedFn", bound=typing.Callable)
 _RetValT = typing.TypeVar("_RetValT")
 
@@ -50,7 +51,7 @@ class AsyncRetrying(BaseRetrying):
                 try:
                     result = await fn(*args, **kwargs)
                 except BaseException:  # noqa: B902
-                    retry_state.set_exception(sys.exc_info())
+                    retry_state.set_exception(sys.exc_info())  # type: ignore
                 else:
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):
@@ -86,7 +87,7 @@ class AsyncRetrying(BaseRetrying):
             return await fn(*args, **kwargs)
 
         # Preserve attributes
-        async_wrapped.retry = fn.retry
-        async_wrapped.retry_with = fn.retry_with
+        async_wrapped.retry = fn.retry  # type: ignore
+        async_wrapped.retry_with = fn.retry_with  # type: ignore
 
-        return async_wrapped
+        return async_wrapped  # type: ignore
