@@ -79,9 +79,9 @@ from .before_sleep import before_sleep_log  # noqa
 from .before_sleep import before_sleep_nothing  # noqa
 
 try:
-    import tornado  # type: ignore
+    import tornado
 except ImportError:
-    tornado = None  # type: ignore
+    tornado = None
 
 if t.TYPE_CHECKING:
     import types
@@ -90,18 +90,8 @@ if t.TYPE_CHECKING:
     from .stop import stop_base
 
 
-WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable)
+WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Any])
 _RetValT = t.TypeVar("_RetValT")
-
-
-@t.overload
-def retry(fn: WrappedFn) -> WrappedFn:
-    pass
-
-
-@t.overload
-def retry(*dargs: t.Any, **dkw: t.Any) -> t.Callable[[WrappedFn], WrappedFn]:  # noqa
-    pass
 
 
 def retry(*dargs: t.Any, **dkw: t.Any) -> t.Union[WrappedFn, t.Callable[[WrappedFn], WrappedFn]]:  # noqa
@@ -214,7 +204,7 @@ class AttemptManager:
         exc_value: t.Optional[BaseException],
         traceback: t.Optional["types.TracebackType"],
     ) -> t.Optional[bool]:
-        if isinstance(exc_value, BaseException):
+        if exc_type is not None and exc_value is not None:
             self.retry_state.set_exception((exc_type, exc_value, traceback))
             return True  # Swallow exception.
         else:
@@ -310,9 +300,9 @@ class BaseRetrying(ABC):
                   statistics from each thread).
         """
         try:
-            return self._local.statistics
+            return self._local.statistics  # type: ignore[no-any-return]
         except AttributeError:
-            self._local.statistics = {}
+            self._local.statistics = t.cast(t.Dict[str, t.Any], {})
             return self._local.statistics
 
     def wraps(self, f: WrappedFn) -> WrappedFn:
@@ -328,10 +318,10 @@ class BaseRetrying(ABC):
         def retry_with(*args: t.Any, **kwargs: t.Any) -> WrappedFn:
             return self.copy(*args, **kwargs).wraps(f)
 
-        wrapped_f.retry = self
-        wrapped_f.retry_with = retry_with
+        wrapped_f.retry = self  # type: ignore[attr-defined]
+        wrapped_f.retry_with = retry_with  # type: ignore[attr-defined]
 
-        return wrapped_f
+        return wrapped_f  # type: ignore[return-value]
 
     def begin(self) -> None:
         self.statistics.clear()
@@ -346,7 +336,7 @@ class BaseRetrying(ABC):
                 self.before(retry_state)
             return DoAttempt()
 
-        is_explicit_retry = retry_state.outcome.failed and isinstance(retry_state.outcome.exception(), TryAgain)
+        is_explicit_retry = fut.failed and isinstance(fut.exception(), TryAgain)
         if not (is_explicit_retry or self.retry(retry_state=retry_state)):
             return fut.result()
 
@@ -408,17 +398,23 @@ class Retrying(BaseRetrying):
                 try:
                     result = fn(*args, **kwargs)
                 except BaseException:  # noqa: B902
-                    retry_state.set_exception(sys.exc_info())
+                    retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]
                 else:
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):
                 retry_state.prepare_for_next_attempt()
                 self.sleep(do)
             else:
-                return do
+                return do  # type: ignore[no-any-return]
 
 
-class Future(futures.Future):
+if sys.version_info[1] >= 9:
+    FutureGenericT = futures.Future[t.Any]
+else:
+    FutureGenericT = futures.Future
+
+
+class Future(FutureGenericT):
     """Encapsulates a (future or past) attempted call to a target function."""
 
     def __init__(self, attempt_number: int) -> None:
@@ -491,13 +487,15 @@ class RetryCallState:
         fut.set_result(val)
         self.outcome, self.outcome_timestamp = fut, ts
 
-    def set_exception(self, exc_info: t.Tuple[t.Type[BaseException], BaseException, "types.TracebackType"]) -> None:
+    def set_exception(
+        self, exc_info: t.Tuple[t.Type[BaseException], BaseException, "types.TracebackType| None"]
+    ) -> None:
         ts = time.monotonic()
         fut = Future(self.attempt_number)
         fut.set_exception(exc_info[1])
         self.outcome, self.outcome_timestamp = fut, ts
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.outcome is None:
             result = "none yet"
         elif self.outcome.failed:

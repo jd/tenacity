@@ -9,6 +9,7 @@ queue_rules:
       - "check-success=test (3.11, py311)"
       - "check-success=test (3.11, black-ci)"
       - "check-success=test (3.11, pep8)"
+      - "check-success=test (3.11, mypy)"
 
 pull_request_rules:
   - name: warn on no changelog
