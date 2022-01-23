@@ -13,4 +13,13 @@ line-length = 120
 safe = true
 target-version = ["py36", "py37", "py38", "py39", "py310", "py311"]
 
+[tool.mypy]
+strict = true
+files = ["tenacity"]
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "tornado.*"
+ignore_missing_imports = true
+
 [tool.setuptools_scm]

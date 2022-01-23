@@ -2,8 +2,8 @@ import logging
 import random
 import unittest.mock
 
-from tenacity import after_log
 from tenacity import _utils  # noqa
+from tenacity import after_log
 
 from . import test_tenacity
 
@@ -24,9 +24,10 @@ class TestAfterLogFormat(unittest.TestCase):
         retry_state = test_tenacity.make_retry_state(self.previous_attempt_number, delay_since_first_attempt)
         fun = after_log(logger=logger, log_level=self.log_level)  # use default sec_format
         fun(retry_state)
+        fn_name = "<unknown>" if retry_state.fn is None else _utils.get_callback_name(retry_state.fn)
         log.assert_called_once_with(
             self.log_level,
-            f"Finished call to '{_utils.get_callback_name(retry_state.fn)}' "
+            f"Finished call to '{fn_name}' "
             f"after {sec_format % retry_state.seconds_since_start}(s), "
             f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
         )
@@ -42,9 +43,10 @@ class TestAfterLogFormat(unittest.TestCase):
         retry_state = test_tenacity.make_retry_state(self.previous_attempt_number, delay_since_first_attempt)
         fun = after_log(logger=logger, log_level=self.log_level, sec_format=sec_format)
         fun(retry_state)
+        fn_name = "<unknown>" if retry_state.fn is None else _utils.get_callback_name(retry_state.fn)
         log.assert_called_once_with(
             self.log_level,
-            f"Finished call to '{_utils.get_callback_name(retry_state.fn)}' "
+            f"Finished call to '{fn_name}' "
             f"after {sec_format % retry_state.seconds_since_start}(s), "
             f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
         )

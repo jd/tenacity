@@ -26,16 +26,19 @@ from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import RetryCallState
 
-WrappedFn = typing.TypeVar("WrappedFn", bound=typing.Callable)
+
+WrappedFn = typing.TypeVar("WrappedFn", bound=typing.Callable[..., typing.Any])
 _RetValT = typing.TypeVar("_RetValT")
 
 
 class AsyncRetrying(BaseRetrying):
-    def __init__(self, sleep: typing.Callable[[float], typing.Awaitable] = sleep, **kwargs: typing.Any) -> None:
+    def __init__(
+        self, sleep: typing.Callable[[float], typing.Awaitable[typing.Any]] = sleep, **kwargs: typing.Any
+    ) -> None:
         super().__init__(**kwargs)
         self.sleep = sleep
 
-    async def __call__(  # type: ignore  # Change signature from supertype
+    async def __call__(  # type: ignore[override]
         self,
         fn: typing.Callable[..., typing.Awaitable[_RetValT]],
         *args: typing.Any,
@@ -50,14 +53,14 @@ class AsyncRetrying(BaseRetrying):
                 try:
                     result = await fn(*args, **kwargs)
                 except BaseException:  # noqa: B902
-                    retry_state.set_exception(sys.exc_info())
+                    retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]
                 else:
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):
                 retry_state.prepare_for_next_attempt()
                 await self.sleep(do)
             else:
-                return do
+                return do  # type: ignore[no-any-return]
 
     def __aiter__(self) -> "AsyncRetrying":
         self.begin()
@@ -86,7 +89,7 @@ class AsyncRetrying(BaseRetrying):
             return await fn(*args, **kwargs)
 
         # Preserve attributes
-        async_wrapped.retry = fn.retry
-        async_wrapped.retry_with = fn.retry_with
+        async_wrapped.retry = fn.retry  # type: ignore[attr-defined]
+        async_wrapped.retry_with = fn.retry_with  # type: ignore[attr-defined]
 
-        return async_wrapped
+        return async_wrapped  # type: ignore[return-value]
