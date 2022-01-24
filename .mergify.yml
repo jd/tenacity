@@ -1,3 +1,13 @@
+queue_rules:
+  - name: default
+    conditions:
+      - "status-success=ci/circleci: pep8"
+      - "status-success=ci/circleci: black"
+      - "status-success=ci/circleci: py36"
+      - "status-success=ci/circleci: py37"
+      - "status-success=ci/circleci: py38"
+      - "status-success=ci/circleci: py39"
+
 pull_request_rules:
   - name: warn on no changelog
     conditions:
@@ -21,8 +31,8 @@ pull_request_rules:
       - "#approved-reviews-by>=1"
       - label=no-changelog
     actions:
-      merge:
-        strict: "smart"
+      queue:
+        name: default
         method: squash
   - name: automatic merge with changelog
     conditions:
@@ -35,8 +45,8 @@ pull_request_rules:
       - "#approved-reviews-by>=1"
       - files~=^releasenotes/notes/
     actions:
-      merge:
-        strict: "smart"
+      queue:
+        name: default
         method: squash
   - name: automatic merge for jd without changelog
     conditions:
@@ -49,8 +59,8 @@ pull_request_rules:
       - "status-success=ci/circleci: py39"
       - label=no-changelog
     actions:
-      merge:
-        strict: "smart"
+      queue:
+        name: default
         method: squash
   - name: automatic merge for jd with changelog
     conditions:
@@ -63,8 +73,8 @@ pull_request_rules:
       - "status-success=ci/circleci: py39"
       - files~=^releasenotes/notes/
     actions:
-      merge:
-        strict: "smart"
+      queue:
+        name: default
         method: squash
   - name: dismiss reviews
     conditions: []
