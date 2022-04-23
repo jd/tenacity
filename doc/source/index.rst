@@ -205,6 +205,9 @@ exceptions, as in the cases here.
 
 .. testcode::
 
+    class ClientError(Exception):
+        """Some type of client error."""
+
     @retry(retry=retry_if_exception_type(IOError))
     def might_io_error():
         print("Retry forever with no wait if an IOError occurs, raise any other errors")
