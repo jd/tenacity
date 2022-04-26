@@ -196,11 +196,11 @@ class wait_exponential_jitter(wait_base):
 
     It allows for a customized initial wait, maximum wait and jitter.
 
-    This implements the stragety described here:
+    This implements the strategy described here:
     https://cloud.google.com/storage/docs/retry-strategy
 
     The wait time is min(initial * (2**n + random.uniform(0, jitter)), maximum)
-    where n in the retry count.
+    where n is the retry count.
     """
 
     def __init__(
