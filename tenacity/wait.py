@@ -205,10 +205,10 @@ class wait_exponential_jitter(wait_base):
 
     def __init__(
         self,
-        initial: typing.Union[int, float] = 1,  # noqa
-        max: typing.Union[int, float] = _utils.MAX_WAIT,  # noqa
-        exp_base: typing.Union[int, float] = 2,
-        jitter: typing.Union[int, float] = 1,
+        initial: float = 1,  # noqa
+        max: float = _utils.MAX_WAIT,  # noqa
+        exp_base: float = 2,
+        jitter: float = 1,
     ) -> None:
         self.initial = initial
         self.max = max
