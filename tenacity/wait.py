@@ -205,7 +205,7 @@ class wait_exponential_jitter(wait_base):
 
     def __init__(
         self,
-        initial: float = 1,  # noqa
+        initial: float = 1,
         max: float = _utils.MAX_WAIT,  # noqa
         exp_base: float = 2,
         jitter: float = 1,
