@@ -66,3 +66,11 @@ def get_callback_name(cb: typing.Callable[..., typing.Any]) -> str:
         except AttributeError:
             pass
         return ".".join(segments)
+
+
+def call_if_callable(maybe_callable, *args, **kwargs):
+    """Calls the passed argument if possible, otherwise return it as is"""
+    if isinstance(maybe_callable, typing.Callable):
+        return maybe_callable(*args, **kwargs)
+    else:
+        return maybe_callable
