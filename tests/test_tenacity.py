@@ -1093,6 +1093,8 @@ class TestBeforeAfterAttempts(unittest.TestCase):
             self.assertGreater(retry_state.next_action.sleep, 0)
             _before_sleep.attempt_number = retry_state.attempt_number
 
+        _before_sleep.attempt_number = 0
+
         @retry(
             wait=tenacity.wait_fixed(0.01),
             stop=tenacity.stop_after_attempt(3),

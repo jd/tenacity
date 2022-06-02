@@ -1,0 +1,3 @@
+---
+features:
+  - Allow asynchronous callbacks for `before`, `after`, `retry_error_callback`, `wait`, and `before_sleep` parameters.
