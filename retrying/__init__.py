@@ -1,2 +1,1 @@
-# flake8: noqa
-from tenacity import retry
+from tenacity import retry # noqa
