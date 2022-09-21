@@ -676,6 +676,56 @@ class NoNameErrorAfterCount:
         return True
 
 
+class NoNameErrorCauseAfterCount:
+    """Holds counter state for invoking a method several times in a row."""
+
+    def __init__(self, count):
+        self.counter = 0
+        self.count = count
+
+    def go2(self):
+        raise NameError("Hi there, I'm a NameError")
+
+    def go(self):
+        """Raise an IOError with a NameError as cause until after count threshold has been crossed.
+
+        Then return True.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            try:
+                self.go2()
+            except NameError as e:
+                raise IOError() from e
+
+        return True
+
+
+class NoIOErrorCauseAfterCount:
+    """Holds counter state for invoking a method several times in a row."""
+
+    def __init__(self, count):
+        self.counter = 0
+        self.count = count
+
+    def go2(self):
+        raise IOError("Hi there, I'm an IOError")
+
+    def go(self):
+        """Raise a NameError with an IOError as cause until after count threshold has been crossed.
+
+        Then return True.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            try:
+                self.go2()
+            except IOError as e:
+                raise NameError() from e
+
+        return True
+
+
 class NameErrorUntilCount:
     """Holds counter state for invoking a method several times in a row."""
 
@@ -780,6 +830,11 @@ def _retryable_test_with_wait(thing):
     retry=tenacity.retry_if_result(lambda result: result is None),
 )
 def _retryable_test_with_stop(thing):
+    return thing.go()
+
+
+@retry(retry=tenacity.retry_if_exception_cause_type(NameError))
+def _retryable_test_with_exception_cause_type(thing):
     return thing.go()
 
 
@@ -986,6 +1041,15 @@ class TestDecoratorWrapper(unittest.TestCase):
         except CustomError:
             s = _retryable_test_if_not_exception_message_message.retry.statistics
             self.assertTrue(s["attempt_number"] == 1)
+
+    def test_retry_if_exception_cause_type(self):
+        self.assertTrue(_retryable_test_with_exception_cause_type(NoNameErrorCauseAfterCount(5)))
+
+        try:
+            _retryable_test_with_exception_cause_type(NoIOErrorCauseAfterCount(5))
+            self.fail("Expected exception without NameError as cause")
+        except NameError:
+            pass
 
     def test_defaults(self):
         self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))
