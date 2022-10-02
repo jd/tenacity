@@ -3,7 +3,7 @@ version: 2
 jobs:
   pep8:
     docker:
-      - image: circleci/python:3.9
+      - image: cimg/python:3.9
     steps:
       - checkout
       - run:
@@ -12,7 +12,7 @@ jobs:
             tox -e pep8
   black:
     docker:
-      - image: circleci/python:3.9
+      - image: cimg/python:3.9
     steps:
       - checkout
       - run:
@@ -21,7 +21,7 @@ jobs:
             tox -e black-ci
   py36:
     docker:
-      - image: circleci/python:3.6
+      - image: cimg/python:3.6
     steps:
       - checkout
       - run:
@@ -30,7 +30,7 @@ jobs:
             tox -e py36
   py37:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.7
     steps:
       - checkout
       - run:
@@ -39,7 +39,7 @@ jobs:
             tox -e py37
   py38:
     docker:
-      - image: circleci/python:3.8
+      - image: cimg/python:3.8
     steps:
       - checkout
       - run:
@@ -48,16 +48,25 @@ jobs:
             tox -e py38
   py39:
     docker:
-      - image: circleci/python:3.9
+      - image: cimg/python:3.9
     steps:
       - checkout
       - run:
           command: |
             sudo pip install tox
             tox -e py39
+  py310:
+    docker:
+      - image: cimg/python:3.10
+    steps:
+      - checkout
+      - run:
+          command: |
+            sudo pip install tox
+            tox -e py310
   deploy:
     docker:
-      - image: circleci/python:3.9
+      - image: cimg/python:3.9
     steps:
       - checkout
       - run: |
@@ -90,6 +99,7 @@ workflows:
       - py37
       - py38
       - py39
+      - py310
       - deploy:
           filters:
             tags:
