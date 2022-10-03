@@ -8,7 +8,7 @@ jobs:
       - checkout
       - run:
           command: |
-            sudo pip install tox
+            pip install tox
             tox -e pep8
   black:
     docker:
@@ -17,7 +17,7 @@ jobs:
       - checkout
       - run:
           command: |
-            sudo pip install tox
+            pip install tox
             tox -e black-ci
   py36:
     docker:
@@ -26,7 +26,7 @@ jobs:
       - checkout
       - run:
           command: |
-            sudo pip install tox
+            pip install tox
             tox -e py36
   py37:
     docker:
@@ -35,7 +35,7 @@ jobs:
       - checkout
       - run:
           command: |
-            sudo pip install tox
+            pip install tox
             tox -e py37
   py38:
     docker:
@@ -44,7 +44,7 @@ jobs:
       - checkout
       - run:
           command: |
-            sudo pip install tox
+            pip install tox
             tox -e py38
   py39:
     docker:
@@ -53,7 +53,7 @@ jobs:
       - checkout
       - run:
           command: |
-            sudo pip install tox
+            pip install tox
             tox -e py39
   py310:
     docker:
@@ -62,7 +62,7 @@ jobs:
       - checkout
       - run:
           command: |
-            sudo pip install tox
+            pip install tox
             tox -e py310
   deploy:
     docker:
