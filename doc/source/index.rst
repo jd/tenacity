@@ -566,6 +566,10 @@ With async code you can use AsyncRetrying.
       except RetryError:
           pass
 
+In both cases, you may want to set the result to the attempt so it's available
+in retry strategies like `retry_if_result`. This can be done using
+`attempt.retry_state.set_result(result)`.
+
 Async and retry
 ~~~~~~~~~~~~~~~
 
