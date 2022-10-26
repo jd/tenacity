@@ -75,7 +75,7 @@ class AsyncRetrying(BaseRetrying):
                 self._retry_state.prepare_for_next_attempt()
                 await self.sleep(do)
             else:
-                return do
+                raise StopAsyncIteration
 
     def wraps(self, fn: WrappedFn) -> WrappedFn:
         fn = super().wraps(fn)
