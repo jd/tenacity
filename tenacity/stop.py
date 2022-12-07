@@ -16,6 +16,8 @@
 import abc
 import typing
 
+from tenacity import _utils
+
 if typing.TYPE_CHECKING:
     import threading
 
@@ -89,8 +91,8 @@ class stop_after_attempt(stop_base):
 class stop_after_delay(stop_base):
     """Stop when the time from the first attempt >= limit."""
 
-    def __init__(self, max_delay: float) -> None:
-        self.max_delay = max_delay
+    def __init__(self, max_delay: _utils.time_unit_type) -> None:
+        self.max_delay = _utils.to_seconds(max_delay)
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return retry_state.seconds_since_start >= self.max_delay
