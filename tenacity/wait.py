@@ -199,7 +199,7 @@ class wait_exponential_jitter(wait_base):
     This implements the strategy described here:
     https://cloud.google.com/storage/docs/retry-strategy
 
-    The wait time is min(initial * (2**n + random.uniform(0, jitter)), maximum)
+    The wait time is min(initial * 2**n + random.uniform(0, jitter), maximum)
     where n is the retry count.
     """
 
