@@ -155,10 +155,12 @@ class TestStopConditions(unittest.TestCase):
         self.assertTrue(r.stop(make_retry_state(4, 6546)))
 
     def test_stop_after_delay(self):
-        r = Retrying(stop=tenacity.stop_after_delay(1))
-        self.assertFalse(r.stop(make_retry_state(2, 0.999)))
-        self.assertTrue(r.stop(make_retry_state(2, 1)))
-        self.assertTrue(r.stop(make_retry_state(2, 1.001)))
+        for delay in (1, datetime.timedelta(seconds=1)):
+            with self.subTest():
+                r = Retrying(stop=tenacity.stop_after_delay(delay))
+                self.assertFalse(r.stop(make_retry_state(2, 0.999)))
+                self.assertTrue(r.stop(make_retry_state(2, 1)))
+                self.assertTrue(r.stop(make_retry_state(2, 1.001)))
 
     def test_legacy_explicit_stop_type(self):
         Retrying(stop="stop_after_attempt")
