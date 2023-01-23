@@ -1,0 +1,3 @@
+---
+prelude: >
+    Clarify usage of `reraise` keyword argument
