@@ -1,12 +1,14 @@
 queue_rules:
   - name: default
-    conditions:
-      - "status-success=ci/circleci: pep8"
-      - "status-success=ci/circleci: black"
-      - "status-success=ci/circleci: py36"
-      - "status-success=ci/circleci: py37"
-      - "status-success=ci/circleci: py38"
-      - "status-success=ci/circleci: py39"
+    conditions: &CheckRuns
+      - "check-success=test (3.6, py36)"
+      - "check-success=test (3.7, py37)"
+      - "check-success=test (3.8, py38)"
+      - "check-success=test (3.9, py39)"
+      - "check-success=test (3.10, py310)"
+      - "check-success=test (3.11, py311)"
+      - "check-success=test (3.11, black-ci)"
+      - "check-success=test (3.11, pep8)"
 
 pull_request_rules:
   - name: warn on no changelog
@@ -22,12 +24,7 @@ pull_request_rules:
           a changelog entry.
   - name: automatic merge without changelog
     conditions:
-      - "status-success=ci/circleci: pep8"
-      - "status-success=ci/circleci: black"
-      - "status-success=ci/circleci: py36"
-      - "status-success=ci/circleci: py37"
-      - "status-success=ci/circleci: py38"
-      - "status-success=ci/circleci: py39"
+      - and: *CheckRuns
       - "#approved-reviews-by>=1"
       - label=no-changelog
     actions:
@@ -36,12 +33,7 @@ pull_request_rules:
         method: squash
   - name: automatic merge with changelog
     conditions:
-      - "status-success=ci/circleci: pep8"
-      - "status-success=ci/circleci: black"
-      - "status-success=ci/circleci: py36"
-      - "status-success=ci/circleci: py37"
-      - "status-success=ci/circleci: py38"
-      - "status-success=ci/circleci: py39"
+      - and: *CheckRuns
       - "#approved-reviews-by>=1"
       - files~=^releasenotes/notes/
     actions:
@@ -51,12 +43,7 @@ pull_request_rules:
   - name: automatic merge for jd without changelog
     conditions:
       - author=jd
-      - "status-success=ci/circleci: pep8"
-      - "status-success=ci/circleci: black"
-      - "status-success=ci/circleci: py36"
-      - "status-success=ci/circleci: py37"
-      - "status-success=ci/circleci: py38"
-      - "status-success=ci/circleci: py39"
+      - and: *CheckRuns
       - label=no-changelog
     actions:
       queue:
@@ -65,12 +52,7 @@ pull_request_rules:
   - name: automatic merge for jd with changelog
     conditions:
       - author=jd
-      - "status-success=ci/circleci: pep8"
-      - "status-success=ci/circleci: black"
-      - "status-success=ci/circleci: py36"
-      - "status-success=ci/circleci: py37"
-      - "status-success=ci/circleci: py38"
-      - "status-success=ci/circleci: py39"
+      - and: *CheckRuns
       - files~=^releasenotes/notes/
     actions:
       queue:

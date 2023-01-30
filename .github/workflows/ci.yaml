@@ -17,28 +17,28 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        python: [3.6, 3.7, 3.8, 3.9, 3.10, 3.11]
-        tox: [36, 37, 38, 39, 310, 311, pep8, black-ci]
         include:
-          - python: 3.6
-            tox: 36
-          - python: 3.7
-            tox: 37
-          - python: 3.8
-            tox: 38
-          - python: 3.9
-            tox: 39
-          - python: 3.10
-            tox: 310
-          - python: 3.11
-            tox: 311
-          - python: 3.11
+          - python: "3.6"
+            tox: py36
+          - python: "3.7"
+            tox: py37
+          - python: "3.8"
+            tox: py38
+          - python: "3.9"
+            tox: py39
+          - python: "3.10"
+            tox: py310
+          - python: "3.11"
+            tox: py311
+          - python: "3.11"
             tox: pep8
-          - python: 3.11
+          - python: "3.11"
             tox: black-ci
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v3.3.0
+        with:
+          fetch-depth: 0
 
       - name: Setup Python 🔧
         uses: actions/setup-python@v4.5.0
