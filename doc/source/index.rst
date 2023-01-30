@@ -573,6 +573,22 @@ With async code you can use AsyncRetrying.
       except RetryError:
           pass
 
+In both cases, you may want to set the result to the attempt so it's available
+in retry strategies like ``retry_if_result``. This can be done accessing the
+``retry_state`` property:
+
+.. testcode::
+
+    from tenacity import AsyncRetrying, retry_if_result
+
+    async def function():
+       async for attempt in AsyncRetrying(retry=retry_if_result(lambda x: x < 3)):
+           with attempt:
+               result = 1  # Some complex calculation, function call, etc.
+           if not attempt.retry_state.outcome.failed:
+               attempt.retry_state.set_result(result)
+       return result
+
 Async and retry
 ~~~~~~~~~~~~~~~
 
