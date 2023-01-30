@@ -34,6 +34,8 @@ jobs:
             tox: pep8
           - python: "3.11"
             tox: black-ci
+          - python: "3.11"
+            tox: mypy
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v3.3.0
