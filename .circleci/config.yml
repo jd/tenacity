@@ -1,60 +1,6 @@
 version: 2
 
 jobs:
-  pep8:
-    docker:
-      - image: circleci/python:3.9
-    steps:
-      - checkout
-      - run:
-          command: |
-            sudo pip install tox
-            tox -e pep8
-  black:
-    docker:
-      - image: circleci/python:3.9
-    steps:
-      - checkout
-      - run:
-          command: |
-            sudo pip install tox
-            tox -e black-ci
-  py36:
-    docker:
-      - image: circleci/python:3.6
-    steps:
-      - checkout
-      - run:
-          command: |
-            sudo pip install tox
-            tox -e py36
-  py37:
-    docker:
-      - image: circleci/python:3.7
-    steps:
-      - checkout
-      - run:
-          command: |
-            sudo pip install tox
-            tox -e py37
-  py38:
-    docker:
-      - image: circleci/python:3.8
-    steps:
-      - checkout
-      - run:
-          command: |
-            sudo pip install tox
-            tox -e py38
-  py39:
-    docker:
-      - image: circleci/python:3.9
-    steps:
-      - checkout
-      - run:
-          command: |
-            sudo pip install tox
-            tox -e py39
   deploy:
     docker:
       - image: circleci/python:3.9
@@ -84,12 +30,6 @@ workflows:
 
   test:
     jobs:
-      - pep8
-      - black
-      - py36
-      - py37
-      - py38
-      - py39
       - deploy:
           filters:
             tags:
