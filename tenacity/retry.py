@@ -36,6 +36,9 @@ class retry_base(abc.ABC):
         return retry_any(self, other)
 
 
+RetryBaseT = typing.Union[retry_base, typing.Callable[["RetryCallState"], bool]]
+
+
 class _retry_never(retry_base):
     """Retry strategy that never rejects any result."""
 
