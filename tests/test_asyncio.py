@@ -20,7 +20,7 @@ from functools import wraps
 
 from tenacity import AsyncRetrying, RetryError
 from tenacity import _asyncio as tasyncio
-from tenacity import retry, stop_after_attempt
+from tenacity import retry, retry_if_result, stop_after_attempt
 from tenacity.wait import wait_fixed
 
 from .test_tenacity import NoIOErrorAfterCount, current_time_ms
@@ -155,6 +155,20 @@ class TestContextManager(unittest.TestCase):
             pass
         t = current_time_ms() - start
         self.assertLess(t, 1.1)
+
+    @asynctest
+    async def test_retry_with_result(self):
+        async def test():
+            attempts = 0
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_if_result(lambda x: x < 3)):
+                with attempt:
+                    attempts += 1
+                attempt.retry_state.set_result(attempts)
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(3, result)
 
 
 if __name__ == "__main__":

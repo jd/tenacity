@@ -64,7 +64,7 @@ class AsyncRetrying(BaseRetrying):
         self._retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
         return self
 
-    async def __anext__(self) -> typing.Union[AttemptManager, typing.Any]:
+    async def __anext__(self) -> AttemptManager:
         while True:
             do = self.iter(retry_state=self._retry_state)
             if do is None:
@@ -75,7 +75,7 @@ class AsyncRetrying(BaseRetrying):
                 self._retry_state.prepare_for_next_attempt()
                 await self.sleep(do)
             else:
-                return do
+                raise StopAsyncIteration
 
     def wraps(self, fn: WrappedFn) -> WrappedFn:
         fn = super().wraps(fn)
