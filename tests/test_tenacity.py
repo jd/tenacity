@@ -50,6 +50,10 @@ def _set_delay_since_start(retry_state, delay):
     assert retry_state.seconds_since_start == delay
 
 
+def flaky_function():
+    """Just an empty function to use as the called function."""
+
+
 def make_retry_state(previous_attempt_number, delay_since_first_attempt, last_result=None):
     """Construct RetryCallState for given attempt number & delay.
 
@@ -63,7 +67,7 @@ def make_retry_state(previous_attempt_number, delay_since_first_attempt, last_re
             delay_since_first_attempt=delay_since_first_attempt,
         )
 
-    retry_state = RetryCallState(None, None, (), {})
+    retry_state = RetryCallState(None, flaky_function, (), {})
     retry_state.attempt_number = previous_attempt_number
     if last_result is not None:
         retry_state.outcome = last_result

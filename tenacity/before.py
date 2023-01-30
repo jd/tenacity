@@ -32,10 +32,11 @@ def before_log(logger: "logging.Logger", log_level: int) -> typing.Callable[["Re
     """Before call strategy that logs to some logger the attempt."""
 
     def log_it(retry_state: "RetryCallState") -> None:
+        target = "block" if retry_state.fn is None else f"call to '{_utils.get_callback_name(retry_state.fn)}'"
+        verb = "running" if retry_state.fn is None else "calling"
         logger.log(
             log_level,
-            f"Starting call to '{_utils.get_callback_name(retry_state.fn)}', "
-            f"this is the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
+            f"Starting {target}, this is the {_utils.to_ordinal(retry_state.attempt_number)} time {verb} it.",
         )
 
     return log_it

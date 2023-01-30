@@ -32,7 +32,7 @@ class TestAfterLogFormat(unittest.TestCase):
         )
 
     def test_02_custom_sec_format(self):
-        """Test log formatting with custom int format.."""
+        """Test log formatting with custom int format."""
         log = unittest.mock.MagicMock(spec="logging.Logger.log")
         logger = unittest.mock.MagicMock(spec="logging.Logger", log=log)
 
@@ -47,4 +47,26 @@ class TestAfterLogFormat(unittest.TestCase):
             f"Finished call to '{_utils.get_callback_name(retry_state.fn)}' "
             f"after {sec_format % retry_state.seconds_since_start}(s), "
             f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
+        )
+
+    def test_03_no_call_function(self):
+        """Test log formatting when there is no called function.
+
+        E.g. when using as context manager.
+        """
+        log = unittest.mock.MagicMock(spec="logging.Logger.log")
+        logger = unittest.mock.MagicMock(spec="logging.Logger", log=log)
+
+        sec_format = "%0.3f"
+        delay_since_first_attempt = 0.1
+
+        retry_state = test_tenacity.make_retry_state(self.previous_attempt_number, delay_since_first_attempt)
+        retry_state.fn = None
+        fun = after_log(logger=logger, log_level=self.log_level)  # use default sec_format
+        fun(retry_state)
+        log.assert_called_once_with(
+            self.log_level,
+            f"Finished block "
+            f"after {sec_format % retry_state.seconds_since_start}(s), "
+            f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time running it.",
         )
