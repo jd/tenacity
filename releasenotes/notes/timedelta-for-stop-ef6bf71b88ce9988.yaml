@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    - accept ``datetime.timedelta`` instances as argument to ``tenacity.stop.stop_after_delay``

@@ -274,8 +274,12 @@ exception:
 Error Handling
 ~~~~~~~~~~~~~~
 
-While callables that "timeout" retrying raise a `RetryError` by default,
-we can reraise the last attempt's exception if needed:
+Normally when your function fails its final time (and will not be retried again based on your settings),
+a `RetryError` is raised. The exception your code encountered will be shown somewhere in the *middle*
+of the stack trace.
+
+If you would rather see the exception your code encountered at the *end* of the stack trace (where it
+is most visible), you can set `reraise=True`.
 
 .. testcode::
 
@@ -298,6 +302,7 @@ by using the before callback function:
 .. testcode::
 
     import logging
+    import sys
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
@@ -312,6 +317,7 @@ In the same spirit, It's possible to execute after a call that failed:
 .. testcode::
 
     import logging
+    import sys
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
@@ -328,6 +334,7 @@ retries happen after a wait interval, so the keyword argument is called
 .. testcode::
 
     import logging
+    import sys
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
