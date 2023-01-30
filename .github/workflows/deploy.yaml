@@ -1,0 +1,33 @@
+name: Release deploy
+
+on:
+  push:
+    tags:
+
+jobs:
+  test:
+    timeout-minutes: 20
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v3.3.0
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python 🔧
+        uses: actions/setup-python@v4.5.0
+        with:
+          python-version: 3.11
+
+      - name: Build 🔧 & Deploy 🚀
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          pip install tox twine wheel$
+
+          echo -e "[pypi]" >> ~/.pypirc
+          echo -e "username = __token__" >> ~/.pypirc
+          echo -e "password = $PYPI_TOKEN" >> ~/.pypirc
+
+          python setup.py sdist bdist_wheel
+          twine upload dist/*
