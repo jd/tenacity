@@ -86,8 +86,9 @@ except ImportError:
 if t.TYPE_CHECKING:
     import types
 
-    from .wait import wait_base
-    from .stop import stop_base
+    from .retry import RetryBaseT
+    from .stop import StopBaseT
+    from .wait import WaitBaseT
 
 
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Any])
@@ -217,9 +218,9 @@ class BaseRetrying(ABC):
     def __init__(
         self,
         sleep: t.Callable[[t.Union[int, float]], None] = sleep,
-        stop: "stop_base" = stop_never,
-        wait: "wait_base" = wait_none(),
-        retry: retry_base = retry_if_exception_type(),
+        stop: "StopBaseT" = stop_never,
+        wait: "WaitBaseT" = wait_none(),
+        retry: "RetryBaseT" = retry_if_exception_type(),
         before: t.Callable[["RetryCallState"], None] = before_nothing,
         after: t.Callable[["RetryCallState"], None] = after_nothing,
         before_sleep: t.Optional[t.Callable[["RetryCallState"], None]] = None,
@@ -242,8 +243,8 @@ class BaseRetrying(ABC):
     def copy(
         self,
         sleep: t.Union[t.Callable[[t.Union[int, float]], None], object] = _unset,
-        stop: t.Union["stop_base", object] = _unset,
-        wait: t.Union["wait_base", object] = _unset,
+        stop: t.Union["StopBaseT", object] = _unset,
+        wait: t.Union["WaitBaseT", object] = _unset,
         retry: t.Union[retry_base, object] = _unset,
         before: t.Union[t.Callable[["RetryCallState"], None], object] = _unset,
         after: t.Union[t.Callable[["RetryCallState"], None], object] = _unset,
@@ -337,14 +338,14 @@ class BaseRetrying(ABC):
             return DoAttempt()
 
         is_explicit_retry = fut.failed and isinstance(fut.exception(), TryAgain)
-        if not (is_explicit_retry or self.retry(retry_state=retry_state)):
+        if not (is_explicit_retry or self.retry(retry_state)):
             return fut.result()
 
         if self.after is not None:
             self.after(retry_state)
 
         self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start
-        if self.stop(retry_state=retry_state):
+        if self.stop(retry_state):
             if self.retry_error_callback:
                 return self.retry_error_callback(retry_state)
             retry_exc = self.retry_error_cls(fut)
@@ -353,7 +354,7 @@ class BaseRetrying(ABC):
             raise retry_exc from fut.exception()
 
         if self.wait:
-            sleep = self.wait(retry_state=retry_state)
+            sleep = self.wait(retry_state)
         else:
             sleep = 0.0
         retry_state.next_action = RetryAction(sleep)

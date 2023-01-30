@@ -41,6 +41,9 @@ class wait_base(abc.ABC):
         return self.__add__(other)
 
 
+WaitBaseT = typing.Union[wait_base, typing.Callable[["RetryCallState"], bool]]
+
+
 class wait_fixed(wait_base):
     """Wait strategy that waits a fixed amount of time between each retry."""
 
