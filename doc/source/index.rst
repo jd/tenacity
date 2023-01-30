@@ -302,6 +302,7 @@ by using the before callback function:
 .. testcode::
 
     import logging
+    import sys
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
@@ -316,6 +317,7 @@ In the same spirit, It's possible to execute after a call that failed:
 .. testcode::
 
     import logging
+    import sys
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
@@ -332,6 +334,7 @@ retries happen after a wait interval, so the keyword argument is called
 .. testcode::
 
     import logging
+    import sys
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
