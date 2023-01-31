@@ -367,6 +367,12 @@ class BaseRetrying(ABC):
 
         return DoSleep(sleep)
 
+    @abstractmethod
+    def __call__(self, fn: t.Callable[..., _RetValT], *args: t.Any, **kwargs: t.Any) -> _RetValT:
+        pass
+
+
+class BaseSyncRetrying(BaseRetrying):
     def __iter__(self) -> t.Generator[AttemptManager, None, None]:
         self.begin()
 
@@ -381,12 +387,8 @@ class BaseRetrying(ABC):
             else:
                 break
 
-    @abstractmethod
-    def __call__(self, fn: t.Callable[..., _RetValT], *args: t.Any, **kwargs: t.Any) -> _RetValT:
-        pass
 
-
-class Retrying(BaseRetrying):
+class Retrying(BaseSyncRetrying):
     """Retrying controller."""
 
     def __call__(self, fn: t.Callable[..., _RetValT], *args: t.Any, **kwargs: t.Any) -> _RetValT:
@@ -564,6 +566,7 @@ __all__ = [
     "RetryError",
     "AttemptManager",
     "BaseRetrying",
+    "BaseSyncRetrying",
     "Retrying",
     "Future",
     "RetryCallState",

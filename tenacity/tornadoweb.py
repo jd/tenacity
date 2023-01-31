@@ -15,7 +15,7 @@
 import sys
 import typing
 
-from tenacity import BaseRetrying
+from tenacity import BaseSyncRetrying
 from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import RetryCallState
@@ -28,7 +28,7 @@ if typing.TYPE_CHECKING:
 _RetValT = typing.TypeVar("_RetValT")
 
 
-class TornadoRetrying(BaseRetrying):
+class TornadoRetrying(BaseSyncRetrying):
     def __init__(self, sleep: "typing.Callable[[float], Future[None]]" = gen.sleep, **kwargs: typing.Any) -> None:
         super().__init__(**kwargs)
         self.sleep = sleep
