@@ -90,7 +90,6 @@ class TestAsync(unittest.TestCase):
 
     @asynctest
     async def test_attempt_number_is_correct_for_interleaved_coroutines(self):
-
         attempts = []
 
         def after(retry_state):
