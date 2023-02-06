@@ -18,6 +18,8 @@ import inspect
 import unittest
 from functools import wraps
 
+import pytest
+
 from tenacity import AsyncRetrying, RetryError
 from tenacity import _asyncio as tasyncio
 from tenacity import retry, retry_if_result, stop_after_attempt
@@ -168,6 +170,14 @@ class TestContextManager(unittest.TestCase):
         result = await test()
 
         self.assertEqual(3, result)
+
+    @asynctest
+    async def test_async_retying_iterator(self):
+        thing = NoIOErrorAfterCount(5)
+        with pytest.raises(TypeError):
+            for attempts in AsyncRetrying():
+                with attempts:
+                    await _async_function(thing)
 
 
 if __name__ == "__main__":

@@ -62,6 +62,9 @@ class AsyncRetrying(BaseRetrying):
             else:
                 return do  # type: ignore[no-any-return]
 
+    def __iter__(self) -> typing.Generator[AttemptManager, None, None]:
+        raise TypeError("AsyncRetrying object is not iterable")
+
     def __aiter__(self) -> "AsyncRetrying":
         self.begin()
         self._retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
