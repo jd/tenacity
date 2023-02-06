@@ -6,7 +6,7 @@ Tenacity
 .. image:: https://circleci.com/gh/jd/tenacity.svg?style=svg
     :target: https://circleci.com/gh/jd/tenacity
 
-.. image:: https://img.shields.io/endpoint.svg?url=https://dashboard.mergify.io/badges/jd/tenacity&style=flat
+.. image:: https://img.shields.io/endpoint.svg?url=https://api.mergify.com/badges/jd/tenacity&style=flat
    :target: https://mergify.io
    :alt: Mergify Status
 
