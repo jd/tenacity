@@ -16,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import functools
 import sys
 import threading
@@ -91,37 +92,8 @@ if t.TYPE_CHECKING:
     from .wait import WaitBaseT
 
 
+WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Any])
-_RetValT = t.TypeVar("_RetValT")
-
-
-def retry(*dargs: t.Any, **dkw: t.Any) -> t.Union[WrappedFn, t.Callable[[WrappedFn], WrappedFn]]:  # noqa
-    """Wrap a function with a new `Retrying` object.
-
-    :param dargs: positional arguments passed to Retrying object
-    :param dkw: keyword arguments passed to the Retrying object
-    """
-    # support both @retry and @retry() as valid syntax
-    if len(dargs) == 1 and callable(dargs[0]):
-        return retry()(dargs[0])
-    else:
-
-        def wrap(f: WrappedFn) -> WrappedFn:
-            if isinstance(f, retry_base):
-                warnings.warn(
-                    f"Got retry_base instance ({f.__class__.__name__}) as callable argument, "
-                    f"this will probably hang indefinitely (did you mean retry={f.__class__.__name__}(...)?)"
-                )
-            if iscoroutinefunction(f):
-                r: "BaseRetrying" = AsyncRetrying(*dargs, **dkw)
-            elif tornado and hasattr(tornado.gen, "is_coroutine_function") and tornado.gen.is_coroutine_function(f):
-                r = TornadoRetrying(*dargs, **dkw)
-            else:
-                r = Retrying(*dargs, **dkw)
-
-            return r.wraps(f)
-
-        return wrap
 
 
 class TryAgain(Exception):
@@ -382,14 +354,24 @@ class BaseRetrying(ABC):
                 break
 
     @abstractmethod
-    def __call__(self, fn: t.Callable[..., _RetValT], *args: t.Any, **kwargs: t.Any) -> _RetValT:
+    def __call__(
+        self,
+        fn: t.Callable[..., WrappedFnReturnT],
+        *args: t.Any,
+        **kwargs: t.Any,
+    ) -> WrappedFnReturnT:
         pass
 
 
 class Retrying(BaseRetrying):
     """Retrying controller."""
 
-    def __call__(self, fn: t.Callable[..., _RetValT], *args: t.Any, **kwargs: t.Any) -> _RetValT:
+    def __call__(
+        self,
+        fn: t.Callable[..., WrappedFnReturnT],
+        *args: t.Any,
+        **kwargs: t.Any,
+    ) -> WrappedFnReturnT:
         self.begin()
 
         retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
@@ -508,6 +490,57 @@ class RetryCallState:
         slept = float(round(self.idle_for, 2))
         clsname = self.__class__.__name__
         return f"<{clsname} {id(self)}: attempt #{self.attempt_number}; slept for {slept}; last result: {result}>"
+
+
+@t.overload
+def retry(func: WrappedFn) -> WrappedFn:
+    ...
+
+
+@t.overload
+def retry(
+    sleep: t.Callable[[t.Union[int, float]], None] = sleep,
+    stop: "StopBaseT" = stop_never,
+    wait: "WaitBaseT" = wait_none(),
+    retry: "RetryBaseT" = retry_if_exception_type(),
+    before: t.Callable[["RetryCallState"], None] = before_nothing,
+    after: t.Callable[["RetryCallState"], None] = after_nothing,
+    before_sleep: t.Optional[t.Callable[["RetryCallState"], None]] = None,
+    reraise: bool = False,
+    retry_error_cls: t.Type["RetryError"] = RetryError,
+    retry_error_callback: t.Optional[t.Callable[["RetryCallState"], t.Any]] = None,
+) -> t.Callable[[WrappedFn], WrappedFn]:
+    ...
+
+
+def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
+    """Wrap a function with a new `Retrying` object.
+
+    :param dargs: positional arguments passed to Retrying object
+    :param dkw: keyword arguments passed to the Retrying object
+    """
+    # support both @retry and @retry() as valid syntax
+    if len(dargs) == 1 and callable(dargs[0]):
+        return retry()(dargs[0])
+    else:
+
+        def wrap(f: WrappedFn) -> WrappedFn:
+            if isinstance(f, retry_base):
+                warnings.warn(
+                    f"Got retry_base instance ({f.__class__.__name__}) as callable argument, "
+                    f"this will probably hang indefinitely (did you mean retry={f.__class__.__name__}(...)?)"
+                )
+            r: "BaseRetrying"
+            if iscoroutinefunction(f):
+                r = AsyncRetrying(*dargs, **dkw)
+            elif tornado and hasattr(tornado.gen, "is_coroutine_function") and tornado.gen.is_coroutine_function(f):
+                r = TornadoRetrying(*dargs, **dkw)
+            else:
+                r = Retrying(*dargs, **dkw)
+
+            return r.wraps(f)
+
+        return wrap
 
 
 from tenacity._asyncio import AsyncRetrying  # noqa:E402,I100
