@@ -17,7 +17,7 @@
 
 import functools
 import sys
-import typing
+import typing as t
 from asyncio import sleep
 
 from tenacity import AttemptManager
@@ -26,24 +26,20 @@ from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import RetryCallState
 
-
-WrappedFn = typing.TypeVar("WrappedFn", bound=typing.Callable[..., typing.Any])
-_RetValT = typing.TypeVar("_RetValT")
+WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
+WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Awaitable[t.Any]])
 
 
 class AsyncRetrying(BaseRetrying):
-    def __init__(
-        self, sleep: typing.Callable[[float], typing.Awaitable[typing.Any]] = sleep, **kwargs: typing.Any
-    ) -> None:
+    sleep: t.Callable[[float], t.Awaitable[t.Any]]
+
+    def __init__(self, sleep: t.Callable[[float], t.Awaitable[t.Any]] = sleep, **kwargs: t.Any) -> None:
         super().__init__(**kwargs)
         self.sleep = sleep
 
     async def __call__(  # type: ignore[override]
-        self,
-        fn: typing.Callable[..., typing.Awaitable[_RetValT]],
-        *args: typing.Any,
-        **kwargs: typing.Any,
-    ) -> _RetValT:
+        self, fn: WrappedFn, *args: t.Any, **kwargs: t.Any
+    ) -> WrappedFnReturnT:
         self.begin()
 
         retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
@@ -62,7 +58,7 @@ class AsyncRetrying(BaseRetrying):
             else:
                 return do  # type: ignore[no-any-return]
 
-    def __iter__(self) -> typing.Generator[AttemptManager, None, None]:
+    def __iter__(self) -> t.Generator[AttemptManager, None, None]:
         raise TypeError("AsyncRetrying object is not iterable")
 
     def __aiter__(self) -> "AsyncRetrying":
@@ -88,7 +84,7 @@ class AsyncRetrying(BaseRetrying):
         # Ensure wrapper is recognized as a coroutine function.
 
         @functools.wraps(fn)
-        async def async_wrapped(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
+        async def async_wrapped(*args: t.Any, **kwargs: t.Any) -> t.Any:
             return await fn(*args, **kwargs)
 
         # Preserve attributes
