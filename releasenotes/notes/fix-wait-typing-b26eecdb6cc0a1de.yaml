@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Argument `wait` was improperly annotated, making mypy checks fail.
+    Now it's annotated as `typing.Union[wait_base, typing.Callable[["RetryCallState"], typing.Union[float, int]]]`

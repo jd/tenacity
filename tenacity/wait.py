@@ -41,7 +41,7 @@ class wait_base(abc.ABC):
         return self.__add__(other)
 
 
-WaitBaseT = typing.Union[wait_base, typing.Callable[["RetryCallState"], bool]]
+WaitBaseT = typing.Union[wait_base, typing.Callable[["RetryCallState"], typing.Union[float, int]]]
 
 
 class wait_fixed(wait_base):
