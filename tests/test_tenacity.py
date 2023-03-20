@@ -1542,10 +1542,10 @@ class TestRetryTyping(unittest.TestCase):
         with_constructor_result = with_raw(1)
 
         # These raise TypeError exceptions if they fail
-        check_type("with_raw", with_raw, typing.Callable[[int], str])
-        check_type("with_raw_result", with_raw_result, str)
-        check_type("with_constructor", with_constructor, typing.Callable[[int], str])
-        check_type("with_constructor_result", with_constructor_result, str)
+        check_type(with_raw, typing.Callable[[int], str])
+        check_type(with_raw_result, str)
+        check_type(with_constructor, typing.Callable[[int], str])
+        check_type(with_constructor_result, str)
 
 
 @contextmanager

@@ -1,0 +1,3 @@
+---
+fixes:
+  - "Fixes test failures with typeguard 3.x"
