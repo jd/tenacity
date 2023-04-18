@@ -15,7 +15,7 @@ target-version = ["py37", "py38", "py39", "py310", "py311"]
 
 [tool.mypy]
 strict = true
-files = ["tenacity"]
+files = ["tenacity", "tests"]
 show_error_codes = true
 
 [[tool.mypy.overrides]]
