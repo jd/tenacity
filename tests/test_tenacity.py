@@ -1054,6 +1054,20 @@ class TestDecoratorWrapper(unittest.TestCase):
         except NameError:
             pass
 
+    def test_retry_preserves_argument_defaults(self):
+        def function_with_defaults(a=1):
+            return a
+
+        def function_with_kwdefaults(*, a=1):
+            return a
+
+        retrying = Retrying(wait=tenacity.wait_fixed(0.01), stop=tenacity.stop_after_attempt(3))
+        wrapped_defaults_function = retrying.wraps(function_with_defaults)
+        wrapped_kwdefaults_function = retrying.wraps(function_with_kwdefaults)
+
+        self.assertEqual(function_with_defaults.__defaults__, wrapped_defaults_function.__defaults__)
+        self.assertEqual(function_with_kwdefaults.__kwdefaults__, wrapped_kwdefaults_function.__kwdefaults__)
+
     def test_defaults(self):
         self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))
         self.assertTrue(_retryable_default_f(NoNameErrorAfterCount(5)))

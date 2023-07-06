@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    Preserve __defaults__ and __kwdefaults__ through retry decorator

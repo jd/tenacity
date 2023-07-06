@@ -83,7 +83,7 @@ class AsyncRetrying(BaseRetrying):
         fn = super().wraps(fn)
         # Ensure wrapper is recognized as a coroutine function.
 
-        @functools.wraps(fn)
+        @functools.wraps(fn, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__"))
         async def async_wrapped(*args: t.Any, **kwargs: t.Any) -> t.Any:
             return await fn(*args, **kwargs)
 
