@@ -10,11 +10,7 @@ Tenacity
    :target: https://mergify.io
    :alt: Mergify Status
 
-For a better experience
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. image:: https://img.shields.io/badge/Documentation-blue
-    :target: https://tenacity.readthedocs.io/en/latest/
-    :alt: Documentation
+**Please refer to the** `tenacity documentation <https://tenacity.readthedocs.io/en/latest/>`_ **for a better experience.**
 
 Tenacity is an Apache 2.0 licensed general-purpose retrying library, written in
 Python, to simplify the task of adding retry behavior to just about anything.
