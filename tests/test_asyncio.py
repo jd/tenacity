@@ -21,6 +21,7 @@ from functools import wraps
 
 import pytest
 
+import tenacity
 from tenacity import AsyncRetrying, RetryError
 from tenacity import _asyncio as tasyncio
 from tenacity import retry, retry_if_result, stop_after_attempt
@@ -88,6 +89,20 @@ class TestAsync(unittest.TestCase):
     def test_retry_attributes(self):
         assert hasattr(_retryable_coroutine, "retry")
         assert hasattr(_retryable_coroutine, "retry_with")
+
+    def test_retry_preserves_argument_defaults(self):
+        async def function_with_defaults(a=1):
+            return a
+
+        async def function_with_kwdefaults(*, a=1):
+            return a
+
+        retrying = AsyncRetrying(wait=tenacity.wait_fixed(0.01), stop=tenacity.stop_after_attempt(3))
+        wrapped_defaults_function = retrying.wraps(function_with_defaults)
+        wrapped_kwdefaults_function = retrying.wraps(function_with_kwdefaults)
+
+        self.assertEqual(function_with_defaults.__defaults__, wrapped_defaults_function.__defaults__)
+        self.assertEqual(function_with_kwdefaults.__kwdefaults__, wrapped_kwdefaults_function.__kwdefaults__)
 
     @asynctest
     async def test_attempt_number_is_correct_for_interleaved_coroutines(self):

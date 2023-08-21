@@ -284,7 +284,7 @@ class BaseRetrying(ABC):
         :param f: A function to wraps for retrying.
         """
 
-        @functools.wraps(f)
+        @functools.wraps(f, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__"))
         def wrapped_f(*args: t.Any, **kw: t.Any) -> t.Any:
             return self(f, *args, **kw)
 
