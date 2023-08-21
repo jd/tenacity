@@ -1,3 +1,4 @@
+# mypy: disable_error_code="no-untyped-def,no-untyped-call,attr-defined,arg-type,no-any-return,list-item,var-annotated,import,call-overload"
 # Copyright 2016–2021 Julien Danjou
 # Copyright 2016 Joshua Harlow
 # Copyright 2013 Ray Holder

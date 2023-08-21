@@ -1,3 +1,4 @@
+# mypy: disable-error-code="no-untyped-def,no-untyped-call"
 # coding: utf-8
 # Copyright 2016 Étienne Bersac
 #
@@ -99,8 +100,8 @@ class TestAsync(unittest.TestCase):
         thing2 = NoIOErrorAfterCount(3)
 
         await asyncio.gather(
-            _retryable_coroutine.retry_with(after=after)(thing1),
-            _retryable_coroutine.retry_with(after=after)(thing2),
+            _retryable_coroutine.retry_with(after=after)(thing1),  # type: ignore[attr-defined]
+            _retryable_coroutine.retry_with(after=after)(thing2),  # type: ignore[attr-defined]
         )
 
         # There's no waiting on retry, only a wait in the coroutine, so the
@@ -161,7 +162,12 @@ class TestContextManager(unittest.TestCase):
     async def test_retry_with_result(self):
         async def test():
             attempts = 0
-            async for attempt in tasyncio.AsyncRetrying(retry=retry_if_result(lambda x: x < 3)):
+
+            # mypy doesn't have great lambda support
+            def lt_3(x: float) -> bool:
+                return x < 3
+
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_if_result(lt_3)):
                 with attempt:
                     attempts += 1
                 attempt.retry_state.set_result(attempts)
@@ -178,6 +184,17 @@ class TestContextManager(unittest.TestCase):
             for attempts in AsyncRetrying():
                 with attempts:
                     await _async_function(thing)
+
+
+# make sure mypy accepts passing an async sleep function
+# https://github.com/jd/tenacity/issues/399
+async def my_async_sleep(x: float) -> None:
+    await asyncio.sleep(x)
+
+
+@retry(sleep=my_async_sleep)
+async def foo():
+    pass
 
 
 if __name__ == "__main__":

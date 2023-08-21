@@ -1,3 +1,4 @@
+# mypy: disable-error-code="no-untyped-def,no-untyped-call"
 # coding: utf-8
 # Copyright 2017 Elisey Zanko
 #
@@ -38,7 +39,7 @@ def _retryable_coroutine_with_2_attempts(thing):
     thing.go()
 
 
-class TestTornado(testing.AsyncTestCase):
+class TestTornado(testing.AsyncTestCase):  # type: ignore[misc]
     @testing.gen_test
     def test_retry(self):
         assert gen.is_coroutine_function(_retryable_coroutine)
