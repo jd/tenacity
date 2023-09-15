@@ -2,6 +2,7 @@ name: Continuous Integration
 permissions: read-all
 
 on:
+  push:
   pull_request:
     branches:
       - main
@@ -34,16 +35,19 @@ jobs:
             tox: black-ci
           - python: "3.11"
             tox: mypy
+          - python: "3.12"
+            tox: py312
     steps:
       - name: Checkout 🛎️
-        uses: actions/checkout@v3.3.0
+        uses: actions/checkout@v4.0.0
         with:
           fetch-depth: 0
 
       - name: Setup Python 🔧
-        uses: actions/setup-python@v4.5.0
+        uses: actions/setup-python@v4.7.0
         with:
-          python-version: ${{ matrix.python }}
+          python-version: ${{ matrix.python }}
+          allow-prereleases: true
 
       - name: Build 🔧 & Test 🔍
         run: |
