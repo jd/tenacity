@@ -32,14 +32,10 @@ def before_log(logger: "logging.Logger", log_level: int) -> typing.Callable[["Re
     """Before call strategy that logs to some logger the attempt."""
 
     def log_it(retry_state: "RetryCallState") -> None:
-        if retry_state.fn is None:
-            # NOTE(sileht): can't really happen, but we must please mypy
-            fn_name = "<unknown>"
-        else:
-            fn_name = _utils.get_callback_name(retry_state.fn)
+        label = retry_state.fn_label
         logger.log(
             log_level,
-            f"Starting call to '{fn_name}', "
+            f"Starting call to '{label}', "
             f"this is the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
         )
 

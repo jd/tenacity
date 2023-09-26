@@ -16,8 +16,6 @@
 
 import typing
 
-from tenacity import _utils
-
 if typing.TYPE_CHECKING:
     import logging
 
@@ -56,15 +54,11 @@ def before_sleep_log(
             verb, value = "returned", retry_state.outcome.result()
             local_exc_info = False  # exc_info does not apply when no exception
 
-        if retry_state.fn is None:
-            # NOTE(sileht): can't really happen, but we must please mypy
-            fn_name = "<unknown>"
-        else:
-            fn_name = _utils.get_callback_name(retry_state.fn)
+        label = retry_state.fn_label
 
         logger.log(
             log_level,
-            f"Retrying {fn_name} " f"in {retry_state.next_action.sleep} seconds as it {verb} {value}.",
+            f"Retrying {label} " f"in {retry_state.next_action.sleep} seconds as it {verb} {value}.",
             exc_info=local_exc_info,
         )
 
