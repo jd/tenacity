@@ -405,6 +405,7 @@ RetryCallState
 ``retry_state`` argument is an object of `RetryCallState` class:
 
 .. autoclass:: tenacity.RetryCallState
+   :noindex:
 
    Constant attributes:
 
