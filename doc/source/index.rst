@@ -402,44 +402,7 @@ without raising an exception (or you can re-raise or do anything really)
 RetryCallState
 ~~~~~~~~~~~~~~
 
-``retry_state`` argument is an object of `RetryCallState` class:
-
-.. autoclass:: tenacity.RetryCallState
-   :noindex:
-
-   Constant attributes:
-
-   .. autoattribute:: start_time(float)
-      :annotation:
-
-   .. autoattribute:: retry_object(BaseRetrying)
-      :annotation:
-
-   .. autoattribute:: fn(callable)
-      :annotation:
-
-   .. autoattribute:: args(tuple)
-      :annotation:
-
-   .. autoattribute:: kwargs(dict)
-      :annotation:
-
-   Variable attributes:
-
-   .. autoattribute:: attempt_number(int)
-      :annotation:
-
-   .. autoattribute:: outcome(tenacity.Future or None)
-      :annotation:
-
-   .. autoattribute:: outcome_timestamp(float or None)
-      :annotation:
-
-   .. autoattribute:: idle_for(float)
-      :annotation:
-
-   .. autoattribute:: next_action(tenacity.RetryAction or None)
-      :annotation:
+``retry_state`` argument is an object of :class:`~tenacity.RetryCallState` class.
 
 Other Custom Callbacks
 ~~~~~~~~~~~~~~~~~~~~~~
