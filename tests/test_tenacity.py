@@ -174,6 +174,11 @@ class TestStopConditions(unittest.TestCase):
                 self.assertTrue(r.stop(make_retry_state(2, 1, upcoming_sleep=0.001)))
                 self.assertTrue(r.stop(make_retry_state(2, 1, upcoming_sleep=1)))
 
+                # It should act the same as stop_after_delay if upcoming sleep is 0
+                self.assertFalse(r.stop(make_retry_state(2, 0.999, upcoming_sleep=0)))
+                self.assertTrue(r.stop(make_retry_state(2, 1, upcoming_sleep=0)))
+                self.assertTrue(r.stop(make_retry_state(2, 1.001, upcoming_sleep=0)))
+
     def test_legacy_explicit_stop_type(self):
         Retrying(stop="stop_after_attempt")
 
