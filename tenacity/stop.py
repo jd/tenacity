@@ -101,3 +101,14 @@ class stop_after_delay(stop_base):
         if retry_state.seconds_since_start is None:
             raise RuntimeError("__call__() called but seconds_since_start is not set")
         return retry_state.seconds_since_start >= self.max_delay
+
+class stop_before_delay(stop_base):
+    """Stop right before the next attempt would take place after the time from the first attempt >= limit."""
+
+    def __init__(self, max_delay: _utils.time_unit_type) -> None:
+        self.max_delay = _utils.to_seconds(max_delay)
+
+    def __call__(self, retry_state: "RetryCallState") -> bool:
+        if retry_state.seconds_since_start is None:
+            raise RuntimeError("__call__() called but seconds_since_start is not set")
+        return retry_state.seconds_since_start + retry_state.upcoming_sleep >= self.max_delay

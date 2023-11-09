@@ -50,6 +50,7 @@ from .nap import sleep_using_event  # noqa
 # Import all built-in stop strategies for easier usage.
 from .stop import stop_after_attempt  # noqa
 from .stop import stop_after_delay  # noqa
+from .stop import stop_before_delay  # noqa
 from .stop import stop_all  # noqa
 from .stop import stop_any  # noqa
 from .stop import stop_never  # noqa
@@ -316,6 +317,13 @@ class BaseRetrying(ABC):
         if self.after is not None:
             self.after(retry_state)
 
+        if self.wait:
+            sleep = self.wait(retry_state)
+        else:
+            sleep = 0.0
+
+        retry_state.upcoming_sleep = sleep
+
         self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start
         if self.stop(retry_state):
             if self.retry_error_callback:
@@ -325,10 +333,6 @@ class BaseRetrying(ABC):
                 raise retry_exc.reraise()
             raise retry_exc from fut.exception()
 
-        if self.wait:
-            sleep = self.wait(retry_state)
-        else:
-            sleep = 0.0
         retry_state.next_action = RetryAction(sleep)
         retry_state.idle_for += sleep
         self.statistics["idle_for"] += sleep
@@ -568,6 +572,7 @@ __all__ = [
     "sleep_using_event",
     "stop_after_attempt",
     "stop_after_delay",
+    "stop_before_delay",
     "stop_all",
     "stop_any",
     "stop_never",
