@@ -51,7 +51,7 @@ def _set_delay_since_start(retry_state, delay):
     assert retry_state.seconds_since_start == delay
 
 
-def make_retry_state(previous_attempt_number, delay_since_first_attempt, last_result=None):
+def make_retry_state(previous_attempt_number, delay_since_first_attempt, last_result=None, upcoming_sleep=0):
     """Construct RetryCallState for given attempt number & delay.
 
     Only used in testing and thus is extra careful about timestamp arithmetics.
@@ -70,6 +70,9 @@ def make_retry_state(previous_attempt_number, delay_since_first_attempt, last_re
         retry_state.outcome = last_result
     else:
         retry_state.set_result(None)
+
+    retry_state.upcoming_sleep = upcoming_sleep
+
     _set_delay_since_start(retry_state, delay_since_first_attempt)
     return retry_state
 
@@ -162,6 +165,14 @@ class TestStopConditions(unittest.TestCase):
                 self.assertFalse(r.stop(make_retry_state(2, 0.999)))
                 self.assertTrue(r.stop(make_retry_state(2, 1)))
                 self.assertTrue(r.stop(make_retry_state(2, 1.001)))
+
+    def test_stop_before_delay(self):
+        for delay in (1, datetime.timedelta(seconds=1)):
+            with self.subTest():
+                r = Retrying(stop=tenacity.stop_before_delay(delay))
+                self.assertFalse(r.stop(make_retry_state(2, 0.999, upcoming_sleep=0.0001)))
+                self.assertTrue(r.stop(make_retry_state(2, 1, upcoming_sleep=0.001)))
+                self.assertTrue(r.stop(make_retry_state(2, 1, upcoming_sleep=1)))
 
     def test_legacy_explicit_stop_type(self):
         Retrying(stop="stop_after_attempt")
