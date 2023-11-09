@@ -97,7 +97,7 @@ class stop_after_delay(stop_base):
 
     Note: `max_delay` will be exceeded, so when used with a `wait`, the actual total delay will be greater
     than `max_delay` by some of the final sleep period before `max_delay` is exceeded.
-    
+
     If you need stricter timing with waits, consider `stop_before_delay` instead.
     """
 
@@ -108,6 +108,7 @@ class stop_after_delay(stop_base):
         if retry_state.seconds_since_start is None:
             raise RuntimeError("__call__() called but seconds_since_start is not set")
         return retry_state.seconds_since_start >= self.max_delay
+
 
 class stop_before_delay(stop_base):
     """

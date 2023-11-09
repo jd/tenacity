@@ -455,6 +455,8 @@ class RetryCallState:
         self.idle_for: float = 0.0
         #: Next action as decided by the retry manager
         self.next_action: t.Optional[RetryAction] = None
+        #: Next sleep time as decided by the retry manager.
+        self.upcoming_sleep: float = 0.0
 
     @property
     def seconds_since_start(self) -> t.Optional[float]:
