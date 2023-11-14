@@ -1,11 +1,11 @@
 queue_rules:
   - name: default
     conditions: &CheckRuns
-      - "check-success=test (3.7, py37)"
       - "check-success=test (3.8, py38)"
       - "check-success=test (3.9, py39)"
       - "check-success=test (3.10, py310)"
       - "check-success=test (3.11, py311)"
+      - "check-success=test (3.12, py312)"
       - "check-success=test (3.11, black-ci)"
       - "check-success=test (3.11, pep8)"
       - "check-success=test (3.11, mypy)"
