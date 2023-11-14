@@ -402,43 +402,7 @@ without raising an exception (or you can re-raise or do anything really)
 RetryCallState
 ~~~~~~~~~~~~~~
 
-``retry_state`` argument is an object of `RetryCallState` class:
-
-.. autoclass:: tenacity.RetryCallState
-
-   Constant attributes:
-
-   .. autoattribute:: start_time(float)
-      :annotation:
-
-   .. autoattribute:: retry_object(BaseRetrying)
-      :annotation:
-
-   .. autoattribute:: fn(callable)
-      :annotation:
-
-   .. autoattribute:: args(tuple)
-      :annotation:
-
-   .. autoattribute:: kwargs(dict)
-      :annotation:
-
-   Variable attributes:
-
-   .. autoattribute:: attempt_number(int)
-      :annotation:
-
-   .. autoattribute:: outcome(tenacity.Future or None)
-      :annotation:
-
-   .. autoattribute:: outcome_timestamp(float or None)
-      :annotation:
-
-   .. autoattribute:: idle_for(float)
-      :annotation:
-
-   .. autoattribute:: next_action(tenacity.RetryAction or None)
-      :annotation:
+``retry_state`` argument is an object of :class:`~tenacity.RetryCallState` class.
 
 Other Custom Callbacks
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -447,33 +411,33 @@ It's also possible to define custom callbacks for other keyword arguments.
 
 .. function:: my_stop(retry_state)
 
-   :param RetryState retry_state: info about current retry invocation
+   :param RetryCallState retry_state: info about current retry invocation
    :return: whether or not retrying should stop
    :rtype: bool
 
 .. function:: my_wait(retry_state)
 
-   :param RetryState retry_state: info about current retry invocation
+   :param RetryCallState retry_state: info about current retry invocation
    :return: number of seconds to wait before next retry
    :rtype: float
 
 .. function:: my_retry(retry_state)
 
-   :param RetryState retry_state: info about current retry invocation
+   :param RetryCallState retry_state: info about current retry invocation
    :return: whether or not retrying should continue
    :rtype: bool
 
 .. function:: my_before(retry_state)
 
-   :param RetryState retry_state: info about current retry invocation
+   :param RetryCallState retry_state: info about current retry invocation
 
 .. function:: my_after(retry_state)
 
-   :param RetryState retry_state: info about current retry invocation
+   :param RetryCallState retry_state: info about current retry invocation
 
 .. function:: my_before_sleep(retry_state)
 
-   :param RetryState retry_state: info about current retry invocation
+   :param RetryCallState retry_state: info about current retry invocation
 
 Here's an example with a custom ``before_sleep`` function:
 
