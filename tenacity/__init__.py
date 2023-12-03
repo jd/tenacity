@@ -391,7 +391,7 @@ class Retrying(BaseRetrying):
                 return do  # type: ignore[no-any-return]
 
 
-if sys.version_info[1] >= 9:
+if sys.version_info >= (3, 9):
     FutureGenericT = futures.Future[t.Any]
 else:
     FutureGenericT = futures.Future
