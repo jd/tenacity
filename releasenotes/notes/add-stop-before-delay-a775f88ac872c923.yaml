@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Added a new stop function: stop_before_delay, which will stop execution
+    if the next sleep time would cause overall delay to exceed the specified delay. 
+    Useful for use cases where you have some upper bound on retry times that you must
+    not exceed, so returning before that timeout is preferable than returning after that timeout.

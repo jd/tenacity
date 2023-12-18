@@ -124,6 +124,16 @@ retrying stuff.
         print("Stopping after 10 seconds")
         raise Exception
 
+If you're on a tight deadline, and exceeding your delay time isn't ok, 
+then you can give up on retries one attempt before you would exceed the delay. 
+
+.. testcode::
+
+    @retry(stop=stop_before_delay(10))
+    def stop_before_10_s():
+        print("Stopping 1 attempt before 10 seconds")
+        raise Exception
+
 You can combine several stop conditions by using the `|` operator:
 
 .. testcode::
