@@ -417,9 +417,17 @@ class TestWaitConditions(unittest.TestCase):
             self._assert_inclusive_range(fn(make_retry_state(8, 0)), 0, 60.0)
             self._assert_inclusive_range(fn(make_retry_state(9, 0)), 0, 60.0)
 
-        fn = tenacity.wait_random_exponential(10, 5)
+        # max
+        max = 5
+        fn = tenacity.wait_random_exponential(10, max)
         for _ in range(1000):
-            self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0.00, 5.00)
+            self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0.00, max)
+
+        # min
+        min = 1
+        fn = tenacity.wait_random_exponential(0.5, min=min)
+        for _ in range(1000):
+            self._assert_inclusive_range(fn(make_retry_state(1, 0)), min, 1)
 
         # Default arguments exist
         fn = tenacity.wait_random_exponential()
