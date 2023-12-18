@@ -214,7 +214,7 @@ class wait_exponential_jitter(wait_exponential):
         exp_base: typing.Union[int, float] = 2,
         jitter: _utils.time_unit_type = 1,
         min: _utils.time_unit_type = 0,  # noqa
-        initial: typing.Union[int, float] = None,
+        initial: typing.Union[int, float, None] = None,
     ) -> None:
         if initial is not None and multiplier != 1:
             msg = (
