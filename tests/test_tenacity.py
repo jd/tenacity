@@ -465,10 +465,10 @@ class TestWaitConditions(unittest.TestCase):
         for _ in range(1000):
             self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0, max)
 
-        min = 1
-        fn = tenacity.wait_exponential_jitter(0.5, min=min)
+        min = 5
+        fn = tenacity.wait_exponential_jitter(min=min)
         for _ in range(1000):
-            self._assert_inclusive_range(fn(make_retry_state(1, 0)), min, 2)
+            self._assert_inclusive_range(fn(make_retry_state(1, 0)), min, 6)
 
         # Default arguments exist
         fn = tenacity.wait_exponential_jitter()
