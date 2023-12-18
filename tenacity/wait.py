@@ -198,12 +198,12 @@ class wait_random_exponential(wait_exponential):
 class wait_exponential_jitter(wait_exponential):
     """Wait strategy that applies exponential backoff and jitter.
 
-    It allows for a customized initial wait, maximum wait and jitter.
+    It allows for a customized multiplier, max wait, jitter and min wait.
 
     This implements the strategy described here:
     https://cloud.google.com/storage/docs/retry-strategy
 
-    The wait time is min(initial * 2**n + random.uniform(0, jitter), maximum)
+    The wait time is max(min, min(multiplier * 2**n + random.uniform(0, jitter), max))
     where n is the retry count.
     """
 
