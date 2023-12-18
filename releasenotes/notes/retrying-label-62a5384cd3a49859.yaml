@@ -1,0 +1,3 @@
+---
+features:
+  - "Add optional label to Retrying class to be shown in logs"

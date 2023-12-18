@@ -80,6 +80,8 @@ from .after import after_nothing  # noqa
 from .before_sleep import before_sleep_log  # noqa
 from .before_sleep import before_sleep_nothing  # noqa
 
+from ._utils import get_callback_name
+
 try:
     import tornado
 except ImportError:
@@ -200,6 +202,7 @@ class BaseRetrying(ABC):
         reraise: bool = False,
         retry_error_cls: t.Type[RetryError] = RetryError,
         retry_error_callback: t.Optional[t.Callable[["RetryCallState"], t.Any]] = None,
+        label: t.Optional[str] = None,
     ):
         self.sleep = sleep
         self.stop = stop
@@ -212,6 +215,7 @@ class BaseRetrying(ABC):
         self._local = threading.local()
         self.retry_error_cls = retry_error_cls
         self.retry_error_callback = retry_error_callback
+        self.label = label
 
     def copy(
         self,
@@ -225,6 +229,7 @@ class BaseRetrying(ABC):
         reraise: t.Union[bool, object] = _unset,
         retry_error_cls: t.Union[t.Type[RetryError], object] = _unset,
         retry_error_callback: t.Union[t.Optional[t.Callable[["RetryCallState"], t.Any]], object] = _unset,
+            label: t.Optional[str] = _unset,
     ) -> "BaseRetrying":
         """Copy this object with some parameters changed if needed."""
         return self.__class__(
@@ -238,6 +243,7 @@ class BaseRetrying(ABC):
             reraise=_first_set(reraise, self.reraise),
             retry_error_cls=_first_set(retry_error_cls, self.retry_error_cls),
             retry_error_callback=_first_set(retry_error_callback, self.retry_error_callback),
+            label=_first_set(label, self.label),
         )
 
     def __repr__(self) -> str:
@@ -248,7 +254,8 @@ class BaseRetrying(ABC):
             f"sleep={self.sleep}, "
             f"retry={self.retry}, "
             f"before={self.before}, "
-            f"after={self.after})>"
+            f"after={self.after}, "
+            f"label={self.label})>"
         )
 
     @property
@@ -463,6 +470,16 @@ class RetryCallState:
         if self.outcome_timestamp is None:
             return None
         return self.outcome_timestamp - self.start_time
+
+    @property
+    def fn_label(self):
+        if self.retry_object.label is None:
+            if self.fn is None:
+                return "<unknown>"
+            else:
+                return get_callback_name(self.fn)
+        else:
+            return self.retry_object.label
 
     def prepare_for_next_attempt(self) -> None:
         self.outcome = None
