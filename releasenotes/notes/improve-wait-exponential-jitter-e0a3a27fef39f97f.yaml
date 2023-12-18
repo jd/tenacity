@@ -4,5 +4,5 @@ features:
     Improves wait_exponential_jitter to inherit wait_exponential
     - Reuses `wait_exponential.__call__` method instead of reimplementing from scratch
     - Follows argument names of wait_exponential
-    - Adds `min`` argument
-    - Supports supplying `max`, `jitter`, `min` arguments as timedelta
+    - Adds `min` argument
+    - Supports supplying `max`, `jitter`, `min` arguments as `timedelta`
