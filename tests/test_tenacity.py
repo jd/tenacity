@@ -673,7 +673,7 @@ class NoIOErrorAfterCount:
         """
         if self.counter < self.count:
             self.counter += 1
-            raise IOError("Hi there, I'm an IOError")
+            raise OSError("Hi there, I'm an IOError")
         return True
 
 
@@ -715,7 +715,7 @@ class NoNameErrorCauseAfterCount:
             try:
                 self.go2()
             except NameError as e:
-                raise IOError() from e
+                raise OSError() from e
 
         return True
 
@@ -728,7 +728,7 @@ class NoIOErrorCauseAfterCount:
         self.count = count
 
     def go2(self):
-        raise IOError("Hi there, I'm an IOError")
+        raise OSError("Hi there, I'm an IOError")
 
     def go(self):
         """Raise a NameError with an IOError as cause until after count threshold has been crossed.
@@ -739,7 +739,7 @@ class NoIOErrorCauseAfterCount:
             self.counter += 1
             try:
                 self.go2()
-            except IOError as e:
+            except OSError as e:
                 raise NameError() from e
 
         return True
@@ -780,7 +780,7 @@ class IOErrorUntilCount:
         if self.counter < self.count:
             self.counter += 1
             return True
-        raise IOError("Hi there, I'm an IOError")
+        raise OSError("Hi there, I'm an IOError")
 
 
 class CustomError(Exception):
@@ -963,7 +963,7 @@ class TestDecoratorWrapper(unittest.TestCase):
         try:
             _retryable_test_with_stop(NoIOErrorAfterCount(5))
             self.fail("Expected IOError")
-        except IOError as re:
+        except OSError as re:
             self.assertTrue(isinstance(re, IOError))
             print(re)
 
@@ -992,7 +992,7 @@ class TestDecoratorWrapper(unittest.TestCase):
         try:
             _retryable_test_if_not_exception_type_io(NoIOErrorAfterCount(5))
             self.fail("Expected IOError")
-        except IOError as err:
+        except OSError as err:
             self.assertTrue(isinstance(err, IOError))
             print(err)
 
@@ -1130,7 +1130,7 @@ class TestRetryWith:
 
     def test_retry_error_callback_should_be_preserved(self):
         def return_text(retry_state):
-            return "Calling %s keeps raising errors after %s attempts" % (
+            return "Calling {} keeps raising errors after {} attempts".format(
                 retry_state.fn.__name__,
                 retry_state.attempt_number,
             )
