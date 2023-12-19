@@ -225,7 +225,7 @@ class wait_exponential_jitter(wait_exponential):
         elif initial is not None:
             msg = "`initial` is deprecated, use `multiplier` instead."
             warnings.warn(msg, DeprecationWarning)
-            multiplier = jitter
+            multiplier = initial
 
         super().__init__(multiplier, max, exp_base, min)
         self.jitter = _utils.to_seconds(jitter)
