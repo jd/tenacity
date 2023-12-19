@@ -435,13 +435,13 @@ class TestWaitConditions(unittest.TestCase):
 
         # max wait
         max_wait = 5
-        fn = tenacity.wait_random_exponential(10, max)
+        fn = tenacity.wait_random_exponential(10, max_wait)
         for _ in range(1000):
             self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0.00, max_wait)
 
         # min wait
         min_wait = 5
-        fn = tenacity.wait_random_exponential(min=min)
+        fn = tenacity.wait_random_exponential(min=min_wait)
         for _ in range(1000):
             self._assert_inclusive_range(fn(make_retry_state(1, 0)), min_wait, 5)
 
