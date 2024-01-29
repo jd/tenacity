@@ -22,7 +22,7 @@ import pytest
 
 import tenacity
 from tenacity import AsyncRetrying, RetryError
-from tenacity import _asyncio as tasyncio
+from tenacity import asyncio as tasyncio
 from tenacity import retry, retry_if_result, stop_after_attempt
 from tenacity.wait import wait_fixed
 
@@ -55,6 +55,12 @@ async def _retryable_coroutine_with_2_attempts(thing):
     thing.go()
 
 
+@retry(stop=tasyncio.stop_after_attempt(2))
+async def _async_retryable_coroutine_with_2_attempts(thing):
+    await asyncio.sleep(0.00001)
+    thing.go()
+
+
 class TestAsync(unittest.TestCase):
     @asynctest
     async def test_retry(self):
@@ -79,6 +85,14 @@ class TestAsync(unittest.TestCase):
         thing = NoIOErrorAfterCount(2)
         try:
             await _retryable_coroutine_with_2_attempts(thing)
+        except RetryError:
+            assert thing.counter == 2
+
+    @asynctest
+    async def test_stop_after_attempt_async(self):
+        thing = NoIOErrorAfterCount(2)
+        try:
+            await _async_retryable_coroutine_with_2_attempts(thing)
         except RetryError:
             assert thing.counter == 2
 

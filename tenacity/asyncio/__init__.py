@@ -18,13 +18,48 @@ import asyncio
 import functools
 import sys
 import typing as t
-from asyncio import sleep
 
 from tenacity import AttemptManager
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import RetryCallState
+
+# Import all built-in retry strategies for easier usage.
+from .retry import retry_all  # noqa
+from .retry import retry_always  # noqa
+from .retry import retry_any  # noqa
+from .retry import retry_if_exception  # noqa
+from .retry import retry_if_exception_type  # noqa
+from .retry import retry_if_exception_cause_type  # noqa
+from .retry import retry_if_not_exception_type  # noqa
+from .retry import retry_if_not_result  # noqa
+from .retry import retry_if_result  # noqa
+from .retry import retry_never  # noqa
+from .retry import retry_unless_exception_type  # noqa
+from .retry import retry_if_exception_message  # noqa
+from .retry import retry_if_not_exception_message  # noqa
+
+# Import all built-in stop strategies for easier usage.
+from .stop import stop_after_attempt  # noqa
+from .stop import stop_after_delay  # noqa
+from .stop import stop_before_delay  # noqa
+from .stop import stop_all  # noqa
+from .stop import stop_any  # noqa
+from .stop import stop_never  # noqa
+from .stop import stop_when_event_set  # noqa
+
+# Import all built-in wait strategies for easier usage.
+from .wait import wait_chain  # noqa
+from .wait import wait_combine  # noqa
+from .wait import wait_exponential  # noqa
+from .wait import wait_fixed  # noqa
+from .wait import wait_incrementing  # noqa
+from .wait import wait_none  # noqa
+from .wait import wait_random  # noqa
+from .wait import wait_random_exponential  # noqa
+from .wait import wait_random_exponential as wait_full_jitter  # noqa
+from .wait import wait_exponential_jitter  # noqa
 
 WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Awaitable[t.Any]])
@@ -33,7 +68,7 @@ WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Awaitable[t.Any]])
 class AsyncRetrying(BaseRetrying):
     sleep: t.Callable[[float], t.Awaitable[t.Any]]
 
-    def __init__(self, sleep: t.Callable[[float], t.Awaitable[t.Any]] = sleep, **kwargs: t.Any) -> None:
+    def __init__(self, sleep: t.Callable[[float], t.Awaitable[t.Any]] = asyncio.sleep, **kwargs: t.Any) -> None:
         super().__init__(**kwargs)
         self.sleep = sleep
 
@@ -124,3 +159,39 @@ class AsyncRetrying(BaseRetrying):
         async_wrapped.retry_with = fn.retry_with  # type: ignore[attr-defined]
 
         return async_wrapped  # type: ignore[return-value]
+
+
+__all__ = [
+    "retry_all",
+    "retry_always",
+    "retry_any",
+    "retry_if_exception",
+    "retry_if_exception_type",
+    "retry_if_exception_cause_type",
+    "retry_if_not_exception_type",
+    "retry_if_not_result",
+    "retry_if_result",
+    "retry_never",
+    "retry_unless_exception_type",
+    "retry_if_exception_message",
+    "retry_if_not_exception_message",
+    "stop_after_attempt",
+    "stop_after_delay",
+    "stop_before_delay",
+    "stop_all",
+    "stop_any",
+    "stop_never",
+    "stop_when_event_set",
+    "wait_chain",
+    "wait_combine",
+    "wait_exponential",
+    "wait_fixed",
+    "wait_incrementing",
+    "wait_none",
+    "wait_random",
+    "wait_random_exponential",
+    "wait_full_jitter",
+    "wait_exponential_jitter",
+    "WrappedFn",
+    "AsyncRetrying",
+]
