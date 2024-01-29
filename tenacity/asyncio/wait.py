@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import abc
 import random
 import typing
 
@@ -22,6 +22,17 @@ from tenacity.wait import wait_base
 
 if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
+
+
+class wait_base(wait_base):  # type: ignore[no-redef]
+    """Abstract base class for wait strategies."""
+
+    @abc.abstractmethod
+    async def __call__(self, retry_state: "RetryCallState") -> float:  # type: ignore[override]
+        pass
+
+
+WaitBaseT = typing.Union[wait_base, typing.Callable[["RetryCallState"], typing.Awaitable[typing.Union[float, int]]]]
 
 
 class wait_fixed(wait_base):

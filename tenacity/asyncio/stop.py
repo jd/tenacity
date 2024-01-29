@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import abc
 import typing
 
 from tenacity import _utils
@@ -22,6 +23,17 @@ if typing.TYPE_CHECKING:
     import asyncio
 
     from tenacity import RetryCallState
+
+
+class stop_base(stop_base):  # type: ignore[no-redef]
+    """Abstract base class for stop strategies."""
+
+    @abc.abstractmethod
+    async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
+        pass
+
+
+StopBaseT = typing.Union[stop_base, typing.Callable[["RetryCallState"], typing.Awaitable[bool]]]
 
 
 class stop_any(stop_base):

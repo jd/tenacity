@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import abc
 import re
 import typing
 
@@ -21,6 +21,17 @@ from tenacity import retry_base
 
 if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
+
+
+class retry_base(retry_base):  # type: ignore[no-redef]
+    """Abstract base class for retry strategies."""
+
+    @abc.abstractmethod
+    async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
+        pass
+
+
+RetryBaseT = typing.Union[retry_base, typing.Callable[["RetryCallState"], typing.Awaitable[bool]]]
 
 
 class _retry_never(retry_base):
