@@ -137,6 +137,9 @@ class AsyncRetrying(BaseRetrying):
 
         return inner
 
+    def _add_action_func(self, fn: t.Callable[..., t.Any]) -> None:
+        self.iter_state["actions"].append(self._wrap_action_func(fn))
+
     async def _run_retry(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
         self.iter_state["retry_run_result"] = await self._wrap_action_func(self.retry)(retry_state)
 
@@ -153,9 +156,9 @@ class AsyncRetrying(BaseRetrying):
         self.iter_state["stop_run_result"] = await self._wrap_action_func(self.stop)(retry_state)
 
     async def iter(self, retry_state: "RetryCallState") -> t.Union[DoAttempt, DoSleep, t.Any]:  # noqa: A003
-        self.iter_state.clear()
+        self._begin_iter(retry_state)
         result = None
-        for action in self._get_iter_actions(retry_state):
+        for action in self.iter_state["actions"]:
             result = await action(retry_state)
         return result
 
