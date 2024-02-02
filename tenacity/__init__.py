@@ -279,6 +279,14 @@ class BaseRetrying(ABC):
             self._local.statistics = t.cast(t.Dict[str, t.Any], {})
             return self._local.statistics
 
+    @property
+    def iter_state(self) -> t.Dict[str, t.Any]:
+        try:
+            return self._local.iter_state  # type: ignore[no-any-return]
+        except AttributeError:
+            self._local.iter_state = t.cast(t.Dict[str, t.Any], {})
+            return self._local.iter_state
+
     def wraps(self, f: WrappedFn) -> WrappedFn:
         """Wrap a function for retrying.
 
@@ -303,20 +311,13 @@ class BaseRetrying(ABC):
         self.statistics["attempt_number"] = 1
         self.statistics["idle_for"] = 0
 
-    def iter(self, retry_state: "RetryCallState") -> t.Union[DoAttempt, DoSleep, t.Any]:  # noqa
-        fut = retry_state.outcome
-        if fut is None:
-            if self.before is not None:
-                self.before(retry_state)
-            return DoAttempt()
+    def _add_action_func(self, fn: t.Callable[..., t.Any]) -> None:
+        self.iter_state["actions"].append(fn)
 
-        is_explicit_retry = fut.failed and isinstance(fut.exception(), TryAgain)
-        if not (is_explicit_retry or self.retry(retry_state)):
-            return fut.result()
+    def _run_retry(self, retry_state: "RetryCallState") -> None:
+        self.iter_state["retry_run_result"] = self.retry(retry_state)
 
-        if self.after is not None:
-            self.after(retry_state)
-
+    def _run_wait(self, retry_state: "RetryCallState") -> None:
         if self.wait:
             sleep = self.wait(retry_state)
         else:
@@ -324,24 +325,74 @@ class BaseRetrying(ABC):
 
         retry_state.upcoming_sleep = sleep
 
+    def _run_stop(self, retry_state: "RetryCallState") -> None:
         self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start
-        if self.stop(retry_state):
-            if self.retry_error_callback:
-                return self.retry_error_callback(retry_state)
-            retry_exc = self.retry_error_cls(fut)
-            if self.reraise:
-                raise retry_exc.reraise()
-            raise retry_exc from fut.exception()
+        self.iter_state["stop_run_result"] = self.stop(retry_state)
 
-        retry_state.next_action = RetryAction(sleep)
-        retry_state.idle_for += sleep
-        self.statistics["idle_for"] += sleep
-        self.statistics["attempt_number"] += 1
+    def iter(self, retry_state: "RetryCallState") -> t.Union[DoAttempt, DoSleep, t.Any]:  # noqa
+        self._begin_iter(retry_state)
+        result = None
+        for action in self.iter_state["actions"]:
+            result = action(retry_state)
+        return result
+
+    def _begin_iter(self, retry_state: "RetryCallState") -> None:  # noqa
+        self.iter_state.clear()
+        self.iter_state["actions"] = []
+
+        fut = retry_state.outcome
+        if fut is None:
+            if self.before is not None:
+                self._add_action_func(self.before)
+            self._add_action_func(lambda rs: DoAttempt())
+            return
+
+        self.iter_state["is_explicit_retry"] = fut.failed and isinstance(fut.exception(), TryAgain)
+        if not self.iter_state["is_explicit_retry"]:
+            self._add_action_func(self._run_retry)
+        self._add_action_func(self._post_retry_check_actions)
+
+    def _post_retry_check_actions(self, retry_state: "RetryCallState") -> None:
+        if not (self.iter_state["is_explicit_retry"] or self.iter_state.get("retry_run_result")):
+            self._add_action_func(lambda rs: rs.outcome.result())
+            return
+
+        if self.after is not None:
+            self._add_action_func(self.after)
+
+        self._add_action_func(self._run_wait)
+        self._add_action_func(self._run_stop)
+        self._add_action_func(self._post_stop_check_actions)
+
+    def _post_stop_check_actions(self, retry_state: "RetryCallState") -> None:
+        if self.iter_state["stop_run_result"]:
+            if self.retry_error_callback:
+                self._add_action_func(self.retry_error_callback)
+                return
+
+            def exc_check(rs: "RetryCallState") -> None:
+                fut = t.cast(Future, rs.outcome)
+                retry_exc = self.retry_error_cls(fut)
+                if self.reraise:
+                    raise retry_exc.reraise()
+                raise retry_exc from fut.exception()
+
+            self._add_action_func(exc_check)
+            return
+
+        def next_action(rs: "RetryCallState") -> None:
+            sleep = rs.upcoming_sleep
+            rs.next_action = RetryAction(sleep)
+            rs.idle_for += sleep
+            self.statistics["idle_for"] += sleep
+            self.statistics["attempt_number"] += 1
+
+        self._add_action_func(next_action)
 
         if self.before_sleep is not None:
-            self.before_sleep(retry_state)
+            self._add_action_func(self.before_sleep)
 
-        return DoSleep(sleep)
+        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))
 
     def __iter__(self) -> t.Generator[AttemptManager, None, None]:
         self.begin()
