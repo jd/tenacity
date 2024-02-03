@@ -96,12 +96,19 @@ class TestAsync(unittest.TestCase):
         async def function_with_kwdefaults(*, a=1):
             return a
 
-        retrying = AsyncRetrying(wait=tenacity.wait_fixed(0.01), stop=tenacity.stop_after_attempt(3))
+        retrying = AsyncRetrying(
+            wait=tenacity.wait_fixed(0.01), stop=tenacity.stop_after_attempt(3)
+        )
         wrapped_defaults_function = retrying.wraps(function_with_defaults)
         wrapped_kwdefaults_function = retrying.wraps(function_with_kwdefaults)
 
-        self.assertEqual(function_with_defaults.__defaults__, wrapped_defaults_function.__defaults__)
-        self.assertEqual(function_with_kwdefaults.__kwdefaults__, wrapped_kwdefaults_function.__kwdefaults__)
+        self.assertEqual(
+            function_with_defaults.__defaults__, wrapped_defaults_function.__defaults__
+        )
+        self.assertEqual(
+            function_with_kwdefaults.__kwdefaults__,
+            wrapped_kwdefaults_function.__kwdefaults__,
+        )
 
     @asynctest
     async def test_attempt_number_is_correct_for_interleaved_coroutines(self):
@@ -152,7 +159,9 @@ class TestContextManager(unittest.TestCase):
             pass
 
         try:
-            async for attempt in tasyncio.AsyncRetrying(stop=stop_after_attempt(1), reraise=True):
+            async for attempt in tasyncio.AsyncRetrying(
+                stop=stop_after_attempt(1), reraise=True
+            ):
                 with attempt:
                     raise CustomError()
         except CustomError:
@@ -164,7 +173,9 @@ class TestContextManager(unittest.TestCase):
     async def test_sleeps(self):
         start = current_time_ms()
         try:
-            async for attempt in tasyncio.AsyncRetrying(stop=stop_after_attempt(1), wait=wait_fixed(1)):
+            async for attempt in tasyncio.AsyncRetrying(
+                stop=stop_after_attempt(1), wait=wait_fixed(1)
+            ):
                 with attempt:
                     raise Exception()
         except RetryError:
