@@ -19,6 +19,7 @@ import functools
 import sys
 import typing as t
 
+import tenacity
 from tenacity import AttemptManager
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
@@ -66,6 +67,8 @@ from .wait import wait_random_exponential  # noqa
 from .wait import wait_random_exponential as wait_full_jitter  # noqa
 from .wait import wait_exponential_jitter  # noqa
 
+from ..retry import RetryBaseT as SyncRetryBaseT
+
 WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Awaitable[t.Any]])
 
@@ -81,9 +84,9 @@ class AsyncRetrying(BaseRetrying):
     def __init__(
         self,
         sleep: t.Callable[[t.Union[int, float]], t.Union[None, t.Awaitable[None]]] = asyncio_sleep,
-        stop: "t.Union[StopBaseT, StopBaseT]" = stop_never,
-        wait: "t.Union[WaitBaseT, WaitBaseT]" = wait_none(),
-        retry: "t.Union[RetryBaseT, RetryBaseT]" = retry_if_exception_type(),
+        stop: "t.Union[tenacity.stop.StopBaseT, StopBaseT]" = stop_never,
+        wait: "t.Union[tenacity.wait.WaitBaseT, WaitBaseT]" = wait_none(),
+        retry: "t.Union[SyncRetryBaseT, RetryBaseT]" = retry_if_exception_type(),
         before: t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]] = before_nothing,
         after: t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]] = after_nothing,
         before_sleep: t.Optional[t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]]] = None,
