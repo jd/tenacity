@@ -97,6 +97,14 @@ WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Any])
 
 
+class IterState(t.TypedDict):
+    actions: list[t.Callable[["RetryCallState"], t.Any]]
+    retry_run_result: bool
+    delay_since_first_attempt: int
+    stop_run_result: bool
+    is_explicit_retry: bool
+
+
 class TryAgain(Exception):
     """Always retry the executed function when raised."""
 
@@ -280,11 +288,11 @@ class BaseRetrying(ABC):
             return self._local.statistics
 
     @property
-    def iter_state(self) -> t.Dict[str, t.Any]:
+    def iter_state(self) -> IterState:
         try:
             return self._local.iter_state  # type: ignore[no-any-return]
         except AttributeError:
-            self._local.iter_state = t.cast(t.Dict[str, t.Any], {})
+            self._local.iter_state = t.cast(IterState, {})
             return self._local.iter_state
 
     def wraps(self, f: WrappedFn) -> WrappedFn:
@@ -337,8 +345,15 @@ class BaseRetrying(ABC):
         return result
 
     def _begin_iter(self, retry_state: "RetryCallState") -> None:  # noqa
-        self.iter_state.clear()
-        self.iter_state["actions"] = []
+        self.iter_state.update(
+            {
+                "actions": [],
+                "retry_run_result": False,
+                "delay_since_first_attempt": 0,
+                "stop_run_result": False,
+                "is_explicit_retry": False,
+            }
+        )
 
         fut = retry_state.outcome
         if fut is None:
@@ -353,7 +368,7 @@ class BaseRetrying(ABC):
         self._add_action_func(self._post_retry_check_actions)
 
     def _post_retry_check_actions(self, retry_state: "RetryCallState") -> None:
-        if not (self.iter_state["is_explicit_retry"] or self.iter_state.get("retry_run_result")):
+        if not (self.iter_state["is_explicit_retry"] or self.iter_state["retry_run_result"]):
             self._add_action_func(lambda rs: rs.outcome.result())
             return
 
