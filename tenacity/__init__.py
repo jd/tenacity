@@ -98,7 +98,7 @@ WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Any])
 
 @dataclasses.dataclass(slots=True)
 class IterState:
-    actions: list[t.Callable[["RetryCallState"], t.Any]] = dataclasses.field(
+    actions: t.List[t.Callable[["RetryCallState"], t.Any]] = dataclasses.field(
         default_factory=list
     )
     retry_run_result: bool = False
