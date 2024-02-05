@@ -96,7 +96,12 @@ WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Any])
 
 
-@dataclasses.dataclass(slots=True)
+dataclass_kwargs = {}
+if sys.version_info >= (3, 10):
+    dataclass_kwargs.update({"slots": True})
+
+
+@dataclasses.dataclass(**dataclass_kwargs)
 class IterState:
     actions: t.List[t.Callable[["RetryCallState"], t.Any]] = dataclasses.field(
         default_factory=list
