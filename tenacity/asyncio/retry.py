@@ -14,270 +14,82 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import abc
-import re
+import inspect
 import typing
 
+from tenacity import _utils
 from tenacity import retry_base
+from tenacity import retry_if_exception as _retry_if_exception
+from tenacity import retry_if_result as _retry_if_result
 
 if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
 
 
-class retry_base(retry_base):  # type: ignore[no-redef]
-    """Abstract base class for retry strategies."""
+class async_retry_base(retry_base):
+    """Abstract base class for async retry strategies."""
 
     @abc.abstractmethod
     async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
         pass
 
+    def __and__(self, other: "typing.Union[retry_base, async_retry_base]") -> "retry_all":  # type: ignore[override]
+        return retry_all(self, other)
 
-RetryBaseT = typing.Union[retry_base, typing.Callable[["RetryCallState"], typing.Awaitable[bool]]]
-
-
-class _retry_never(retry_base):
-    """Retry strategy that never rejects any result."""
-
-    async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
-        return False
+    def __or__(self, other: "typing.Union[retry_base, async_retry_base]") -> "retry_any":  # type: ignore[override]
+        return retry_any(self, other)
 
 
-retry_never = _retry_never()
+class async_predicate_mixin:
+    async def __call__(self, retry_state: "RetryCallState") -> bool:
+        result = super().__call__(retry_state)  # type: ignore[misc]
+        if inspect.isawaitable(result):
+            result = await result
+        return typing.cast(bool, result)
 
 
-class _retry_always(retry_base):
-    """Retry strategy that always rejects any result."""
-
-    async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
-        return True
+RetryBaseT = typing.Union[async_retry_base, typing.Callable[["RetryCallState"], typing.Awaitable[bool]]]
 
 
-retry_always = _retry_always()
-
-
-class retry_if_exception(retry_base):
+class retry_if_exception(async_predicate_mixin, _retry_if_exception, async_retry_base):  # type: ignore[misc]
     """Retry strategy that retries if an exception verifies a predicate."""
 
     def __init__(self, predicate: typing.Callable[[BaseException], typing.Awaitable[bool]]) -> None:
-        self.predicate = predicate
-
-    async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
-        if retry_state.outcome is None:
-            raise RuntimeError("__call__() called before outcome was set")
-
-        if retry_state.outcome.failed:
-            exception = retry_state.outcome.exception()
-            if exception is None:
-                raise RuntimeError("outcome failed but the exception is None")
-            return await self.predicate(exception)
-        else:
-            return False
+        super().__init__(predicate)  # type: ignore[arg-type]
 
 
-class retry_if_exception_type(retry_if_exception):
-    """Retries if an exception has been raised of one or more types."""
-
-    def __init__(
-        self,
-        exception_types: typing.Union[
-            typing.Type[BaseException],
-            typing.Tuple[typing.Type[BaseException], ...],
-        ] = Exception,
-    ) -> None:
-        self.exception_types = exception_types
-
-        async def predicate(e: BaseException) -> bool:
-            return isinstance(e, exception_types)
-
-        super().__init__(predicate)
-
-
-class retry_if_not_exception_type(retry_if_exception):
-    """Retries except an exception has been raised of one or more types."""
-
-    def __init__(
-        self,
-        exception_types: typing.Union[
-            typing.Type[BaseException],
-            typing.Tuple[typing.Type[BaseException], ...],
-        ] = Exception,
-    ) -> None:
-        self.exception_types = exception_types
-
-        async def predicate(e: BaseException) -> bool:
-            return not isinstance(e, exception_types)
-
-        super().__init__(predicate)
-
-
-class retry_unless_exception_type(retry_if_exception):
-    """Retries until an exception is raised of one or more types."""
-
-    def __init__(
-        self,
-        exception_types: typing.Union[
-            typing.Type[BaseException],
-            typing.Tuple[typing.Type[BaseException], ...],
-        ] = Exception,
-    ) -> None:
-        self.exception_types = exception_types
-
-        async def predicate(e: BaseException) -> bool:
-            return not isinstance(e, exception_types)
-
-        super().__init__(predicate)
-
-    async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
-        if retry_state.outcome is None:
-            raise RuntimeError("__call__() called before outcome was set")
-
-        # always retry if no exception was raised
-        if not retry_state.outcome.failed:
-            return True
-
-        exception = retry_state.outcome.exception()
-        if exception is None:
-            raise RuntimeError("outcome failed but the exception is None")
-        return await self.predicate(exception)
-
-
-class retry_if_exception_cause_type(retry_base):
-    """Retries if any of the causes of the raised exception is of one or more types.
-
-    The check on the type of the cause of the exception is done recursively (until finding
-    an exception in the chain that has no `__cause__`)
-    """
-
-    def __init__(
-        self,
-        exception_types: typing.Union[
-            typing.Type[BaseException],
-            typing.Tuple[typing.Type[BaseException], ...],
-        ] = Exception,
-    ) -> None:
-        self.exception_cause_types = exception_types
-
-    async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
-        if retry_state.outcome is None:
-            raise RuntimeError("__call__ called before outcome was set")
-
-        if retry_state.outcome.failed:
-            exc = retry_state.outcome.exception()
-            while exc is not None:
-                if isinstance(exc.__cause__, self.exception_cause_types):
-                    return True
-                exc = exc.__cause__
-
-        return False
-
-
-class retry_if_result(retry_base):
+class retry_if_result(async_predicate_mixin, _retry_if_result, async_retry_base):  # type: ignore[misc]
     """Retries if the result verifies a predicate."""
 
     def __init__(self, predicate: typing.Callable[[typing.Any], typing.Awaitable[bool]]) -> None:
-        self.predicate = predicate
-
-    async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
-        if retry_state.outcome is None:
-            raise RuntimeError("__call__() called before outcome was set")
-
-        if not retry_state.outcome.failed:
-            return await self.predicate(retry_state.outcome.result())
-        else:
-            return False
+        super().__init__(predicate)  # type: ignore[arg-type]
 
 
-class retry_if_not_result(retry_base):
-    """Retries if the result refutes a predicate."""
-
-    def __init__(self, predicate: typing.Callable[[typing.Any], typing.Awaitable[bool]]) -> None:
-        self.predicate = predicate
-
-    async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
-        if retry_state.outcome is None:
-            raise RuntimeError("__call__() called before outcome was set")
-
-        if not retry_state.outcome.failed:
-            return not await self.predicate(retry_state.outcome.result())
-        else:
-            return False
-
-
-class retry_if_exception_message(retry_if_exception):
-    """Retries if an exception message equals or matches."""
-
-    def __init__(
-        self,
-        message: typing.Optional[str] = None,
-        match: typing.Optional[str] = None,
-    ) -> None:
-        if message and match:
-            raise TypeError(f"{self.__class__.__name__}() takes either 'message' or 'match', not both")
-
-        # set predicate
-        if message:
-
-            async def message_fnc(exception: BaseException) -> bool:
-                return message == str(exception)
-
-            predicate = message_fnc
-        elif match:
-            prog = re.compile(match)
-
-            async def match_fnc(exception: BaseException) -> bool:
-                return bool(prog.match(str(exception)))
-
-            predicate = match_fnc
-        else:
-            raise TypeError(f"{self.__class__.__name__}() missing 1 required argument 'message' or 'match'")
-
-        super().__init__(predicate)
-
-
-class retry_if_not_exception_message(retry_if_exception_message):
-    """Retries until an exception message equals or matches."""
-
-    def __init__(
-        self,
-        message: typing.Optional[str] = None,
-        match: typing.Optional[str] = None,
-    ) -> None:
-        super().__init__(message, match)
-        if_predicate = self.predicate
-
-        # invert predicate
-        async def predicate(e: BaseException) -> bool:
-            return not if_predicate(e)
-
-        self.predicate = predicate
-
-    async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
-        if retry_state.outcome is None:
-            raise RuntimeError("__call__() called before outcome was set")
-
-        if not retry_state.outcome.failed:
-            return True
-
-        exception = retry_state.outcome.exception()
-        if exception is None:
-            raise RuntimeError("outcome failed but the exception is None")
-        return await self.predicate(exception)
-
-
-class retry_any(retry_base):
+class retry_any(async_retry_base):
     """Retries if any of the retries condition is valid."""
 
-    def __init__(self, *retries: retry_base) -> None:
+    def __init__(self, *retries: typing.Union[retry_base, async_retry_base]) -> None:
         self.retries = retries
 
     async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
-        return any(r(retry_state) for r in self.retries)
+        result = False
+        for r in self.retries:
+            result = result or await _utils.wrap_to_async_func(r)(retry_state)
+            if result:
+                break
+        return result
 
 
-class retry_all(retry_base):
+class retry_all(async_retry_base):
     """Retries if all the retries condition are valid."""
 
-    def __init__(self, *retries: retry_base) -> None:
+    def __init__(self, *retries: typing.Union[retry_base, async_retry_base]) -> None:
         self.retries = retries
 
     async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
-        return all(r(retry_state) for r in self.retries)
+        result = True
+        for r in self.retries:
+            result = result and await _utils.wrap_to_async_func(r)(retry_state)
+            if not result:
+                break
+        return result

@@ -596,8 +596,8 @@ def retry(func: WrappedFn) -> WrappedFn: ...
 @t.overload
 def retry(
     sleep: t.Callable[[t.Union[int, float]], t.Union[None, t.Awaitable[None]]] = sleep,
-    stop: "t.Union[StopBaseT, tasyncio.stop.StopBaseT]" = stop_never,
-    wait: "t.Union[WaitBaseT, tasyncio.wait.WaitBaseT]" = wait_none(),
+    stop: "StopBaseT" = stop_never,
+    wait: "WaitBaseT" = wait_none(),
     retry: "t.Union[RetryBaseT, tasyncio.retry.RetryBaseT]" = retry_if_exception_type(),
     before: t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]] = before_nothing,
     after: t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]] = after_nothing,
