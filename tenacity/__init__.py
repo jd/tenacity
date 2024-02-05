@@ -15,8 +15,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
+import dataclasses
 import functools
 import sys
 import threading
@@ -97,12 +96,22 @@ WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Any])
 
 
-class IterState(t.TypedDict):
-    actions: list[t.Callable[["RetryCallState"], t.Any]]
-    retry_run_result: bool
-    delay_since_first_attempt: int
-    stop_run_result: bool
-    is_explicit_retry: bool
+@dataclasses.dataclass(slots=True)
+class IterState:
+    actions: list[t.Callable[["RetryCallState"], t.Any]] = dataclasses.field(
+        default_factory=list
+    )
+    retry_run_result: bool = False
+    delay_since_first_attempt: int = 0
+    stop_run_result: bool = False
+    is_explicit_retry: bool = False
+
+    def reset(self) -> None:
+        self.actions = []
+        self.retry_run_result = False
+        self.delay_since_first_attempt = 0
+        self.stop_run_result = False
+        self.is_explicit_retry = False
 
 
 class TryAgain(Exception):
@@ -300,7 +309,7 @@ class BaseRetrying(ABC):
         try:
             return self._local.iter_state  # type: ignore[no-any-return]
         except AttributeError:
-            self._local.iter_state = t.cast(IterState, {})
+            self._local.iter_state = IterState()
             return self._local.iter_state
 
     def wraps(self, f: WrappedFn) -> WrappedFn:
@@ -330,10 +339,10 @@ class BaseRetrying(ABC):
         self.statistics["idle_for"] = 0
 
     def _add_action_func(self, fn: t.Callable[..., t.Any]) -> None:
-        self.iter_state["actions"].append(fn)
+        self.iter_state.actions.append(fn)
 
     def _run_retry(self, retry_state: "RetryCallState") -> None:
-        self.iter_state["retry_run_result"] = self.retry(retry_state)
+        self.iter_state.retry_run_result = self.retry(retry_state)
 
     def _run_wait(self, retry_state: "RetryCallState") -> None:
         if self.wait:
@@ -345,25 +354,17 @@ class BaseRetrying(ABC):
 
     def _run_stop(self, retry_state: "RetryCallState") -> None:
         self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start
-        self.iter_state["stop_run_result"] = self.stop(retry_state)
+        self.iter_state.stop_run_result = self.stop(retry_state)
 
     def iter(self, retry_state: "RetryCallState") -> t.Union[DoAttempt, DoSleep, t.Any]:  # noqa
         self._begin_iter(retry_state)
         result = None
-        for action in self.iter_state["actions"]:
+        for action in self.iter_state.actions:
             result = action(retry_state)
         return result
 
     def _begin_iter(self, retry_state: "RetryCallState") -> None:  # noqa
-        self.iter_state.update(
-            {
-                "actions": [],
-                "retry_run_result": False,
-                "delay_since_first_attempt": 0,
-                "stop_run_result": False,
-                "is_explicit_retry": False,
-            }
-        )
+        self.iter_state.reset()
 
         fut = retry_state.outcome
         if fut is None:
@@ -372,17 +373,15 @@ class BaseRetrying(ABC):
             self._add_action_func(lambda rs: DoAttempt())
             return
 
-        self.iter_state["is_explicit_retry"] = fut.failed and isinstance(
+        self.iter_state.is_explicit_retry = fut.failed and isinstance(
             fut.exception(), TryAgain
         )
-        if not self.iter_state["is_explicit_retry"]:
+        if not self.iter_state.is_explicit_retry:
             self._add_action_func(self._run_retry)
         self._add_action_func(self._post_retry_check_actions)
 
     def _post_retry_check_actions(self, retry_state: "RetryCallState") -> None:
-        if not (
-            self.iter_state["is_explicit_retry"] or self.iter_state["retry_run_result"]
-        ):
+        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):
             self._add_action_func(lambda rs: rs.outcome.result())
             return
 
@@ -394,7 +393,7 @@ class BaseRetrying(ABC):
         self._add_action_func(self._post_stop_check_actions)
 
     def _post_stop_check_actions(self, retry_state: "RetryCallState") -> None:
-        if self.iter_state["stop_run_result"]:
+        if self.iter_state.stop_run_result:
             if self.retry_error_callback:
                 self._add_action_func(self.retry_error_callback)
                 return
