@@ -20,6 +20,7 @@ import sys
 import typing as t
 
 import tenacity
+from tenacity import _utils
 from tenacity import AttemptManager
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
