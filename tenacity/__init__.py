@@ -372,13 +372,17 @@ class BaseRetrying(ABC):
             self._add_action_func(lambda rs: DoAttempt())
             return
 
-        self.iter_state["is_explicit_retry"] = fut.failed and isinstance(fut.exception(), TryAgain)
+        self.iter_state["is_explicit_retry"] = fut.failed and isinstance(
+            fut.exception(), TryAgain
+        )
         if not self.iter_state["is_explicit_retry"]:
             self._add_action_func(self._run_retry)
         self._add_action_func(self._post_retry_check_actions)
 
     def _post_retry_check_actions(self, retry_state: "RetryCallState") -> None:
-        if not (self.iter_state["is_explicit_retry"] or self.iter_state["retry_run_result"]):
+        if not (
+            self.iter_state["is_explicit_retry"] or self.iter_state["retry_run_result"]
+        ):
             self._add_action_func(lambda rs: rs.outcome.result())
             return
 
