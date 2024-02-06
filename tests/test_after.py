@@ -11,7 +11,15 @@ from . import test_tenacity
 
 class TestAfterLogFormat(unittest.TestCase):
     def setUp(self) -> None:
-        self.log_level = random.choice((logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL))
+        self.log_level = random.choice(
+            (
+                logging.DEBUG,
+                logging.INFO,
+                logging.WARNING,
+                logging.ERROR,
+                logging.CRITICAL,
+            )
+        )
         self.previous_attempt_number = random.randint(1, 512)
 
     def test_01_default(self):
@@ -22,10 +30,18 @@ class TestAfterLogFormat(unittest.TestCase):
         sec_format = "%0.3f"
         delay_since_first_attempt = 0.1
 
-        retry_state = test_tenacity.make_retry_state(self.previous_attempt_number, delay_since_first_attempt)
-        fun = after_log(logger=logger, log_level=self.log_level)  # use default sec_format
+        retry_state = test_tenacity.make_retry_state(
+            self.previous_attempt_number, delay_since_first_attempt
+        )
+        fun = after_log(
+            logger=logger, log_level=self.log_level
+        )  # use default sec_format
         fun(retry_state)
-        fn_name = "<unknown>" if retry_state.fn is None else _utils.get_callback_name(retry_state.fn)
+        fn_name = (
+            "<unknown>"
+            if retry_state.fn is None
+            else _utils.get_callback_name(retry_state.fn)
+        )
         log.assert_called_once_with(
             self.log_level,
             f"Finished call to '{fn_name}' "
@@ -41,10 +57,16 @@ class TestAfterLogFormat(unittest.TestCase):
         sec_format = "%.1f"
         delay_since_first_attempt = 0.1
 
-        retry_state = test_tenacity.make_retry_state(self.previous_attempt_number, delay_since_first_attempt)
+        retry_state = test_tenacity.make_retry_state(
+            self.previous_attempt_number, delay_since_first_attempt
+        )
         fun = after_log(logger=logger, log_level=self.log_level, sec_format=sec_format)
         fun(retry_state)
-        fn_name = "<unknown>" if retry_state.fn is None else _utils.get_callback_name(retry_state.fn)
+        fn_name = (
+            "<unknown>"
+            if retry_state.fn is None
+            else _utils.get_callback_name(retry_state.fn)
+        )
         log.assert_called_once_with(
             self.log_level,
             f"Finished call to '{fn_name}' "

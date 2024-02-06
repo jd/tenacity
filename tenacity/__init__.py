@@ -125,7 +125,9 @@ class BaseAction:
     NAME: t.Optional[str] = None
 
     def __repr__(self) -> str:
-        state_str = ", ".join(f"{field}={getattr(self, field)!r}" for field in self.REPR_FIELDS)
+        state_str = ", ".join(
+            f"{field}={getattr(self, field)!r}" for field in self.REPR_FIELDS
+        )
         return f"{self.__class__.__name__}({state_str})"
 
     def __str__(self) -> str:
@@ -221,10 +223,14 @@ class BaseRetrying(ABC):
         retry: t.Union[retry_base, object] = _unset,
         before: t.Union[t.Callable[["RetryCallState"], None], object] = _unset,
         after: t.Union[t.Callable[["RetryCallState"], None], object] = _unset,
-        before_sleep: t.Union[t.Optional[t.Callable[["RetryCallState"], None]], object] = _unset,
+        before_sleep: t.Union[
+            t.Optional[t.Callable[["RetryCallState"], None]], object
+        ] = _unset,
         reraise: t.Union[bool, object] = _unset,
         retry_error_cls: t.Union[t.Type[RetryError], object] = _unset,
-        retry_error_callback: t.Union[t.Optional[t.Callable[["RetryCallState"], t.Any]], object] = _unset,
+        retry_error_callback: t.Union[
+            t.Optional[t.Callable[["RetryCallState"], t.Any]], object
+        ] = _unset,
     ) -> "BaseRetrying":
         """Copy this object with some parameters changed if needed."""
         return self.__class__(
@@ -237,7 +243,9 @@ class BaseRetrying(ABC):
             before_sleep=_first_set(before_sleep, self.before_sleep),
             reraise=_first_set(reraise, self.reraise),
             retry_error_cls=_first_set(retry_error_cls, self.retry_error_cls),
-            retry_error_callback=_first_set(retry_error_callback, self.retry_error_callback),
+            retry_error_callback=_first_set(
+                retry_error_callback, self.retry_error_callback
+            ),
         )
 
     def __repr__(self) -> str:
@@ -285,7 +293,9 @@ class BaseRetrying(ABC):
         :param f: A function to wraps for retrying.
         """
 
-        @functools.wraps(f, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__"))
+        @functools.wraps(
+            f, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__")
+        )
         def wrapped_f(*args: t.Any, **kw: t.Any) -> t.Any:
             return self(f, *args, **kw)
 
@@ -414,7 +424,9 @@ class Future(FutureGenericT):
         return self.exception() is not None
 
     @classmethod
-    def construct(cls, attempt_number: int, value: t.Any, has_exception: bool) -> "Future":
+    def construct(
+        cls, attempt_number: int, value: t.Any, has_exception: bool
+    ) -> "Future":
         """Construct a new Future object."""
         fut = cls(attempt_number)
         if has_exception:
@@ -477,7 +489,10 @@ class RetryCallState:
         self.outcome, self.outcome_timestamp = fut, ts
 
     def set_exception(
-        self, exc_info: t.Tuple[t.Type[BaseException], BaseException, "types.TracebackType| None"]
+        self,
+        exc_info: t.Tuple[
+            t.Type[BaseException], BaseException, "types.TracebackType| None"
+        ],
     ) -> None:
         ts = time.monotonic()
         fut = Future(self.attempt_number)
@@ -539,7 +554,11 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
             r: "BaseRetrying"
             if iscoroutinefunction(f):
                 r = AsyncRetrying(*dargs, **dkw)
-            elif tornado and hasattr(tornado.gen, "is_coroutine_function") and tornado.gen.is_coroutine_function(f):
+            elif (
+                tornado
+                and hasattr(tornado.gen, "is_coroutine_function")
+                and tornado.gen.is_coroutine_function(f)
+            ):
                 r = TornadoRetrying(*dargs, **dkw)
             else:
                 r = Retrying(*dargs, **dkw)

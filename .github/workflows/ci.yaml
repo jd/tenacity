@@ -27,14 +27,12 @@ jobs:
             tox: py310
           - python: "3.11"
             tox: py311
-          - python: "3.11"
-            tox: pep8
-          - python: "3.11"
-            tox: black-ci
-          - python: "3.11"
-            tox: mypy
           - python: "3.12"
             tox: py312
+          - python: "3.12"
+            tox: pep8
+          - python: "3.11"
+            tox: mypy
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v4.0.0
