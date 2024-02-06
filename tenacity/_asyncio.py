@@ -33,7 +33,9 @@ WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Awaitable[t.Any]])
 class AsyncRetrying(BaseRetrying):
     sleep: t.Callable[[float], t.Awaitable[t.Any]]
 
-    def __init__(self, sleep: t.Callable[[float], t.Awaitable[t.Any]] = sleep, **kwargs: t.Any) -> None:
+    def __init__(
+        self, sleep: t.Callable[[float], t.Awaitable[t.Any]] = sleep, **kwargs: t.Any
+    ) -> None:
         super().__init__(**kwargs)
         self.sleep = sleep
 
@@ -83,7 +85,9 @@ class AsyncRetrying(BaseRetrying):
         fn = super().wraps(fn)
         # Ensure wrapper is recognized as a coroutine function.
 
-        @functools.wraps(fn, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__"))
+        @functools.wraps(
+            fn, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__")
+        )
         async def async_wrapped(*args: t.Any, **kwargs: t.Any) -> t.Any:
             return await fn(*args, **kwargs)
 
