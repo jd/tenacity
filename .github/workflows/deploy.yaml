@@ -1,14 +1,14 @@
 name: Release deploy
 
 on:
-  push:
-    tags:
+  release:
+    types:
+      - published
 
 jobs:
   test:
-    if: github.repository_owner == 'jd'
     timeout-minutes: 20
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v4.0.0
