@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Unit tests can now mock ``nap.asyncio_sleep`` to skip waiting when retrying
+    asynchronous functions, similar to mocking ``nap.time.sleep`` for
+    synchronous ones.
