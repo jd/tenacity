@@ -1,6 +1,7 @@
 queue_rules:
   - name: default
-    conditions: &CheckRuns
+    merge_method: squash
+    queue_conditions: &CheckRuns
       - "check-success=test (3.8, py38)"
       - "check-success=test (3.9, py39)"
       - "check-success=test (3.10, py310)"
@@ -20,42 +21,28 @@ pull_request_rules:
           ⚠️ No release notes detected. Please make sure to use
           [reno](https://docs.openstack.org/reno/latest/user/usage.html) to add
           a changelog entry.
+
   - name: automatic merge without changelog
     conditions:
-      - and: *CheckRuns
-      - "#approved-reviews-by>=1"
-      - label=no-changelog
+      - or:
+        - author=jd
+        - author=dependabot
+        - "#approved-reviews-by>=1"
+      - or:
+        - label=no-changelog
+        - author=dependabot
     actions:
       queue:
-        name: default
-        method: squash
+
   - name: automatic merge with changelog
     conditions:
-      - and: *CheckRuns
-      - "#approved-reviews-by>=1"
+      - or:
+        - author=jd
+        - "#approved-reviews-by>=1"
       - files~=^releasenotes/notes/
     actions:
       queue:
-        name: default
-        method: squash
-  - name: automatic merge for jd without changelog
-    conditions:
-      - author=jd
-      - and: *CheckRuns
-      - label=no-changelog
-    actions:
-      queue:
-        name: default
-        method: squash
-  - name: automatic merge for jd with changelog
-    conditions:
-      - author=jd
-      - and: *CheckRuns
-      - files~=^releasenotes/notes/
-    actions:
-      queue:
-        name: default
-        method: squash
+
   - name: dismiss reviews
     conditions: []
     actions:
