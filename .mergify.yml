@@ -26,11 +26,11 @@ pull_request_rules:
     conditions:
       - or:
         - author=jd
-        - author=dependabot
+        - author=dependabot[bot]
         - "#approved-reviews-by>=1"
       - or:
         - label=no-changelog
-        - author=dependabot
+        - author=dependabot[bot]
     actions:
       queue:
 
