@@ -6,7 +6,7 @@ on:
       - published
 
 jobs:
-  test:
+  publish:
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
