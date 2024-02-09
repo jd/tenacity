@@ -34,7 +34,9 @@ class AsyncRetrying(BaseRetrying):
     sleep: t.Callable[[float], t.Awaitable[t.Any]]
 
     def __init__(
-        self, sleep: t.Callable[[float], t.Awaitable[t.Any]] = async_sleep, **kwargs: t.Any
+        self,
+        sleep: t.Callable[[float], t.Awaitable[t.Any]] = async_sleep,
+        **kwargs: t.Any,
     ) -> None:
         super().__init__(**kwargs)
         self.sleep = sleep
