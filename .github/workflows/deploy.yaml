@@ -1,22 +1,22 @@
 name: Release deploy
 
 on:
-  push:
-    tags:
+  release:
+    types:
+      - published
 
 jobs:
-  test:
-    if: github.repository_owner == 'jd'
+  publish:
     timeout-minutes: 20
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout 🛎️
-        uses: actions/checkout@v4.0.0
+        uses: actions/checkout@v4.1.1
         with:
           fetch-depth: 0
 
       - name: Setup Python 🔧
-        uses: actions/setup-python@v4.7.0
+        uses: actions/setup-python@v5.0.0
         with:
           python-version: 3.11
 
