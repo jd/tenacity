@@ -17,6 +17,7 @@
 
 import time
 import typing
+from asyncio import sleep as asyncio_sleep
 
 if typing.TYPE_CHECKING:
     import threading
@@ -41,3 +42,12 @@ class sleep_using_event:
         # NOTE(harlowja): this may *not* actually wait for timeout
         # seconds if the event is set (ie this may eject out early).
         self.event.wait(timeout=timeout)
+
+
+async def async_sleep(seconds: float) -> None:
+    """
+    Async sleep strategy that delays execution for a given number of seconds.
+
+    To mock waiting for unit testing patch `tenacity.nap.asyncio_sleep` with a no-op.
+    """
+    await asyncio_sleep(seconds)

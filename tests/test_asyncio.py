@@ -16,6 +16,7 @@
 import asyncio
 import inspect
 import unittest
+import unittest.mock
 from functools import wraps
 
 import pytest
@@ -209,6 +210,16 @@ class TestContextManager(unittest.TestCase):
             for attempts in AsyncRetrying():
                 with attempts:
                     await _async_function(thing)
+
+
+class TestAsyncSleepMocking(unittest.TestCase):
+    @asynctest
+    async def test_mock_sleep(self):
+        mock = unittest.mock.AsyncMock()
+        with unittest.mock.patch("tenacity.nap.asyncio_sleep", mock):
+            thing = NoIOErrorAfterCount(3)
+            await _retryable_coroutine(thing)
+        assert mock.await_count == 3
 
 
 # make sure mypy accepts passing an async sleep function
