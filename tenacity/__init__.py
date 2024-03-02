@@ -588,8 +588,7 @@ class RetryCallState:
 
 
 @t.overload
-def retry(func: WrappedFn) -> WrappedFn:
-    ...
+def retry(func: WrappedFn) -> WrappedFn: ...
 
 
 @t.overload
@@ -604,8 +603,7 @@ def retry(
     reraise: bool = False,
     retry_error_cls: t.Type["RetryError"] = RetryError,
     retry_error_callback: t.Optional[t.Callable[["RetryCallState"], t.Any]] = None,
-) -> t.Callable[[WrappedFn], WrappedFn]:
-    ...
+) -> t.Callable[[WrappedFn], WrappedFn]: ...
 
 
 def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
