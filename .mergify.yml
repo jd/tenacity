@@ -1,7 +1,15 @@
 queue_rules:
   - name: default
     merge_method: squash
-    queue_conditions: &CheckRuns
+    queue_conditions:
+      - or:
+        - author = jd
+        - "#approved-reviews-by >= 1"
+        - author = dependabot[bot]
+      - or:
+        - files ~= ^releasenotes/notes/
+        - label = no-changelog
+        - author = dependabot[bot]
       - "check-success=test (3.8, py38)"
       - "check-success=test (3.9, py39)"
       - "check-success=test (3.10, py310)"
@@ -22,24 +30,8 @@ pull_request_rules:
           [reno](https://docs.openstack.org/reno/latest/user/usage.html) to add
           a changelog entry.
 
-  - name: automatic merge without changelog
-    conditions:
-      - or:
-        - author=jd
-        - author=dependabot[bot]
-        - "#approved-reviews-by>=1"
-      - or:
-        - label=no-changelog
-        - author=dependabot[bot]
-    actions:
-      queue:
-
-  - name: automatic merge with changelog
-    conditions:
-      - or:
-        - author=jd
-        - "#approved-reviews-by>=1"
-      - files~=^releasenotes/notes/
+  - name: automatic queue
+    conditions: []
     actions:
       queue:
 
