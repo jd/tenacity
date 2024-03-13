@@ -18,7 +18,6 @@
 import functools
 import sys
 import typing as t
-from asyncio import sleep
 
 from tenacity import AttemptManager
 from tenacity import BaseRetrying
@@ -31,11 +30,20 @@ WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Awaitable[t.Any]])
 
 
+def asyncio_sleep(duration: float) -> t.Awaitable[None]:
+    # Lazy import asyncio as it's expensive (responsible for 25-50% of total import overhead).
+    import asyncio
+
+    return asyncio.sleep(duration)
+
+
 class AsyncRetrying(BaseRetrying):
     sleep: t.Callable[[float], t.Awaitable[t.Any]]
 
     def __init__(
-        self, sleep: t.Callable[[float], t.Awaitable[t.Any]] = sleep, **kwargs: t.Any
+        self,
+        sleep: t.Callable[[float], t.Awaitable[t.Any]] = asyncio_sleep,
+        **kwargs: t.Any,
     ) -> None:
         super().__init__(**kwargs)
         self.sleep = sleep
