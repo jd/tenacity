@@ -8,5 +8,6 @@ AUTHORS
 ChangeLog
 .eggs/
 doc/_build
+venv/
 
 /.pytest_cache

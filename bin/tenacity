@@ -1,0 +1,3 @@
+#!/usr/bin/env python3
+from tenacity.__main__ import main
+main()
