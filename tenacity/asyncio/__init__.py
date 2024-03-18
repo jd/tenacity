@@ -26,7 +26,6 @@ from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import RetryCallState
 from tenacity import RetryError
-from tenacity import _utils
 from tenacity import after_nothing
 from tenacity import before_nothing
 from tenacity import _utils
@@ -57,16 +56,26 @@ def asyncio_sleep(duration: float) -> t.Awaitable[None]:
 class AsyncRetrying(BaseRetrying):
     def __init__(
         self,
-        sleep: t.Callable[[t.Union[int, float]], t.Union[None, t.Awaitable[None]]] = asyncio_sleep,
+        sleep: t.Callable[
+            [t.Union[int, float]], t.Union[None, t.Awaitable[None]]
+        ] = asyncio_sleep,
         stop: "StopBaseT" = tenacity.stop.stop_never,
         wait: "WaitBaseT" = tenacity.wait.wait_none(),
         retry: "t.Union[SyncRetryBaseT, RetryBaseT]" = tenacity.retry_if_exception_type(),
-        before: t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]] = before_nothing,
-        after: t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]] = after_nothing,
-        before_sleep: t.Optional[t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]]] = None,
+        before: t.Callable[
+            ["RetryCallState"], t.Union[None, t.Awaitable[None]]
+        ] = before_nothing,
+        after: t.Callable[
+            ["RetryCallState"], t.Union[None, t.Awaitable[None]]
+        ] = after_nothing,
+        before_sleep: t.Optional[
+            t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]]
+        ] = None,
         reraise: bool = False,
         retry_error_cls: t.Type["RetryError"] = RetryError,
-        retry_error_callback: t.Optional[t.Callable[["RetryCallState"], t.Union[t.Any, t.Awaitable[t.Any]]]] = None,
+        retry_error_callback: t.Optional[
+            t.Callable[["RetryCallState"], t.Union[t.Any, t.Awaitable[t.Any]]]
+        ] = None,
     ) -> None:
         super().__init__(
             sleep=sleep,  # type: ignore[arg-type]

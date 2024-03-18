@@ -599,12 +599,20 @@ def retry(
     stop: "StopBaseT" = stop_never,
     wait: "WaitBaseT" = wait_none(),
     retry: "t.Union[RetryBaseT, tasyncio.retry.RetryBaseT]" = retry_if_exception_type(),
-    before: t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]] = before_nothing,
-    after: t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]] = after_nothing,
-    before_sleep: t.Optional[t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]]] = None,
+    before: t.Callable[
+        ["RetryCallState"], t.Union[None, t.Awaitable[None]]
+    ] = before_nothing,
+    after: t.Callable[
+        ["RetryCallState"], t.Union[None, t.Awaitable[None]]
+    ] = after_nothing,
+    before_sleep: t.Optional[
+        t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]]
+    ] = None,
     reraise: bool = False,
     retry_error_cls: t.Type["RetryError"] = RetryError,
-    retry_error_callback: t.Optional[t.Callable[["RetryCallState"], t.Union[t.Any, t.Awaitable[t.Any]]]] = None,
+    retry_error_callback: t.Optional[
+        t.Callable[["RetryCallState"], t.Union[t.Any, t.Awaitable[t.Any]]]
+    ] = None,
 ) -> t.Callable[[WrappedFn], WrappedFn]: ...
 
 
