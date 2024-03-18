@@ -33,11 +33,25 @@ class async_retry_base(retry_base):
     async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
         pass
 
-    def __and__(self, other: "typing.Union[retry_base, async_retry_base]") -> "retry_all":  # type: ignore[override]
+    def __and__(  # type: ignore[override]
+        self, other: "typing.Union[retry_base, async_retry_base]"
+    ) -> "retry_all":
         return retry_all(self, other)
 
-    def __or__(self, other: "typing.Union[retry_base, async_retry_base]") -> "retry_any":  # type: ignore[override]
+    def __rand__(  # type: ignore[misc,override]
+        self, other: "typing.Union[retry_base, async_retry_base]"
+    ) -> "retry_all":
+        return retry_all(other, self)
+
+    def __or__(  # type: ignore[override]
+        self, other: "typing.Union[retry_base, async_retry_base]"
+    ) -> "retry_any":
         return retry_any(self, other)
+
+    def __ror__(  # type: ignore[misc,override]
+        self, other: "typing.Union[retry_base, async_retry_base]"
+    ) -> "retry_any":
+        return retry_any(other, self)
 
 
 class async_predicate_mixin:
@@ -48,20 +62,26 @@ class async_predicate_mixin:
         return typing.cast(bool, result)
 
 
-RetryBaseT = typing.Union[async_retry_base, typing.Callable[["RetryCallState"], typing.Awaitable[bool]]]
+RetryBaseT = typing.Union[
+    async_retry_base, typing.Callable[["RetryCallState"], typing.Awaitable[bool]]
+]
 
 
 class retry_if_exception(async_predicate_mixin, _retry_if_exception, async_retry_base):  # type: ignore[misc]
     """Retry strategy that retries if an exception verifies a predicate."""
 
-    def __init__(self, predicate: typing.Callable[[BaseException], typing.Awaitable[bool]]) -> None:
+    def __init__(
+        self, predicate: typing.Callable[[BaseException], typing.Awaitable[bool]]
+    ) -> None:
         super().__init__(predicate)  # type: ignore[arg-type]
 
 
 class retry_if_result(async_predicate_mixin, _retry_if_result, async_retry_base):  # type: ignore[misc]
     """Retries if the result verifies a predicate."""
 
-    def __init__(self, predicate: typing.Callable[[typing.Any], typing.Awaitable[bool]]) -> None:
+    def __init__(
+        self, predicate: typing.Callable[[typing.Any], typing.Awaitable[bool]]
+    ) -> None:
         super().__init__(predicate)  # type: ignore[arg-type]
 
 

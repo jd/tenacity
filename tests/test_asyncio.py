@@ -23,7 +23,7 @@ import pytest
 import tenacity
 from tenacity import AsyncRetrying, RetryError
 from tenacity import asyncio as tasyncio
-from tenacity import retry, retry_if_result, stop_after_attempt
+from tenacity import retry, retry_if_exception, retry_if_result, stop_after_attempt
 from tenacity.wait import wait_fixed
 
 from .test_tenacity import NoIOErrorAfterCount, current_time_ms
@@ -203,12 +203,33 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(3, result)
 
     @asynctest
-    async def test_retry_with_async_result_or(self):
+    async def test_retry_with_async_result(self):
         async def test():
             attempts = 0
 
             async def lt_3(x: float) -> bool:
                 return x < 3
+
+            async for attempt in tasyncio.AsyncRetrying(
+                retry=tasyncio.retry_if_result(lt_3)
+            ):
+                with attempt:
+                    attempts += 1
+
+                assert attempt.retry_state.outcome  # help mypy
+                if not attempt.retry_state.outcome.failed:
+                    attempt.retry_state.set_result(attempts)
+
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(3, result)
+
+    @asynctest
+    async def test_retry_with_async_exc(self):
+        async def test():
+            attempts = 0
 
             class CustomException(Exception):
                 pass
@@ -216,11 +237,12 @@ class TestContextManager(unittest.TestCase):
             async def is_exc(e: BaseException) -> bool:
                 return isinstance(e, CustomException)
 
-            retry_strategy = tasyncio.retry_if_result(lt_3) | tasyncio.retry_if_exception(is_exc)
-            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+            async for attempt in tasyncio.AsyncRetrying(
+                retry=tasyncio.retry_if_exception(is_exc)
+            ):
                 with attempt:
                     attempts += 1
-                    if 1 < attempts < 3:
+                    if attempts < 3:
                         raise CustomException()
 
                 assert attempt.retry_state.outcome  # help mypy
@@ -234,6 +256,68 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(3, result)
 
     @asynctest
+    async def test_retry_with_async_result_or(self):
+        async def test():
+            attempts = 0
+
+            async def lt_3(x: float) -> bool:
+                return x < 3
+
+            class CustomException(Exception):
+                pass
+
+            def is_exc(e: BaseException) -> bool:
+                return isinstance(e, CustomException)
+
+            retry_strategy = tasyncio.retry_if_result(lt_3) | retry_if_exception(is_exc)
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+                    if 2 < attempts < 4:
+                        raise CustomException()
+
+                assert attempt.retry_state.outcome  # help mypy
+                if not attempt.retry_state.outcome.failed:
+                    attempt.retry_state.set_result(attempts)
+
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(4, result)
+
+    @asynctest
+    async def test_retry_with_async_result_ror(self):
+        async def test():
+            attempts = 0
+
+            def lt_3(x: float) -> bool:
+                return x < 3
+
+            class CustomException(Exception):
+                pass
+
+            async def is_exc(e: BaseException) -> bool:
+                return isinstance(e, CustomException)
+
+            retry_strategy = retry_if_result(lt_3) | tasyncio.retry_if_exception(is_exc)
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+                    if 2 < attempts < 4:
+                        raise CustomException()
+
+                assert attempt.retry_state.outcome  # help mypy
+                if not attempt.retry_state.outcome.failed:
+                    attempt.retry_state.set_result(attempts)
+
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(4, result)
+
+    @asynctest
     async def test_retry_with_async_result_and(self):
         async def test():
             attempts = 0
@@ -245,6 +329,29 @@ class TestContextManager(unittest.TestCase):
                 return x > 0
 
             retry_strategy = tasyncio.retry_if_result(lt_3) & retry_if_result(gt_0)
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+                attempt.retry_state.set_result(attempts)
+
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(3, result)
+
+    @asynctest
+    async def test_retry_with_async_result_rand(self):
+        async def test():
+            attempts = 0
+
+            async def lt_3(x: float) -> bool:
+                return x < 3
+
+            def gt_0(x: float) -> bool:
+                return x > 0
+
+            retry_strategy = retry_if_result(gt_0) & tasyncio.retry_if_result(lt_3)
             async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
                 with attempt:
                     attempts += 1
