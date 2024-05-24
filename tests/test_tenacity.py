@@ -1,5 +1,4 @@
-# -*- encoding: utf-8 -*-
-#
+# mypy: disable_error_code="no-untyped-def,no-untyped-call,attr-defined,arg-type,no-any-return,list-item,var-annotated,import,call-overload"
 # Copyright 2016–2021 Julien Danjou
 # Copyright 2016 Joshua Harlow
 # Copyright 2013 Ray Holder
@@ -15,6 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import datetime
 import logging
 import re
 import sys
@@ -28,18 +28,15 @@ from fractions import Fraction
 
 import pytest
 
-import six.moves
-
 import tenacity
 from tenacity import RetryCallState, RetryError, Retrying, retry
-
 
 _unset = object()
 
 
 def _make_unset_exception(func_name, **kwargs):
     missing = []
-    for k, v in six.iteritems(kwargs):
+    for k, v in kwargs.items():
         if v is _unset:
             missing.append(k)
     missing_str = ", ".join(repr(s) for s in missing)
@@ -55,7 +52,10 @@ def _set_delay_since_start(retry_state, delay):
 
 
 def make_retry_state(
-    previous_attempt_number, delay_since_first_attempt, last_result=None
+    previous_attempt_number,
+    delay_since_first_attempt,
+    last_result=None,
+    upcoming_sleep=0,
 ):
     """Construct RetryCallState for given attempt number & delay.
 
@@ -77,17 +77,35 @@ def make_retry_state(
         retry_state.outcome = last_result
     else:
         retry_state.set_result(None)
+
+    retry_state.upcoming_sleep = upcoming_sleep
+
     _set_delay_since_start(retry_state, delay_since_first_attempt)
     return retry_state
 
 
 class TestBase(unittest.TestCase):
-    def test_repr(self):
+    def test_retrying_repr(self):
         class ConcreteRetrying(tenacity.BaseRetrying):
-            def __call__(self):
+            def __call__(self, fn, *args, **kwargs):
                 pass
 
         repr(ConcreteRetrying())
+
+    def test_callstate_repr(self):
+        rs = RetryCallState(None, None, (), {})
+        rs.idle_for = 1.1111111
+        assert repr(rs).endswith("attempt #1; slept for 1.11; last result: none yet>")
+        rs = make_retry_state(2, 5)
+        assert repr(rs).endswith(
+            "attempt #2; slept for 0.0; last result: returned None>"
+        )
+        rs = make_retry_state(
+            0, 0, last_result=tenacity.Future.construct(1, ValueError("aaa"), True)
+        )
+        assert repr(rs).endswith(
+            "attempt #0; slept for 0.0; last result: failed (ValueError aaa)>"
+        )
 
 
 class TestStopConditions(unittest.TestCase):
@@ -158,10 +176,27 @@ class TestStopConditions(unittest.TestCase):
         self.assertTrue(r.stop(make_retry_state(4, 6546)))
 
     def test_stop_after_delay(self):
-        r = Retrying(stop=tenacity.stop_after_delay(1))
-        self.assertFalse(r.stop(make_retry_state(2, 0.999)))
-        self.assertTrue(r.stop(make_retry_state(2, 1)))
-        self.assertTrue(r.stop(make_retry_state(2, 1.001)))
+        for delay in (1, datetime.timedelta(seconds=1)):
+            with self.subTest():
+                r = Retrying(stop=tenacity.stop_after_delay(delay))
+                self.assertFalse(r.stop(make_retry_state(2, 0.999)))
+                self.assertTrue(r.stop(make_retry_state(2, 1)))
+                self.assertTrue(r.stop(make_retry_state(2, 1.001)))
+
+    def test_stop_before_delay(self):
+        for delay in (1, datetime.timedelta(seconds=1)):
+            with self.subTest():
+                r = Retrying(stop=tenacity.stop_before_delay(delay))
+                self.assertFalse(
+                    r.stop(make_retry_state(2, 0.999, upcoming_sleep=0.0001))
+                )
+                self.assertTrue(r.stop(make_retry_state(2, 1, upcoming_sleep=0.001)))
+                self.assertTrue(r.stop(make_retry_state(2, 1, upcoming_sleep=1)))
+
+                # It should act the same as stop_after_delay if upcoming sleep is 0
+                self.assertFalse(r.stop(make_retry_state(2, 0.999, upcoming_sleep=0)))
+                self.assertTrue(r.stop(make_retry_state(2, 1, upcoming_sleep=0)))
+                self.assertTrue(r.stop(make_retry_state(2, 1.001, upcoming_sleep=0)))
 
     def test_legacy_explicit_stop_type(self):
         Retrying(stop="stop_after_attempt")
@@ -183,28 +218,42 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(0, r.wait(make_retry_state(18, 9879)))
 
     def test_fixed_sleep(self):
-        r = Retrying(wait=tenacity.wait_fixed(1))
-        self.assertEqual(1, r.wait(make_retry_state(12, 6546)))
+        for wait in (1, datetime.timedelta(seconds=1)):
+            with self.subTest():
+                r = Retrying(wait=tenacity.wait_fixed(wait))
+                self.assertEqual(1, r.wait(make_retry_state(12, 6546)))
 
     def test_incrementing_sleep(self):
-        r = Retrying(wait=tenacity.wait_incrementing(start=500, increment=100))
-        self.assertEqual(500, r.wait(make_retry_state(1, 6546)))
-        self.assertEqual(600, r.wait(make_retry_state(2, 6546)))
-        self.assertEqual(700, r.wait(make_retry_state(3, 6546)))
+        for start, increment in (
+            (500, 100),
+            (datetime.timedelta(seconds=500), datetime.timedelta(seconds=100)),
+        ):
+            with self.subTest():
+                r = Retrying(
+                    wait=tenacity.wait_incrementing(start=start, increment=increment)
+                )
+                self.assertEqual(500, r.wait(make_retry_state(1, 6546)))
+                self.assertEqual(600, r.wait(make_retry_state(2, 6546)))
+                self.assertEqual(700, r.wait(make_retry_state(3, 6546)))
 
     def test_random_sleep(self):
-        r = Retrying(wait=tenacity.wait_random(min=1, max=20))
-        times = set()
-        for x in six.moves.range(1000):
-            times.add(r.wait(make_retry_state(1, 6546)))
+        for min_, max_ in (
+            (1, 20),
+            (datetime.timedelta(seconds=1), datetime.timedelta(seconds=20)),
+        ):
+            with self.subTest():
+                r = Retrying(wait=tenacity.wait_random(min=min_, max=max_))
+                times = set()
+                for _ in range(1000):
+                    times.add(r.wait(make_retry_state(1, 6546)))
 
-        # this is kind of non-deterministic...
-        self.assertTrue(len(times) > 1)
-        for t in times:
-            self.assertTrue(t >= 1)
-            self.assertTrue(t < 20)
+                # this is kind of non-deterministic...
+                self.assertTrue(len(times) > 1)
+                for t in times:
+                    self.assertTrue(t >= 1)
+                    self.assertTrue(t < 20)
 
-    def test_random_sleep_without_min(self):
+    def test_random_sleep_withoutmin_(self):
         r = Retrying(wait=tenacity.wait_random(max=2))
         times = set()
         times.add(r.wait(make_retry_state(1, 6546)))
@@ -277,18 +326,23 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(make_retry_state(8, 0)), 256)
         self.assertEqual(r.wait(make_retry_state(20, 0)), 1048576)
 
-    def test_exponential_with_min_wait_and_max_wait(self):
-        r = Retrying(wait=tenacity.wait_exponential(min=10, max=100))
-        self.assertEqual(r.wait(make_retry_state(1, 0)), 10)
-        self.assertEqual(r.wait(make_retry_state(2, 0)), 10)
-        self.assertEqual(r.wait(make_retry_state(3, 0)), 10)
-        self.assertEqual(r.wait(make_retry_state(4, 0)), 10)
-        self.assertEqual(r.wait(make_retry_state(5, 0)), 16)
-        self.assertEqual(r.wait(make_retry_state(6, 0)), 32)
-        self.assertEqual(r.wait(make_retry_state(7, 0)), 64)
-        self.assertEqual(r.wait(make_retry_state(8, 0)), 100)
-        self.assertEqual(r.wait(make_retry_state(9, 0)), 100)
-        self.assertEqual(r.wait(make_retry_state(20, 0)), 100)
+    def test_exponential_with_min_wait_andmax__wait(self):
+        for min_, max_ in (
+            (10, 100),
+            (datetime.timedelta(seconds=10), datetime.timedelta(seconds=100)),
+        ):
+            with self.subTest():
+                r = Retrying(wait=tenacity.wait_exponential(min=min_, max=max_))
+                self.assertEqual(r.wait(make_retry_state(1, 0)), 10)
+                self.assertEqual(r.wait(make_retry_state(2, 0)), 10)
+                self.assertEqual(r.wait(make_retry_state(3, 0)), 10)
+                self.assertEqual(r.wait(make_retry_state(4, 0)), 10)
+                self.assertEqual(r.wait(make_retry_state(5, 0)), 16)
+                self.assertEqual(r.wait(make_retry_state(6, 0)), 32)
+                self.assertEqual(r.wait(make_retry_state(7, 0)), 64)
+                self.assertEqual(r.wait(make_retry_state(8, 0)), 100)
+                self.assertEqual(r.wait(make_retry_state(9, 0)), 100)
+                self.assertEqual(r.wait(make_retry_state(20, 0)), 100)
 
     def test_legacy_explicit_wait_type(self):
         Retrying(wait="exponential_sleep")
@@ -309,7 +363,7 @@ class TestWaitConditions(unittest.TestCase):
             )
         )
         # Test it a few time since it's random
-        for i in six.moves.range(1000):
+        for i in range(1000):
             w = r.wait(make_retry_state(1, 5))
             self.assertLess(w, 8)
             self.assertGreaterEqual(w, 5)
@@ -317,7 +371,7 @@ class TestWaitConditions(unittest.TestCase):
     def test_wait_double_sum(self):
         r = Retrying(wait=tenacity.wait_random(0, 3) + tenacity.wait_fixed(5))
         # Test it a few time since it's random
-        for i in six.moves.range(1000):
+        for i in range(1000):
             w = r.wait(make_retry_state(1, 5))
             self.assertLess(w, 8)
             self.assertGreaterEqual(w, 5)
@@ -329,7 +383,7 @@ class TestWaitConditions(unittest.TestCase):
             + tenacity.wait_fixed(5)
         )
         # Test it a few time since it's random
-        for i in six.moves.range(1000):
+        for i in range(1000):
             w = r.wait(make_retry_state(1, 5))
             self.assertLess(w, 9)
             self.assertGreaterEqual(w, 6)
@@ -346,7 +400,7 @@ class TestWaitConditions(unittest.TestCase):
             )
         )
         # Test it a few time since it's random
-        for i in six.moves.range(1000):
+        for _ in range(1000):
             w = r.wait(make_retry_state(1, 5))
             self.assertLess(w, 9)
             self.assertGreaterEqual(w, 6)
@@ -366,13 +420,13 @@ class TestWaitConditions(unittest.TestCase):
     def test_wait_chain(self):
         r = Retrying(
             wait=tenacity.wait_chain(
-                *[tenacity.wait_fixed(1) for i in six.moves.range(2)]
-                + [tenacity.wait_fixed(4) for i in six.moves.range(2)]
-                + [tenacity.wait_fixed(8) for i in six.moves.range(1)]
+                *[tenacity.wait_fixed(1) for i in range(2)]
+                + [tenacity.wait_fixed(4) for i in range(2)]
+                + [tenacity.wait_fixed(8) for i in range(1)]
             )
         )
 
-        for i in six.moves.range(10):
+        for i in range(10):
             w = r.wait(make_retry_state(i + 1, 1))
             if i < 2:
                 self._assert_range(w, 1, 2)
@@ -385,9 +439,7 @@ class TestWaitConditions(unittest.TestCase):
         sleep_intervals = []
         r = Retrying(
             sleep=sleep_intervals.append,
-            wait=tenacity.wait_chain(
-                *[tenacity.wait_fixed(i + 1) for i in six.moves.range(3)]
-            ),
+            wait=tenacity.wait_chain(*[tenacity.wait_fixed(i + 1) for i in range(3)]),
             stop=tenacity.stop_after_attempt(5),
             retry=tenacity.retry_if_result(lambda x: x == 1),
         )
@@ -408,7 +460,7 @@ class TestWaitConditions(unittest.TestCase):
     def test_wait_random_exponential(self):
         fn = tenacity.wait_random_exponential(0.5, 60.0)
 
-        for _ in six.moves.range(1000):
+        for _ in range(1000):
             self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0, 0.5)
             self._assert_inclusive_range(fn(make_retry_state(2, 0)), 0, 1.0)
             self._assert_inclusive_range(fn(make_retry_state(3, 0)), 0, 2.0)
@@ -420,7 +472,7 @@ class TestWaitConditions(unittest.TestCase):
             self._assert_inclusive_range(fn(make_retry_state(9, 0)), 0, 60.0)
 
         fn = tenacity.wait_random_exponential(10, 5)
-        for _ in six.moves.range(1000):
+        for _ in range(1000):
             self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0.00, 5.00)
 
         # Default arguments exist
@@ -431,8 +483,8 @@ class TestWaitConditions(unittest.TestCase):
         fn = tenacity.wait_random_exponential(0.5, 60.0)
 
         attempt = []
-        for i in six.moves.range(10):
-            attempt.append([fn(make_retry_state(i, 0)) for _ in six.moves.range(4000)])
+        for i in range(10):
+            attempt.append([fn(make_retry_state(i, 0)) for _ in range(4000)])
 
         def mean(lst):
             return float(sum(lst)) / float(len(lst))
@@ -447,6 +499,28 @@ class TestWaitConditions(unittest.TestCase):
         self._assert_inclusive_epsilon(mean(attempt[7]), 16, 1.28)
         self._assert_inclusive_epsilon(mean(attempt[8]), 30, 2.56)
         self._assert_inclusive_epsilon(mean(attempt[9]), 30, 2.56)
+
+    def test_wait_exponential_jitter(self):
+        fn = tenacity.wait_exponential_jitter(max=60)
+
+        for _ in range(1000):
+            self._assert_inclusive_range(fn(make_retry_state(1, 0)), 1, 2)
+            self._assert_inclusive_range(fn(make_retry_state(2, 0)), 2, 3)
+            self._assert_inclusive_range(fn(make_retry_state(3, 0)), 4, 5)
+            self._assert_inclusive_range(fn(make_retry_state(4, 0)), 8, 9)
+            self._assert_inclusive_range(fn(make_retry_state(5, 0)), 16, 17)
+            self._assert_inclusive_range(fn(make_retry_state(6, 0)), 32, 33)
+            self.assertEqual(fn(make_retry_state(7, 0)), 60)
+            self.assertEqual(fn(make_retry_state(8, 0)), 60)
+            self.assertEqual(fn(make_retry_state(9, 0)), 60)
+
+        fn = tenacity.wait_exponential_jitter(10, 5)
+        for _ in range(1000):
+            self.assertEqual(fn(make_retry_state(1, 0)), 5)
+
+        # Default arguments exist
+        fn = tenacity.wait_exponential_jitter()
+        fn(make_retry_state(0, 0))
 
     def test_wait_retry_state_attributes(self):
         class ExtractCallState(Exception):
@@ -614,7 +688,7 @@ class TestRetryConditions(unittest.TestCase):
             tenacity.retry_if_exception_message(message="negative", match="negative")
 
 
-class NoneReturnUntilAfterCount(object):
+class NoneReturnUntilAfterCount:
     """Holds counter state for invoking a method several times in a row."""
 
     def __init__(self, count):
@@ -632,7 +706,7 @@ class NoneReturnUntilAfterCount(object):
         return True
 
 
-class NoIOErrorAfterCount(object):
+class NoIOErrorAfterCount:
     """Holds counter state for invoking a method several times in a row."""
 
     def __init__(self, count):
@@ -646,11 +720,11 @@ class NoIOErrorAfterCount(object):
         """
         if self.counter < self.count:
             self.counter += 1
-            raise IOError("Hi there, I'm an IOError")
+            raise OSError("Hi there, I'm an IOError")
         return True
 
 
-class NoNameErrorAfterCount(object):
+class NoNameErrorAfterCount:
     """Holds counter state for invoking a method several times in a row."""
 
     def __init__(self, count):
@@ -668,7 +742,57 @@ class NoNameErrorAfterCount(object):
         return True
 
 
-class NameErrorUntilCount(object):
+class NoNameErrorCauseAfterCount:
+    """Holds counter state for invoking a method several times in a row."""
+
+    def __init__(self, count):
+        self.counter = 0
+        self.count = count
+
+    def go2(self):
+        raise NameError("Hi there, I'm a NameError")
+
+    def go(self):
+        """Raise an IOError with a NameError as cause until after count threshold has been crossed.
+
+        Then return True.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            try:
+                self.go2()
+            except NameError as e:
+                raise OSError() from e
+
+        return True
+
+
+class NoIOErrorCauseAfterCount:
+    """Holds counter state for invoking a method several times in a row."""
+
+    def __init__(self, count):
+        self.counter = 0
+        self.count = count
+
+    def go2(self):
+        raise OSError("Hi there, I'm an IOError")
+
+    def go(self):
+        """Raise a NameError with an IOError as cause until after count threshold has been crossed.
+
+        Then return True.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            try:
+                self.go2()
+            except OSError as e:
+                raise NameError() from e
+
+        return True
+
+
+class NameErrorUntilCount:
     """Holds counter state for invoking a method several times in a row."""
 
     derived_message = "Hi there, I'm a NameError"
@@ -688,7 +812,7 @@ class NameErrorUntilCount(object):
         raise NameError(self.derived_message)
 
 
-class IOErrorUntilCount(object):
+class IOErrorUntilCount:
     """Holds counter state for invoking a method several times in a row."""
 
     def __init__(self, count):
@@ -703,7 +827,7 @@ class IOErrorUntilCount(object):
         if self.counter < self.count:
             self.counter += 1
             return True
-        raise IOError("Hi there, I'm an IOError")
+        raise OSError("Hi there, I'm an IOError")
 
 
 class CustomError(Exception):
@@ -724,7 +848,7 @@ class CustomError(Exception):
         return self.value
 
 
-class NoCustomErrorAfterCount(object):
+class NoCustomErrorAfterCount:
     """Holds counter state for invoking a method several times in a row."""
 
     derived_message = "This is a Custom exception class"
@@ -748,7 +872,7 @@ class CapturingHandler(logging.Handler):
     """Captures log records for inspection."""
 
     def __init__(self, *args, **kwargs):
-        super(CapturingHandler, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.records = []
 
     def emit(self, record):
@@ -775,8 +899,18 @@ def _retryable_test_with_stop(thing):
     return thing.go()
 
 
+@retry(retry=tenacity.retry_if_exception_cause_type(NameError))
+def _retryable_test_with_exception_cause_type(thing):
+    return thing.go()
+
+
 @retry(retry=tenacity.retry_if_exception_type(IOError))
 def _retryable_test_with_exception_type_io(thing):
+    return thing.go()
+
+
+@retry(retry=tenacity.retry_if_not_exception_type(IOError))
+def _retryable_test_if_not_exception_type_io(thing):
     return thing.go()
 
 
@@ -896,7 +1030,7 @@ class TestDecoratorWrapper(unittest.TestCase):
         try:
             _retryable_test_with_stop(NoIOErrorAfterCount(5))
             self.fail("Expected IOError")
-        except IOError as re:
+        except OSError as re:
             self.assertTrue(isinstance(re, IOError))
             print(re)
 
@@ -920,6 +1054,18 @@ class TestDecoratorWrapper(unittest.TestCase):
         except NameError as n:
             self.assertTrue(isinstance(n, NameError))
             print(n)
+
+    def test_retry_except_exception_of_type(self):
+        self.assertTrue(
+            _retryable_test_if_not_exception_type_io(NoNameErrorAfterCount(5))
+        )
+
+        try:
+            _retryable_test_if_not_exception_type_io(NoIOErrorAfterCount(5))
+            self.fail("Expected IOError")
+        except OSError as err:
+            self.assertTrue(isinstance(err, IOError))
+            print(err)
 
     def test_retry_until_exception_of_type_attempt_number(self):
         try:
@@ -1008,6 +1154,38 @@ class TestDecoratorWrapper(unittest.TestCase):
             s = _retryable_test_if_not_exception_message_message.retry.statistics
             self.assertTrue(s["attempt_number"] == 1)
 
+    def test_retry_if_exception_cause_type(self):
+        self.assertTrue(
+            _retryable_test_with_exception_cause_type(NoNameErrorCauseAfterCount(5))
+        )
+
+        try:
+            _retryable_test_with_exception_cause_type(NoIOErrorCauseAfterCount(5))
+            self.fail("Expected exception without NameError as cause")
+        except NameError:
+            pass
+
+    def test_retry_preserves_argument_defaults(self):
+        def function_with_defaults(a=1):
+            return a
+
+        def function_with_kwdefaults(*, a=1):
+            return a
+
+        retrying = Retrying(
+            wait=tenacity.wait_fixed(0.01), stop=tenacity.stop_after_attempt(3)
+        )
+        wrapped_defaults_function = retrying.wraps(function_with_defaults)
+        wrapped_kwdefaults_function = retrying.wraps(function_with_kwdefaults)
+
+        self.assertEqual(
+            function_with_defaults.__defaults__, wrapped_defaults_function.__defaults__
+        )
+        self.assertEqual(
+            function_with_kwdefaults.__kwdefaults__,
+            wrapped_kwdefaults_function.__kwdefaults__,
+        )
+
     def test_defaults(self):
         self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))
         self.assertTrue(_retryable_default_f(NoNameErrorAfterCount(5)))
@@ -1015,13 +1193,13 @@ class TestDecoratorWrapper(unittest.TestCase):
         self.assertTrue(_retryable_default_f(NoCustomErrorAfterCount(5)))
 
     def test_retry_function_object(self):
-        """Test that six.wraps doesn't cause problems with callable objects.
+        """Test that funсtools.wraps doesn't cause problems with callable objects.
 
         It raises an error upon trying to wrap it in Py2, because __name__
         attribute is missing. It's fixed in Py3 but was never backported.
         """
 
-        class Hello(object):
+        class Hello:
             def __call__(self):
                 return "Hello"
 
@@ -1060,7 +1238,7 @@ class TestRetryWith:
 
     def test_retry_error_callback_should_be_preserved(self):
         def return_text(retry_state):
-            return "Calling %s keeps raising errors after %s attempts" % (
+            return "Calling {} keeps raising errors after {} attempts".format(
                 retry_state.fn.__name__,
                 retry_state.attempt_number,
             )
@@ -1156,14 +1334,11 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         )
         self.assertEqual(len(handler.records), 2)
         fmt = logging.Formatter().format
-        self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
-        self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
+        self.assertRegex(fmt(handler.records[0]), etalon_re)
+        self.assertRegex(fmt(handler.records[1]), etalon_re)
 
     def test_before_sleep_log_raises(self):
         self._before_sleep_log_raises(lambda x: x)
-
-    def test_before_sleep_log_raises_deprecated_call(self):
-        self._before_sleep_log_raises(lambda x: x.call)
 
     def test_before_sleep_log_raises_with_exc_info(self):
         thing = NoIOErrorAfterCount(2)
@@ -1194,8 +1369,8 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         )
         self.assertEqual(len(handler.records), 2)
         fmt = logging.Formatter().format
-        self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
-        self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
+        self.assertRegex(fmt(handler.records[0]), etalon_re)
+        self.assertRegex(fmt(handler.records[1]), etalon_re)
 
     def test_before_sleep_log_returns(self, exc_info=False):
         thing = NoneReturnUntilAfterCount(2)
@@ -1222,8 +1397,8 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         etalon_re = r"^Retrying .* in 0\.01 seconds as it returned None\.$"
         self.assertEqual(len(handler.records), 2)
         fmt = logging.Formatter().format
-        self.assertRegexpMatches(fmt(handler.records[0]), etalon_re)
-        self.assertRegexpMatches(fmt(handler.records[1]), etalon_re)
+        self.assertRegex(fmt(handler.records[0]), etalon_re)
+        self.assertRegex(fmt(handler.records[1]), etalon_re)
 
     def test_before_sleep_log_returns_with_exc_info(self):
         self.test_before_sleep_log_returns(exc_info=True)
@@ -1479,15 +1654,6 @@ class TestInvokeAsCallable:
         assert f.calls == [1, 2]
 
 
-class TestInvokeViaLegacyCallMethod(TestInvokeAsCallable):
-    """Retrying.call() method should work the same as Retrying.__call__()."""
-
-    @staticmethod
-    def invoke(retry, f):
-        with reports_deprecation_warning():
-            return retry.call(f)
-
-
 class TestRetryException(unittest.TestCase):
     def test_retry_error_is_pickleable(self):
         import pickle
@@ -1524,10 +1690,10 @@ class TestRetryTyping(unittest.TestCase):
         with_constructor_result = with_raw(1)
 
         # These raise TypeError exceptions if they fail
-        check_type("with_raw", with_raw, typing.Callable[[int], str])
-        check_type("with_raw_result", with_raw_result, str)
-        check_type("with_constructor", with_constructor, typing.Callable[[int], str])
-        check_type("with_constructor_result", with_constructor_result, str)
+        check_type(with_raw, typing.Callable[[int], str])
+        check_type(with_raw_result, str)
+        check_type(with_constructor, typing.Callable[[int], str])
+        check_type(with_constructor_result, str)
 
 
 @contextmanager
@@ -1557,7 +1723,7 @@ class TestMockingSleep:
 
     @pytest.fixture()
     def mock_sleep(self, monkeypatch):
-        class MockSleep(object):
+        class MockSleep:
             call_count = 0
 
             def __call__(self, seconds):
@@ -1566,12 +1732,6 @@ class TestMockingSleep:
         sleep = MockSleep()
         monkeypatch.setattr(tenacity.nap.time, "sleep", sleep)
         yield sleep
-
-    def test_call(self, mock_sleep):
-        retrying = Retrying(**self.RETRY_ARGS)
-        with pytest.raises(RetryError):
-            retrying.call(self._fail)
-        assert mock_sleep.call_count == 4
 
     def test_decorated(self, mock_sleep):
         with pytest.raises(RetryError):

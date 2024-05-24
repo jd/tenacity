@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    `AsyncRetrying` was erroneously implementing `__iter__()`, making tenacity
+    retrying mechanism working but in a synchronous fashion and not waiting as
+    expected. This interface has been removed, `__aiter__()` should be used
+    instead.

@@ -1,0 +1,5 @@
+---
+upgrade:
+  - "Removed `BaseRetrying.call`: was long time deprecated and produced `DeprecationWarning`"
+  - "Removed `BaseRetrying.fn`: was noted as deprecated"
+  - "API change: `BaseRetrying.begin()` do not require arguments anymore as it not setting `BaseRetrying.fn`"

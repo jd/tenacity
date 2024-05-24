@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Implement a wait.wait_exponential_jitter per Google's storage retry guide.
+    See https://cloud.google.com/storage/docs/retry-strategy

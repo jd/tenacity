@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright 2017 Elisey Zanko
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +13,7 @@
 # limitations under the License.
 
 import sys
+import typing
 
 from tenacity import BaseRetrying
 from tenacity import DoAttempt
@@ -22,15 +22,29 @@ from tenacity import RetryCallState
 
 from tornado import gen
 
+if typing.TYPE_CHECKING:
+    from tornado.concurrent import Future
+
+_RetValT = typing.TypeVar("_RetValT")
+
 
 class TornadoRetrying(BaseRetrying):
-    def __init__(self, sleep=gen.sleep, **kwargs):
-        super(TornadoRetrying, self).__init__(**kwargs)
+    def __init__(
+        self,
+        sleep: "typing.Callable[[float], Future[None]]" = gen.sleep,
+        **kwargs: typing.Any,
+    ) -> None:
+        super().__init__(**kwargs)
         self.sleep = sleep
 
-    @gen.coroutine
-    def __call__(self, fn, *args, **kwargs):
-        self.begin(fn)
+    @gen.coroutine  # type: ignore[misc]
+    def __call__(
+        self,
+        fn: "typing.Callable[..., typing.Union[typing.Generator[typing.Any, typing.Any, _RetValT], Future[_RetValT]]]",
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> "typing.Generator[typing.Any, typing.Any, _RetValT]":
+        self.begin()
 
         retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
         while True:
@@ -39,7 +53,7 @@ class TornadoRetrying(BaseRetrying):
                 try:
                     result = yield fn(*args, **kwargs)
                 except BaseException:  # noqa: B902
-                    retry_state.set_exception(sys.exc_info())
+                    retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]
                 else:
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):

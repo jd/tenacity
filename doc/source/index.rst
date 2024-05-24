@@ -6,9 +6,11 @@ Tenacity
 .. image:: https://circleci.com/gh/jd/tenacity.svg?style=svg
     :target: https://circleci.com/gh/jd/tenacity
 
-.. image:: https://img.shields.io/endpoint.svg?url=https://dashboard.mergify.io/badges/jd/tenacity&style=flat
+.. image:: https://img.shields.io/endpoint.svg?url=https://api.mergify.com/badges/jd/tenacity&style=flat
    :target: https://mergify.io
    :alt: Mergify Status
+
+**Please refer to the** `tenacity documentation <https://tenacity.readthedocs.io/en/latest/>`_ **for a better experience.**
 
 Tenacity is an Apache 2.0 licensed general-purpose retrying library, written in
 Python, to simplify the task of adding retry behavior to just about anything.
@@ -95,7 +97,7 @@ an exception is raised.
 .. testcode::
 
     @retry
-    def never_give_up_never_surrender():
+    def never_gonna_give_you_up():
         print("Retry forever ignoring Exceptions, don't wait between retries")
         raise Exception
 
@@ -120,6 +122,16 @@ retrying stuff.
     @retry(stop=stop_after_delay(10))
     def stop_after_10_s():
         print("Stopping after 10 seconds")
+        raise Exception
+
+If you're on a tight deadline, and exceeding your delay time isn't ok, 
+then you can give up on retries one attempt before you would exceed the delay. 
+
+.. testcode::
+
+    @retry(stop=stop_before_delay(10))
+    def stop_before_10_s():
+        print("Stopping 1 attempt before 10 seconds")
         raise Exception
 
 You can combine several stop conditions by using the `|` operator:
@@ -205,9 +217,17 @@ exceptions, as in the cases here.
 
 .. testcode::
 
+    class ClientError(Exception):
+        """Some type of client error."""
+
     @retry(retry=retry_if_exception_type(IOError))
     def might_io_error():
         print("Retry forever with no wait if an IOError occurs, raise any other errors")
+        raise Exception
+
+    @retry(retry=retry_if_not_exception_type(ClientError))
+    def might_client_error():
+        print("Retry forever with no wait if any error other than ClientError occurs. Immediately raise ClientError.")
         raise Exception
 
 We can also use the result of the function to alter the behavior of retrying.
@@ -221,6 +241,21 @@ We can also use the result of the function to alter the behavior of retrying.
     @retry(retry=retry_if_result(is_none_p))
     def might_return_none():
         print("Retry with no wait if return value is None")
+
+See also these methods:
+
+.. testcode::
+
+    retry_if_exception
+    retry_if_exception_type
+    retry_if_not_exception_type
+    retry_unless_exception_type
+    retry_if_result
+    retry_if_not_result
+    retry_if_exception_message
+    retry_if_not_exception_message
+    retry_any
+    retry_all
 
 We can also combine several conditions:
 
@@ -251,8 +286,12 @@ exception:
 Error Handling
 ~~~~~~~~~~~~~~
 
-While callables that "timeout" retrying raise a `RetryError` by default,
-we can reraise the last attempt's exception if needed:
+Normally when your function fails its final time (and will not be retried again based on your settings),
+a `RetryError` is raised. The exception your code encountered will be shown somewhere in the *middle*
+of the stack trace.
+
+If you would rather see the exception your code encountered at the *end* of the stack trace (where it
+is most visible), you can set `reraise=True`.
 
 .. testcode::
 
@@ -275,6 +314,7 @@ by using the before callback function:
 .. testcode::
 
     import logging
+    import sys
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
@@ -289,6 +329,7 @@ In the same spirit, It's possible to execute after a call that failed:
 .. testcode::
 
     import logging
+    import sys
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
@@ -305,6 +346,7 @@ retries happen after a wait interval, so the keyword argument is called
 .. testcode::
 
     import logging
+    import sys
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
@@ -370,43 +412,7 @@ without raising an exception (or you can re-raise or do anything really)
 RetryCallState
 ~~~~~~~~~~~~~~
 
-``retry_state`` argument is an object of `RetryCallState` class:
-
-.. autoclass:: tenacity.RetryCallState
-
-   Constant attributes:
-
-   .. autoattribute:: start_time(float)
-      :annotation:
-
-   .. autoattribute:: retry_object(BaseRetrying)
-      :annotation:
-
-   .. autoattribute:: fn(callable)
-      :annotation:
-
-   .. autoattribute:: args(tuple)
-      :annotation:
-
-   .. autoattribute:: kwargs(dict)
-      :annotation:
-
-   Variable attributes:
-
-   .. autoattribute:: attempt_number(int)
-      :annotation:
-
-   .. autoattribute:: outcome(tenacity.Future or None)
-      :annotation:
-
-   .. autoattribute:: outcome_timestamp(float or None)
-      :annotation:
-
-   .. autoattribute:: idle_for(float)
-      :annotation:
-
-   .. autoattribute:: next_action(tenacity.RetryAction or None)
-      :annotation:
+``retry_state`` argument is an object of :class:`~tenacity.RetryCallState` class.
 
 Other Custom Callbacks
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -415,33 +421,33 @@ It's also possible to define custom callbacks for other keyword arguments.
 
 .. function:: my_stop(retry_state)
 
-   :param RetryState retry_state: info about current retry invocation
+   :param RetryCallState retry_state: info about current retry invocation
    :return: whether or not retrying should stop
    :rtype: bool
 
 .. function:: my_wait(retry_state)
 
-   :param RetryState retry_state: info about current retry invocation
+   :param RetryCallState retry_state: info about current retry invocation
    :return: number of seconds to wait before next retry
    :rtype: float
 
 .. function:: my_retry(retry_state)
 
-   :param RetryState retry_state: info about current retry invocation
+   :param RetryCallState retry_state: info about current retry invocation
    :return: whether or not retrying should continue
    :rtype: bool
 
 .. function:: my_before(retry_state)
 
-   :param RetryState retry_state: info about current retry invocation
+   :param RetryCallState retry_state: info about current retry invocation
 
 .. function:: my_after(retry_state)
 
-   :param RetryState retry_state: info about current retry invocation
+   :param RetryCallState retry_state: info about current retry invocation
 
 .. function:: my_before_sleep(retry_state)
 
-   :param RetryState retry_state: info about current retry invocation
+   :param RetryCallState retry_state: info about current retry invocation
 
 Here's an example with a custom ``before_sleep`` function:
 
@@ -543,6 +549,22 @@ With async code you can use AsyncRetrying.
       except RetryError:
           pass
 
+In both cases, you may want to set the result to the attempt so it's available
+in retry strategies like ``retry_if_result``. This can be done accessing the
+``retry_state`` property:
+
+.. testcode::
+
+    from tenacity import AsyncRetrying, retry_if_result
+
+    async def function():
+       async for attempt in AsyncRetrying(retry=retry_if_result(lambda x: x < 3)):
+           with attempt:
+               result = 1  # Some complex calculation, function call, etc.
+           if not attempt.retry_state.outcome.failed:
+               attempt.retry_state.set_result(result)
+       return result
+
 Async and retry
 ~~~~~~~~~~~~~~~
 
@@ -582,7 +604,7 @@ Contribute
 #. Check for open issues or open a fresh issue to start a discussion around a
    feature idea or a bug.
 #. Fork `the repository`_ on GitHub to start making your changes to the
-   **master** branch (or branch off of it).
+   **main** branch (or branch off of it).
 #. Write a test which shows that the bug was fixed or that the feature works as
    expected.
 #. Add a `changelog <#Changelogs>`_

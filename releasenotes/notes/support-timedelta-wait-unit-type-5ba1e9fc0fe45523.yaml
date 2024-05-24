@@ -1,0 +1,3 @@
+---
+features:
+  - Add ``datetime.timedelta`` as accepted wait unit type.

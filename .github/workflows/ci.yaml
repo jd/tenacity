@@ -1,0 +1,50 @@
+name: Continuous Integration
+permissions: read-all
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  # yamllint disable-line rule:line-length
+  group: "${{ github.workflow }}-${{ github.head_ref || github.run_id }}"
+  cancel-in-progress: true
+
+jobs:
+  test:
+    timeout-minutes: 20
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        include:
+          - python: "3.8"
+            tox: py38
+          - python: "3.9"
+            tox: py39
+          - python: "3.10"
+            tox: py310
+          - python: "3.11"
+            tox: py311
+          - python: "3.12"
+            tox: py312,py312-trio
+          - python: "3.12"
+            tox: pep8
+          - python: "3.11"
+            tox: mypy
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4.1.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python 🔧
+        uses: actions/setup-python@v5.0.0
+        with:
+          python-version: ${{ matrix.python }}
+          allow-prereleases: true
+
+      - name: Build 🔧 & Test 🔍
+        run: |
+          pip install tox
+          tox -e ${{ matrix.tox }}

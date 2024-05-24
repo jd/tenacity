@@ -1,0 +1,25 @@
+[build-system]
+# Minimum requirements for the build system to execute.
+# PEP 508 specifications for PEP 518.
+# Banned setuptools versions have well-known issues
+requires = [
+  "setuptools >= 21.0.0,!=24.0.0,!=34.0.0,!=34.0.1,!=34.0.2,!=34.0.3,!=34.1.0,!=34.1.1,!=34.2.0,!=34.3.0,!=34.3.1,!=34.3.2,!=36.2.0",  # PSF/ZPL
+  "setuptools_scm[toml]>=3.4",
+]
+build-backend="setuptools.build_meta"
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py38"
+
+[tool.mypy]
+strict = true
+files = ["tenacity", "tests"]
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "tornado.*"
+ignore_missing_imports = true
+
+[tool.setuptools_scm]

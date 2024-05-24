@@ -1,4 +1,4 @@
-# coding: utf-8
+# mypy: disable-error-code="no-untyped-def,no-untyped-call"
 # Copyright 2017 Elisey Zanko
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,10 +17,11 @@ import unittest
 
 from tenacity import RetryError, retry, stop_after_attempt
 from tenacity import tornadoweb
-from tenacity.tests.test_tenacity import NoIOErrorAfterCount
 
 from tornado import gen
 from tornado import testing
+
+from .test_tenacity import NoIOErrorAfterCount
 
 
 @retry
@@ -37,7 +38,7 @@ def _retryable_coroutine_with_2_attempts(thing):
     thing.go()
 
 
-class TestTornado(testing.AsyncTestCase):
+class TestTornado(testing.AsyncTestCase):  # type: ignore[misc]
     @testing.gen_test
     def test_retry(self):
         assert gen.is_coroutine_function(_retryable_coroutine)
@@ -71,6 +72,9 @@ class TestTornado(testing.AsyncTestCase):
         finally:
             gen.is_coroutine_function = old_attr
 
+    # temporary workaround for https://github.com/jd/tenacity/issues/460
+    def runTest(self):
+        self.subTest()
 
 if __name__ == "__main__":
     unittest.main()
