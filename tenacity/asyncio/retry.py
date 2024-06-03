@@ -14,13 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import abc
-import inspect
 import typing
 
 from tenacity import _utils
 from tenacity import retry_base
-from tenacity import retry_if_exception as _retry_if_exception
-from tenacity import retry_if_result as _retry_if_result
 
 if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
@@ -54,35 +51,48 @@ class async_retry_base(retry_base):
         return retry_any(other, self)
 
 
-class async_predicate_mixin:
-    async def __call__(self, retry_state: "RetryCallState") -> bool:
-        result = super().__call__(retry_state)  # type: ignore[misc]
-        if inspect.isawaitable(result):
-            result = await result
-        return typing.cast(bool, result)
-
-
 RetryBaseT = typing.Union[
     async_retry_base, typing.Callable[["RetryCallState"], typing.Awaitable[bool]]
 ]
 
 
-class retry_if_exception(async_predicate_mixin, _retry_if_exception, async_retry_base):  # type: ignore[misc]
+class retry_if_exception(async_retry_base):
     """Retry strategy that retries if an exception verifies a predicate."""
 
     def __init__(
         self, predicate: typing.Callable[[BaseException], typing.Awaitable[bool]]
     ) -> None:
-        super().__init__(predicate)  # type: ignore[arg-type]
+        self.predicate = predicate
+
+    async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
+        if retry_state.outcome is None:
+            raise RuntimeError("__call__() called before outcome was set")
+
+        if retry_state.outcome.failed:
+            exception = retry_state.outcome.exception()
+            if exception is None:
+                raise RuntimeError("outcome failed but the exception is None")
+            return await self.predicate(exception)
+        else:
+            return False
 
 
-class retry_if_result(async_predicate_mixin, _retry_if_result, async_retry_base):  # type: ignore[misc]
+class retry_if_result(async_retry_base):
     """Retries if the result verifies a predicate."""
 
     def __init__(
         self, predicate: typing.Callable[[typing.Any], typing.Awaitable[bool]]
     ) -> None:
-        super().__init__(predicate)  # type: ignore[arg-type]
+        self.predicate = predicate
+
+    async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
+        if retry_state.outcome is None:
+            raise RuntimeError("__call__() called before outcome was set")
+
+        if not retry_state.outcome.failed:
+            return await self.predicate(retry_state.outcome.result())
+        else:
+            return False
 
 
 class retry_any(async_retry_base):
