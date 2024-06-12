@@ -580,7 +580,7 @@ Sleeps are done asynchronously too.
 .. code-block:: python
 
     @retry
-    def my_async_trio_function():
+    async def my_async_trio_function():
         await trio.socket.getaddrinfo('8.8.8.8', 53)
 
 .. code-block:: python
