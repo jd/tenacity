@@ -73,8 +73,6 @@ class TestTornado(testing.AsyncTestCase):  # type: ignore[misc]
             gen.is_coroutine_function = old_attr
 
     # temporary workaround for https://github.com/jd/tenacity/issues/460
-    def runTest(self):
-        self.subTest()
 
 
 if __name__ == "__main__":
