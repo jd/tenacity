@@ -79,7 +79,7 @@ Examples
 Basic Retry
 ~~~~~~~~~~~
 
-.. testsetup:: *
+.. testsetup::
 
     import logging
     #
