@@ -30,7 +30,7 @@ WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Awaitable[t.Any]])
 
 
-async def _portable_async_sleep(seconds: float) -> None:
+def _portable_async_sleep(seconds: float) -> t.Awaitable[None]:
     # If trio is already imported, then importing it is cheap.
     # If trio isn't already imported, then it's definitely not running, so we
     # can skip further checks.
@@ -40,13 +40,12 @@ async def _portable_async_sleep(seconds: float) -> None:
         import sniffio
 
         if sniffio.current_async_library() == "trio":
-            await trio.sleep(seconds)
-            return
+            return trio.sleep(seconds)
     # Otherwise, assume asyncio
     # Lazy import asyncio as it's expensive (responsible for 25-50% of total import overhead).
     import asyncio
 
-    await asyncio.sleep(seconds)
+    return asyncio.sleep(seconds)
 
 
 class AsyncRetrying(BaseRetrying):
