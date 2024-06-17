@@ -1,0 +1,3 @@
+---
+fixes:
+  - Fix setuptools config to include tenacity.asyncio package in release distributions.
