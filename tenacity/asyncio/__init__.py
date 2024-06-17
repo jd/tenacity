@@ -46,11 +46,22 @@ WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Awaitable[t.Any]])
 
 
-def asyncio_sleep(duration: float) -> t.Awaitable[None]:
+def _portable_async_sleep(seconds: float) -> t.Awaitable[None]:
+    # If trio is already imported, then importing it is cheap.
+    # If trio isn't already imported, then it's definitely not running, so we
+    # can skip further checks.
+    if "trio" in sys.modules:
+        # If trio is available, then sniffio is too
+        import trio
+        import sniffio
+
+        if sniffio.current_async_library() == "trio":
+            return trio.sleep(seconds)
+    # Otherwise, assume asyncio
     # Lazy import asyncio as it's expensive (responsible for 25-50% of total import overhead).
     import asyncio
 
-    return asyncio.sleep(duration)
+    return asyncio.sleep(seconds)
 
 
 class AsyncRetrying(BaseRetrying):
@@ -58,7 +69,7 @@ class AsyncRetrying(BaseRetrying):
         self,
         sleep: t.Callable[
             [t.Union[int, float]], t.Union[None, t.Awaitable[None]]
-        ] = asyncio_sleep,
+        ] = _portable_async_sleep,
         stop: "StopBaseT" = tenacity.stop.stop_never,
         wait: "WaitBaseT" = tenacity.wait.wait_none(),
         retry: "t.Union[SyncRetryBaseT, RetryBaseT]" = tenacity.retry_if_exception_type(),
