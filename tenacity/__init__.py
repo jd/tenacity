@@ -650,7 +650,7 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
         return wrap
 
 
-from tenacity._asyncio import AsyncRetrying  # noqa:E402,I100
+from tenacity.asyncio import AsyncRetrying  # noqa:E402,I100
 
 if tornado:
     from tenacity.tornadoweb import TornadoRetrying
