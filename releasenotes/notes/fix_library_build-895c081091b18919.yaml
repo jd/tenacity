@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    Fix library build. Added async package.
