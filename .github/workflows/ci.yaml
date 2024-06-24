@@ -30,6 +30,8 @@ jobs:
             tox: py312,py312-trio
           - python: "3.12"
             tox: pep8
+          - python: "3.13"
+            tox: py313
           - python: "3.11"
             tox: mypy
     steps:
