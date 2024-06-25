@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    If you're using `Trio <https://trio.readthedocs.io>`__, then
+    ``@retry`` now works automatically. It's no longer necessary to
+    pass ``sleep=trio.sleep``.

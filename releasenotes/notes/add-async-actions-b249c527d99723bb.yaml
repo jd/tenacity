@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Added the ability to use async functions for retries. This way, you can now use
+    asyncio coroutines for retry strategy predicates.
