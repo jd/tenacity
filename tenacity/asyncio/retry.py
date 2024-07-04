@@ -104,7 +104,7 @@ class retry_any(async_retry_base):
     async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
         result = False
         for r in self.retries:
-            result = result or await _utils.wrap_to_async_func(r)(retry_state)
+            result = result or (await _utils.wrap_to_async_func(r)(retry_state) is True)
             if result:
                 break
         return result
@@ -119,7 +119,9 @@ class retry_all(async_retry_base):
     async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
         result = True
         for r in self.retries:
-            result = result and await _utils.wrap_to_async_func(r)(retry_state)
+            result = result and (
+                await _utils.wrap_to_async_func(r)(retry_state) is True
+            )
             if not result:
                 break
         return result
