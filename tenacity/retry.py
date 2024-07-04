@@ -30,15 +30,29 @@ class retry_base(abc.ABC):
         pass
 
     def __and__(self, other: "retry_base") -> "retry_all":
-        return other.__rand__(self)
+        if isinstance(other, retry_base):
+            # Delegate to the other object to allow for specific
+            # implementations, such as asyncio
+            return other.__rand__(self)
+        return retry_all(other, self)
 
     def __rand__(self, other: "retry_base") -> "retry_all":
+        # This is automatically invoked for inheriting classes,
+        # so it helps to keep the abstraction and delegate specific
+        # implementations, such as asyncio
         return retry_all(other, self)
 
     def __or__(self, other: "retry_base") -> "retry_any":
-        return other.__ror__(self)
+        if isinstance(other, retry_base):
+            # Delegate to the other object to allow for specific
+            # implementations, such as asyncio
+            return other.__ror__(self)
+        return retry_any(other, self)
 
     def __ror__(self, other: "retry_base") -> "retry_any":
+        # This is automatically invoked for inheriting classes,
+        # so it helps to keep the abstraction and delegate specific
+        # implementations, such as asyncio
         return retry_any(other, self)
 
 
