@@ -394,11 +394,16 @@ class TestContextManager(unittest.TestCase):
 
             return attempts
 
-        result = await test()
-
-        # It does not correctly work as the function is not called!
-        self.assertFalse(called)
-        self.assertEqual(3, result)
+        try:
+            await test()
+        except TypeError as exc:
+            self.assertEqual(
+                str(exc),
+                "Cannot use async functions in a sync context. Make sure you use "
+                "the correct retrying object and the corresponding async strategies",
+            )
+        else:
+            self.fail("This is an invalid retry combination that should have failed")
 
     @asynctest
     async def test_retry_with_async_result_ror(self):
@@ -517,11 +522,16 @@ class TestContextManager(unittest.TestCase):
 
             return attempts
 
-        result = await test()
-
-        # It does not correctly work as the function is not called!
-        self.assertFalse(called)
-        self.assertEqual(3, result)
+        try:
+            await test()
+        except TypeError as exc:
+            self.assertEqual(
+                str(exc),
+                "Cannot use async functions in a sync context. Make sure you use "
+                "the correct retrying object and the corresponding async strategies",
+            )
+        else:
+            self.fail("This is an invalid retry combination that should have failed")
 
     @asynctest
     async def test_retry_with_async_result_and(self):
@@ -623,11 +633,16 @@ class TestContextManager(unittest.TestCase):
 
             return attempts
 
-        result = await test()
-
-        # It does not correctly work as the function is not called!
-        self.assertFalse(called)
-        self.assertEqual(1, result)
+        try:
+            await test()
+        except TypeError as exc:
+            self.assertEqual(
+                str(exc),
+                "Cannot use async functions in a sync context. Make sure you use "
+                "the correct retrying object and the corresponding async strategies",
+            )
+        else:
+            self.fail("This is an invalid retry combination that should have failed")
 
     @asynctest
     async def test_retry_with_async_result_rand(self):
@@ -729,11 +744,16 @@ class TestContextManager(unittest.TestCase):
 
             return attempts
 
-        result = await test()
-
-        # It does not correctly work as the function is not called!
-        self.assertFalse(called)
-        self.assertEqual(1, result)
+        try:
+            await test()
+        except TypeError as exc:
+            self.assertEqual(
+                str(exc),
+                "Cannot use async functions in a sync context. Make sure you use "
+                "the correct retrying object and the corresponding async strategies",
+            )
+        else:
+            self.fail("This is an invalid retry combination that should have failed")
 
     @asynctest
     async def test_async_retying_iterator(self):

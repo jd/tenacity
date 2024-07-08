@@ -18,6 +18,13 @@ import abc
 import re
 import typing
 
+from . import _utils
+
+try:
+    import tornado
+except ImportError:
+    tornado = None
+
 if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
 
@@ -283,7 +290,22 @@ class retry_any(retry_base):
         self.retries = retries
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
-        return any(r(retry_state) is True for r in self.retries)
+        result = False
+        for r in self.retries:
+            if _utils.is_coroutine_callable(r) or (
+                tornado
+                and hasattr(tornado.gen, "is_coroutine_function")
+                and tornado.gen.is_coroutine_function(r)
+            ):
+                raise TypeError(
+                    "Cannot use async functions in a sync context. Make sure "
+                    "you use the correct retrying object and the corresponding "
+                    "async strategies"
+                )
+            result = result or r(retry_state)
+            if result:
+                break
+        return result
 
 
 class retry_all(retry_base):
@@ -293,4 +315,19 @@ class retry_all(retry_base):
         self.retries = retries
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
-        return all(r(retry_state) is True for r in self.retries)
+        result = True
+        for r in self.retries:
+            if _utils.is_coroutine_callable(r) or (
+                tornado
+                and hasattr(tornado.gen, "is_coroutine_function")
+                and tornado.gen.is_coroutine_function(r)
+            ):
+                raise TypeError(
+                    "Cannot use async functions in a sync context. Make sure "
+                    "you use the correct retrying object and the corresponding "
+                    "async strategies"
+                )
+            result = result and r(retry_state)
+            if not result:
+                break
+        return result
