@@ -339,7 +339,7 @@ class BaseRetrying(ABC):
             return self.copy(*args, **kwargs).wraps(f)
 
         # Preserve attributes
-        wrapped_f.retry = wrapped_f  # type: ignore[attr-defined]
+        wrapped_f.retry = self  # type: ignore[attr-defined]
         wrapped_f.retry_with = retry_with  # type: ignore[attr-defined]
         wrapped_f.statistics = {}  # type: ignore[attr-defined]
 

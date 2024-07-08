@@ -189,7 +189,7 @@ class AsyncRetrying(BaseRetrying):
             return await copy(fn, *args, **kwargs)
 
         # Preserve attributes
-        async_wrapped.retry = async_wrapped  # type: ignore[attr-defined]
+        async_wrapped.retry = self  # type: ignore[attr-defined]
         async_wrapped.retry_with = wrapped.retry_with  # type: ignore[attr-defined]
         async_wrapped.statistics = {}  # type: ignore[attr-defined]
 
