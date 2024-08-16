@@ -17,6 +17,7 @@ import asyncio
 import inspect
 import unittest
 from functools import wraps
+from unittest import mock
 
 try:
     import trio
@@ -59,7 +60,7 @@ async def _retryable_coroutine(thing):
 @retry(stop=stop_after_attempt(2))
 async def _retryable_coroutine_with_2_attempts(thing):
     await asyncio.sleep(0.00001)
-    thing.go()
+    return thing.go()
 
 
 class TestAsyncio(unittest.TestCase):
@@ -392,6 +393,64 @@ class TestContextManager(unittest.TestCase):
             for attempts in AsyncRetrying():
                 with attempts:
                     await _async_function(thing)
+
+
+class TestDecoratorWrapper(unittest.TestCase):
+    @asynctest
+    async def test_retry_function_attributes(self):
+        """Test that the wrapped function attributes are exposed as intended.
+
+        - statistics contains the value for the latest function run
+        - retry object can be modified to change its behaviour (useful to patch in tests)
+        - retry object statistics do not contain valid information
+        """
+
+        self.assertTrue(
+            await _retryable_coroutine_with_2_attempts(NoIOErrorAfterCount(1))
+        )
+
+        expected_stats = {
+            "attempt_number": 2,
+            "delay_since_first_attempt": mock.ANY,
+            "idle_for": mock.ANY,
+            "start_time": mock.ANY,
+        }
+        self.assertEqual(
+            _retryable_coroutine_with_2_attempts.statistics,  # type: ignore[attr-defined]
+            expected_stats,
+        )
+        self.assertEqual(
+            _retryable_coroutine_with_2_attempts.retry.statistics,  # type: ignore[attr-defined]
+            {},
+        )
+
+        with mock.patch.object(
+            _retryable_coroutine_with_2_attempts.retry,  # type: ignore[attr-defined]
+            "stop",
+            tenacity.stop_after_attempt(1),
+        ):
+            try:
+                self.assertTrue(
+                    await _retryable_coroutine_with_2_attempts(NoIOErrorAfterCount(2))
+                )
+            except RetryError as exc:
+                expected_stats = {
+                    "attempt_number": 1,
+                    "delay_since_first_attempt": mock.ANY,
+                    "idle_for": mock.ANY,
+                    "start_time": mock.ANY,
+                }
+                self.assertEqual(
+                    _retryable_coroutine_with_2_attempts.statistics,  # type: ignore[attr-defined]
+                    expected_stats,
+                )
+                self.assertEqual(exc.last_attempt.attempt_number, 1)
+                self.assertEqual(
+                    _retryable_coroutine_with_2_attempts.retry.statistics,  # type: ignore[attr-defined]
+                    {},
+                )
+            else:
+                self.fail("RetryError should have been raised after 1 attempt")
 
 
 # make sure mypy accepts passing an async sleep function

@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Restore the value of the `retry` attribute for wrapped functions. Also,
+    clarify that those attributes are write-only and statistics should be
+    read from the function attribute directly.

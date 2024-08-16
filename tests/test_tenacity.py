@@ -25,6 +25,7 @@ import warnings
 from contextlib import contextmanager
 from copy import copy
 from fractions import Fraction
+from unittest import mock
 
 import pytest
 
@@ -471,9 +472,17 @@ class TestWaitConditions(unittest.TestCase):
             self._assert_inclusive_range(fn(make_retry_state(8, 0)), 0, 60.0)
             self._assert_inclusive_range(fn(make_retry_state(9, 0)), 0, 60.0)
 
-        fn = tenacity.wait_random_exponential(10, 5)
+        # max wait
+        max_wait = 5
+        fn = tenacity.wait_random_exponential(10, max_wait)
         for _ in range(1000):
-            self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0.00, 5.00)
+            self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0.00, max_wait)
+
+        # min wait
+        min_wait = 5
+        fn = tenacity.wait_random_exponential(min=min_wait)
+        for _ in range(1000):
+            self._assert_inclusive_range(fn(make_retry_state(1, 0)), min_wait, 5)
 
         # Default arguments exist
         fn = tenacity.wait_random_exponential()
@@ -1079,7 +1088,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 _retryable_test_with_unless_exception_type_name(NameErrorUntilCount(5))
             )
         except NameError as e:
-            s = _retryable_test_with_unless_exception_type_name.retry.statistics
+            s = _retryable_test_with_unless_exception_type_name.statistics
             self.assertTrue(s["attempt_number"] == 6)
             print(e)
         else:
@@ -1094,7 +1103,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 )
             )
         except NameError as e:
-            s = _retryable_test_with_unless_exception_type_no_input.retry.statistics
+            s = _retryable_test_with_unless_exception_type_no_input.statistics
             self.assertTrue(s["attempt_number"] == 6)
             print(e)
         else:
@@ -1117,7 +1126,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 _retryable_test_if_exception_message_message(NoCustomErrorAfterCount(3))
             )
         except CustomError:
-            print(_retryable_test_if_exception_message_message.retry.statistics)
+            print(_retryable_test_if_exception_message_message.statistics)
             self.fail("CustomError should've been retried from errormessage")
 
     def test_retry_if_not_exception_message(self):
@@ -1128,7 +1137,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 )
             )
         except CustomError:
-            s = _retryable_test_if_not_exception_message_message.retry.statistics
+            s = _retryable_test_if_not_exception_message_message.statistics
             self.assertTrue(s["attempt_number"] == 1)
 
     def test_retry_if_not_exception_message_delay(self):
@@ -1137,7 +1146,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 _retryable_test_not_exception_message_delay(NameErrorUntilCount(3))
             )
         except NameError:
-            s = _retryable_test_not_exception_message_delay.retry.statistics
+            s = _retryable_test_not_exception_message_delay.statistics
             print(s["attempt_number"])
             self.assertTrue(s["attempt_number"] == 4)
 
@@ -1157,7 +1166,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 )
             )
         except CustomError:
-            s = _retryable_test_if_not_exception_message_message.retry.statistics
+            s = _retryable_test_if_not_exception_message_message.statistics
             self.assertTrue(s["attempt_number"] == 1)
 
     def test_retry_if_exception_cause_type(self):
@@ -1214,6 +1223,43 @@ class TestDecoratorWrapper(unittest.TestCase):
         )
         h = retrying.wraps(Hello())
         self.assertEqual(h(), "Hello")
+
+    def test_retry_function_attributes(self):
+        """Test that the wrapped function attributes are exposed as intended.
+
+        - statistics contains the value for the latest function run
+        - retry object can be modified to change its behaviour (useful to patch in tests)
+        - retry object statistics do not contain valid information
+        """
+
+        self.assertTrue(_retryable_test_with_stop(NoneReturnUntilAfterCount(2)))
+
+        expected_stats = {
+            "attempt_number": 3,
+            "delay_since_first_attempt": mock.ANY,
+            "idle_for": mock.ANY,
+            "start_time": mock.ANY,
+        }
+        self.assertEqual(_retryable_test_with_stop.statistics, expected_stats)
+        self.assertEqual(_retryable_test_with_stop.retry.statistics, {})
+
+        with mock.patch.object(
+            _retryable_test_with_stop.retry, "stop", tenacity.stop_after_attempt(1)
+        ):
+            try:
+                self.assertTrue(_retryable_test_with_stop(NoneReturnUntilAfterCount(2)))
+            except RetryError as exc:
+                expected_stats = {
+                    "attempt_number": 1,
+                    "delay_since_first_attempt": mock.ANY,
+                    "idle_for": mock.ANY,
+                    "start_time": mock.ANY,
+                }
+                self.assertEqual(_retryable_test_with_stop.statistics, expected_stats)
+                self.assertEqual(exc.last_attempt.attempt_number, 1)
+                self.assertEqual(_retryable_test_with_stop.retry.statistics, {})
+            else:
+                self.fail("RetryError should have been raised after 1 attempt")
 
 
 class TestRetryWith:
@@ -1485,21 +1531,21 @@ class TestStatistics(unittest.TestCase):
         def _foobar():
             return 42
 
-        self.assertEqual({}, _foobar.retry.statistics)
+        self.assertEqual({}, _foobar.statistics)
         _foobar()
-        self.assertEqual(1, _foobar.retry.statistics["attempt_number"])
+        self.assertEqual(1, _foobar.statistics["attempt_number"])
 
     def test_stats_failing(self):
         @retry(stop=tenacity.stop_after_attempt(2))
         def _foobar():
             raise ValueError(42)
 
-        self.assertEqual({}, _foobar.retry.statistics)
+        self.assertEqual({}, _foobar.statistics)
         try:
             _foobar()
         except Exception:  # noqa: B902
             pass
-        self.assertEqual(2, _foobar.retry.statistics["attempt_number"])
+        self.assertEqual(2, _foobar.statistics["attempt_number"])
 
 
 class TestRetryErrorCallback(unittest.TestCase):
