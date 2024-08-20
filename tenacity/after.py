@@ -31,7 +31,7 @@ def after_nothing(retry_state: "RetryCallState") -> None:
 def after_log(
     logger: "logging.Logger",
     log_level: int,
-    sec_format: str = "%0.3f",
+    sec_format: str = "%.3g",
 ) -> typing.Callable[["RetryCallState"], None]:
     """After call strategy that logs to some logger the finished attempt."""
 
