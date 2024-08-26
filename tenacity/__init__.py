@@ -76,7 +76,7 @@ from .before import before_nothing  # noqa
 from .after import after_log  # noqa
 from .after import after_nothing  # noqa
 
-# Import all built-in after strategies for easier usage.
+# Import all built-in before sleep strategies for easier usage.
 from .before_sleep import before_sleep_log  # noqa
 from .before_sleep import before_sleep_nothing  # noqa
 
