@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    Added `re.Pattern` to allowed match types.
