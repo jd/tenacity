@@ -1,0 +1,15 @@
+---
+prelude: >
+  This release introduces configurable retry parameters with the
+  DictConfig class and adds comprehensive unit tests for default
+  configurations.
+features:
+  - Added `DictConfig` class to manage default retry parameters
+  - in a singleton dictionary. (Commit 622bea5)
+improvements:
+  - Refactored the initialization method by removing redundant
+  - attribute checks and adding a new `get` method for better
+  - configuration access. (Commit 25efec0)
+issues:
+  - Included a new test class `TestRetryDefaults` to verify
+  - `dict_config` functionalities within tenacity. (Commit 58b9993)
