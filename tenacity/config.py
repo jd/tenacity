@@ -34,8 +34,9 @@ class DictConfig:
     - __contains__: Checks if a configuration attribute exists.
     - __repr__: Returns a string representation of the configuration object.
     """
+
     _instance = None
-    _lock = Lock()      # For thread safety
+    _lock = Lock()  # For thread safety
 
     def __new__(cls):
         if cls._instance is None:
@@ -60,9 +61,11 @@ class DictConfig:
         if name in self._config:
             del self._config[name]
         else:
-            raise KeyError(f'Attribute {name} not found in configuration.')
+            raise KeyError(f"Attribute {name} not found in configuration.")
 
-    def get_config(self, override: t.Optional[t.Dict[str, t.Any]] = None) -> t.Dict[str, t.Any]:
+    def get_config(
+        self, override: t.Optional[t.Dict[str, t.Any]] = None
+    ) -> t.Dict[str, t.Any]:
         """
         Retrieves the configuration dictionary.
 
@@ -93,7 +96,7 @@ class DictConfig:
         return name in self._config
 
     def __repr__(self) -> str:
-        return f'<DictConfig {self._config}>'
+        return f"<DictConfig {self._config}>"
 
 
 dict_config = DictConfig()
