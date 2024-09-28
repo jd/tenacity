@@ -45,8 +45,7 @@ class DictConfig:
         return cls._instance
 
     def __init__(self):
-        if not hasattr(self, '_config'):
-            self._config = {}
+        self._config = {}
 
     def set_config(self, **kwargs: t.Any) -> None:
         """Sets multiple configuration parameters."""
@@ -80,6 +79,9 @@ class DictConfig:
 
     def reset_config(self):
         self._config = {}
+
+    def get(self, name: str) -> t.Any:
+        return self._config.get(name)
 
     def __getattr__(self, name: str) -> t.Any:
         return self._config.get(name)
