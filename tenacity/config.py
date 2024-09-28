@@ -35,18 +35,18 @@ class DictConfig:
     - __repr__: Returns a string representation of the configuration object.
     """
 
-    _instance = None
+    _instance: t.Optional["DictConfig"] = None
     _lock = Lock()  # For thread safety
 
-    def __new__(cls):
+    def __new__(cls) -> "DictConfig":
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
-        self._config = {}
+    def __init__(self) -> None:
+        self._config: t.Dict[str, t.Any] = {}
 
     def set_config(self, **kwargs: t.Any) -> None:
         """Sets multiple configuration parameters."""
@@ -80,7 +80,7 @@ class DictConfig:
             config.update(override)
         return config
 
-    def reset_config(self):
+    def reset_config(self) -> None:
         self._config = {}
 
     def get(self, name: str) -> t.Any:
