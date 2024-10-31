@@ -737,7 +737,7 @@ class NoIOErrorAfterCount:
 
 
 class NoExceptionGroupAfterCount:
-    def __init__(self, count: int, exceptions: tuple[Exception]):
+    def __init__(self, count: int, exceptions: typing.Tuple[Exception]):
         self.counter = 0
         self.count = count
         self.exceptions = exceptions
