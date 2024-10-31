@@ -25,6 +25,7 @@ if typing.TYPE_CHECKING:
 if sys.version_info < (3, 11):
     from exceptiongroup import BaseExceptionGroup
 
+
 class retry_base(abc.ABC):
     """Abstract base class for retry strategies."""
 

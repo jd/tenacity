@@ -1095,7 +1095,7 @@ class TestDecoratorWrapper(unittest.TestCase):
         with pytest.raises(ExceptionGroup):
             self.assertTrue(
                 _retryable_test_with_exception_type_io(
-                    NoExceptionGroupAfterCount(5, exceptions=(IOError(),ValueError()))
+                    NoExceptionGroupAfterCount(5, exceptions=(IOError(), ValueError()))
                 )
             )
         # not supported
@@ -1107,8 +1107,6 @@ class TestDecoratorWrapper(unittest.TestCase):
                     NoExceptionGroupAfterCount(5, exceptions=(e,))
                 )
             )
-
-
 
     def test_retry_except_exception_of_type(self):
         self.assertTrue(
