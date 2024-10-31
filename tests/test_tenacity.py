@@ -32,6 +32,9 @@ import pytest
 import tenacity
 from tenacity import RetryCallState, RetryError, Retrying, retry
 
+if sys.version_info < (3, 11):
+    from exceptiongroup import ExceptionGroup
+
 _unset = object()
 
 
@@ -733,6 +736,24 @@ class NoIOErrorAfterCount:
         return True
 
 
+class NoExceptionGroupAfterCount:
+    def __init__(self, count: int, exceptions: tuple[Exception]):
+        self.counter = 0
+        self.count = count
+        self.exceptions = exceptions
+
+    def go(self):
+        """Raise an ExceptionGroup until after count threshold has been crossed.
+
+        Then return True.
+        """
+        if self.counter < self.count:
+            self.counter += 1
+            raise ExceptionGroup("tenacity test group", self.exceptions)
+
+        return True
+
+
 class NoNameErrorAfterCount:
     """Holds counter state for invoking a method several times in a row."""
 
@@ -1014,6 +1035,7 @@ def _retryable_test_with_exception_type_custom(thing):
     retry=tenacity.retry_if_exception_type(CustomError),
 )
 def _retryable_test_with_exception_type_custom_attempt_limit(thing):
+    # this is not used??
     return thing.go()
 
 
@@ -1063,6 +1085,30 @@ class TestDecoratorWrapper(unittest.TestCase):
         except NameError as n:
             self.assertTrue(isinstance(n, NameError))
             print(n)
+
+    def test_retry_if_exception_of_type_exceptiongroup(self):
+        self.assertTrue(
+            _retryable_test_with_exception_type_io(
+                NoExceptionGroupAfterCount(5, exceptions=(IOError(),))
+            )
+        )
+        with pytest.raises(ExceptionGroup):
+            self.assertTrue(
+                _retryable_test_with_exception_type_io(
+                    NoExceptionGroupAfterCount(5, exceptions=(IOError(),ValueError()))
+                )
+            )
+        # not supported
+        with pytest.raises(ExceptionGroup):
+            e = IOError()
+            e.__cause__ = NameError()
+            self.assertTrue(
+                _retryable_test_with_exception_cause_type(
+                    NoExceptionGroupAfterCount(5, exceptions=(e,))
+                )
+            )
+
+
 
     def test_retry_except_exception_of_type(self):
         self.assertTrue(
