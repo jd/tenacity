@@ -16,10 +16,14 @@
 
 import abc
 import re
+import sys
 import typing
 
 if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
+
+if sys.version_info < (3, 11):
+    from exceptiongroup import BaseExceptionGroup
 
 
 class retry_base(abc.ABC):
@@ -79,6 +83,9 @@ class retry_if_exception(retry_base):
             exception = retry_state.outcome.exception()
             if exception is None:
                 raise RuntimeError("outcome failed but the exception is None")
+            if isinstance(exception, BaseExceptionGroup):
+                # look for any exceptions not matching the predicate
+                return exception.split(self.predicate)[1] is None
             return self.predicate(exception)
         else:
             return False
