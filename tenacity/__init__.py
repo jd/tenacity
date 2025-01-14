@@ -427,7 +427,7 @@ class BaseRetrying(ABC):
             rs.idle_for += sleep
             self.statistics["idle_for"] = self.statistics.get("idle_for", 0) + sleep
             self.statistics["attempt_number"] = (
-                self.statistics.get("attempt_number", 0) + 1
+                self.statistics.get("attempt_number", 1) + 1
             )
 
         self._add_action_func(next_action)
