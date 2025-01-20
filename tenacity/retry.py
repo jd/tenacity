@@ -207,7 +207,7 @@ class retry_if_exception_message(retry_if_exception):
     def __init__(
         self,
         message: typing.Optional[str] = None,
-        match: typing.Optional[str] = None,
+        match: typing.Union[None, str, typing.Pattern[str]] = None,
     ) -> None:
         if message and match:
             raise TypeError(
@@ -242,7 +242,7 @@ class retry_if_not_exception_message(retry_if_exception_message):
     def __init__(
         self,
         message: typing.Optional[str] = None,
-        match: typing.Optional[str] = None,
+        match: typing.Union[None, str, typing.Pattern[str]] = None,
     ) -> None:
         super().__init__(message, match)
         # invert predicate
