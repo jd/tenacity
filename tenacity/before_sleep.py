@@ -46,7 +46,8 @@ def before_sleep_log(
 
         if retry_state.outcome.failed:
             ex = retry_state.outcome.exception()
-            verb, value = "raised", f"{ex.__class__.__name__}: {ex}"
+            exception_str = str(ex).strip()  # Ensure message isn't multiline.
+            verb, value = "raised", f"{ex.__class__.__name__}: {exception_str}"
 
             if exc_info:
                 local_exc_info = retry_state.outcome.exception()
