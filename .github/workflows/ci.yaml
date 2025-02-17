@@ -36,12 +36,12 @@ jobs:
             tox: mypy
     steps:
       - name: Checkout 🛎️
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
 
       - name: Setup Python 🔧
-        uses: actions/setup-python@v5.1.0
+        uses: actions/setup-python@v5.4.0
         with:
           python-version: ${{ matrix.python }}
           allow-prereleases: true
