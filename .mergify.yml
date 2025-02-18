@@ -14,7 +14,8 @@ queue_rules:
       - "check-success=test (3.9, py39)"
       - "check-success=test (3.10, py310)"
       - "check-success=test (3.11, py311)"
-      - "check-success=test (3.12, py312,py312-trio)"
+      - "check-success=test (3.12, py312)"
+      - "check-success=test (3.13, py313,py313-trio)"
       - "check-success=test (3.12, pep8)"
 
 pull_request_rules:
