@@ -11,7 +11,7 @@ build-backend="setuptools.build_meta"
 [tool.ruff]
 line-length = 88
 indent-width = 4
-target-version = "py38"
+target-version = "py39"
 
 [tool.mypy]
 strict = true
