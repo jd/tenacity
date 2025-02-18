@@ -27,7 +27,7 @@ class TestAfterLogFormat(unittest.TestCase):
         log = unittest.mock.MagicMock(spec="logging.Logger.log")
         logger = unittest.mock.MagicMock(spec="logging.Logger", log=log)
 
-        sec_format = "%0.3f"
+        sec_format = "%.3g"
         delay_since_first_attempt = 0.1
 
         retry_state = test_tenacity.make_retry_state(
