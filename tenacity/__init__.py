@@ -88,6 +88,8 @@ except ImportError:
 if t.TYPE_CHECKING:
     import types
 
+    from typing_extensions import Self
+
     from . import asyncio as tasyncio
     from .retry import RetryBaseT
     from .stop import StopBaseT
@@ -255,7 +257,7 @@ class BaseRetrying(ABC):
         retry_error_callback: t.Union[
             t.Optional[t.Callable[["RetryCallState"], t.Any]], object
         ] = _unset,
-    ) -> "BaseRetrying":
+    ) -> "Self":
         """Copy this object with some parameters changed if needed."""
         return self.__class__(
             sleep=_first_set(sleep, self.sleep),
