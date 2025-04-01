@@ -39,7 +39,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Python 🔧
-        uses: actions/setup-python@v5.4.0
+        uses: actions/setup-python@v5.5.0
         with:
           python-version: ${{ matrix.python }}
           allow-prereleases: true
