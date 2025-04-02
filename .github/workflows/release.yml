@@ -1,4 +1,4 @@
-catname: upload release to PyPI
+name: upload release to PyPI
 on:
   release:
     types:
