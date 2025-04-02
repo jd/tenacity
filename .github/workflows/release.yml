@@ -1,0 +1,34 @@
+name: upload release to PyPI
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  pypi-publish:
+    name: upload release to PyPI
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v5.5.0
+        with:
+          python-version: 3.13
+
+      - name: Install build
+        run: |
+          pip install setuptools-scm wheel
+
+      - name: Build
+        run: |
+          python setup.py sdist bdist_wheel
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

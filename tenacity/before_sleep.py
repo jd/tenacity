@@ -25,7 +25,7 @@ if typing.TYPE_CHECKING:
 
 
 def before_sleep_nothing(retry_state: "RetryCallState") -> None:
-    """Before call strategy that does nothing."""
+    """Before sleep strategy that does nothing."""
 
 
 def before_sleep_log(
@@ -34,7 +34,7 @@ def before_sleep_log(
     exc_info: bool = False,
     sec_format: str = "%.3g",
 ) -> typing.Callable[["RetryCallState"], None]:
-    """Before call strategy that logs to some logger the attempt."""
+    """Before sleep strategy that logs to some logger the attempt."""
 
     def log_it(retry_state: "RetryCallState") -> None:
         local_exc_info: BaseException | bool | None

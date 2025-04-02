@@ -14,12 +14,10 @@ concurrency:
 jobs:
   test:
     timeout-minutes: 20
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         include:
-          - python: "3.8"
-            tox: py38
           - python: "3.9"
             tox: py39
           - python: "3.10"
@@ -27,19 +25,21 @@ jobs:
           - python: "3.11"
             tox: py311
           - python: "3.12"
-            tox: py312,py312-trio
+            tox: py312
           - python: "3.12"
             tox: pep8
+          - python: "3.13"
+            tox: py313,py313-trio
           - python: "3.11"
             tox: mypy
     steps:
       - name: Checkout 🛎️
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
 
       - name: Setup Python 🔧
-        uses: actions/setup-python@v5.1.1
+        uses: actions/setup-python@v5.5.0
         with:
           python-version: ${{ matrix.python }}
           allow-prereleases: true
