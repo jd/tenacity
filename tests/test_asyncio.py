@@ -40,8 +40,7 @@ from .test_tenacity import NoIOErrorAfterCount, current_time_ms
 def asynctest(callable_):
     @wraps(callable_)
     def wrapper(*a, **kw):
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(callable_(*a, **kw))
+        return asyncio.run(callable_(*a, **kw))
 
     return wrapper
 
