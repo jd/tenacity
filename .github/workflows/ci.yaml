@@ -26,11 +26,13 @@ jobs:
             tox: py311
           - python: "3.12"
             tox: py312
-          - python: "3.12"
-            tox: pep8
           - python: "3.13"
-            tox: py313,py313-trio
-          - python: "3.11"
+            tox: py313
+          - python: "3.14"
+            tox: py314,py314-trio
+          - python: "3.14"
+            tox: pep8
+          - python: "3.14"
             tox: mypy
     steps:
       - name: Checkout 🛎️
