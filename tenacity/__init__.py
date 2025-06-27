@@ -307,19 +307,15 @@ class BaseRetrying(ABC):
                   future we may provide a way to aggregate the various
                   statistics from each thread).
         """
-        try:
-            return self._local.statistics  # type: ignore[no-any-return]
-        except AttributeError:
+        if not hasattr(self._local, "statistics"):
             self._local.statistics = t.cast(t.Dict[str, t.Any], {})
-            return self._local.statistics
+        return self._local.statistics  # type: ignore[no-any-return]
 
     @property
     def iter_state(self) -> IterState:
-        try:
-            return self._local.iter_state  # type: ignore[no-any-return]
-        except AttributeError:
+        if not hasattr(self._local, "iter_state"):
             self._local.iter_state = IterState()
-            return self._local.iter_state
+        return self._local.iter_state  # type: ignore[no-any-return]
 
     def wraps(self, f: WrappedFn) -> WrappedFn:
         """Wrap a function for retrying.

@@ -12,8 +12,7 @@ def asynctest(
 ) -> typing.Callable[..., typing.Any]:
     @wraps(callable_)
     def wrapper(*a: typing.Any, **kw: typing.Any) -> typing.Any:
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(callable_(*a, **kw))
+        return asyncio.run(callable_(*a, **kw))
 
     return wrapper
 
