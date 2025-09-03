@@ -1,6 +1,7 @@
 queue_rules:
   - name: default
     merge_method: squash
+    autoqueue: true
     queue_conditions:
       - or:
         - author = jd
@@ -22,7 +23,8 @@ pull_request_rules:
   - name: warn on no changelog
     conditions:
       - -files~=^releasenotes/notes/
-      - label!=no-changelog
+      - label != no-changelog
+      - author != dependabot[bot]
       - -closed
     actions:
       comment:
@@ -30,11 +32,6 @@ pull_request_rules:
           ⚠️ No release notes detected. Please make sure to use
           [reno](https://docs.openstack.org/reno/latest/user/usage.html) to add
           a changelog entry.
-
-  - name: automatic queue
-    conditions: []
-    actions:
-      queue:
 
   - name: dismiss reviews
     conditions: []
