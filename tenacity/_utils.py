@@ -32,8 +32,9 @@ class LoggerProtocol(typing.Protocol):
     Compatible with logging, structlog, loguru, etc...
     """
 
-    def log(self, level: int, msg: str, /, *args: typing.Any, **kwargs: typing.Any) -> typing.Any:
-        ...
+    def log(
+        self, level: int, msg: str, /, *args: typing.Any, **kwargs: typing.Any
+    ) -> typing.Any: ...
 
 
 def find_ordinal(pos_num: int) -> str:
