@@ -19,8 +19,6 @@ import typing
 from tenacity import _utils
 
 if typing.TYPE_CHECKING:
-    import logging
-
     from tenacity import RetryCallState
 
 
@@ -29,7 +27,7 @@ def after_nothing(retry_state: "RetryCallState") -> None:
 
 
 def after_log(
-    logger: "logging.Logger",
+    logger: _utils.LoggerProtocol,
     log_level: int,
     sec_format: str = "%.3g",
 ) -> typing.Callable[["RetryCallState"], None]:

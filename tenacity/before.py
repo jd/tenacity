@@ -19,8 +19,6 @@ import typing
 from tenacity import _utils
 
 if typing.TYPE_CHECKING:
-    import logging
-
     from tenacity import RetryCallState
 
 
@@ -29,7 +27,7 @@ def before_nothing(retry_state: "RetryCallState") -> None:
 
 
 def before_log(
-    logger: "logging.Logger", log_level: int
+    logger: _utils.LoggerProtocol, log_level: int
 ) -> typing.Callable[["RetryCallState"], None]:
     """Before call strategy that logs to some logger the attempt."""
 

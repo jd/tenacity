@@ -25,6 +25,18 @@ from datetime import timedelta
 MAX_WAIT = sys.maxsize / 2
 
 
+class LoggerProtocol(typing.Protocol):
+    """
+    Protocol used by utils expecting a logger (eg: before_log).
+
+    Compatible with logging, structlog, loguru, etc...
+    """
+
+    def log(
+        self, level: int, msg: str, /, *args: typing.Any, **kwargs: typing.Any
+    ) -> typing.Any: ...
+
+
 def find_ordinal(pos_num: int) -> str:
     # See: https://en.wikipedia.org/wiki/English_numerals#Ordinal_numbers
     if pos_num == 0:
