@@ -7,10 +7,6 @@ queue_rules:
         - author = jd
         - "#approved-reviews-by >= 1"
         - author = dependabot[bot]
-      - or:
-        - files ~= ^releasenotes/notes/
-        - label = no-changelog
-        - author = dependabot[bot]
       - "check-success=test (3.9, py39)"
       - "check-success=test (3.10, py310)"
       - "check-success=test (3.11, py311)"
@@ -20,19 +16,6 @@ queue_rules:
       - "check-success=test (3.14, pep8)"
 
 pull_request_rules:
-  - name: warn on no changelog
-    conditions:
-      - -files~=^releasenotes/notes/
-      - label != no-changelog
-      - author != dependabot[bot]
-      - -closed
-    actions:
-      comment:
-        message: >
-          ⚠️ No release notes detected. Please make sure to use
-          [reno](https://docs.openstack.org/reno/latest/user/usage.html) to add
-          a changelog entry.
-
   - name: dismiss reviews
     conditions: []
     actions:
