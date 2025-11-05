@@ -59,6 +59,7 @@ from .stop import stop_when_event_set  # noqa
 # Import all built-in wait strategies for easier usage.
 from .wait import wait_chain  # noqa
 from .wait import wait_combine  # noqa
+from .wait import wait_exception  # noqa
 from .wait import wait_exponential  # noqa
 from .wait import wait_fixed  # noqa
 from .wait import wait_incrementing  # noqa
@@ -686,6 +687,7 @@ __all__ = [
     "stop_when_event_set",
     "wait_chain",
     "wait_combine",
+    "wait_exception",
     "wait_exponential",
     "wait_fixed",
     "wait_incrementing",

@@ -369,6 +369,24 @@ class TestWaitConditions(unittest.TestCase):
             self.assertLess(w, 8)
             self.assertGreaterEqual(w, 5)
 
+    def test_wait_exception(self):
+        def predicate(exc):
+            if isinstance(exc, ValueError):
+                return 3.5
+            return 10.0
+
+        r = Retrying(wait=tenacity.wait_exception(predicate))
+
+        fut1 = tenacity.Future.construct(1, ValueError(), True)
+        self.assertEqual(r.wait(make_retry_state(1, 0, last_result=fut1)), 3.5)
+
+        fut2 = tenacity.Future.construct(1, KeyError(), True)
+        self.assertEqual(r.wait(make_retry_state(1, 0, last_result=fut2)), 10.0)
+
+        fut3 = tenacity.Future.construct(1, None, False)
+        with self.assertRaises(RuntimeError):
+            r.wait(make_retry_state(1, 0, last_result=fut3))
+
     def test_wait_double_sum(self):
         r = Retrying(wait=tenacity.wait_random(0, 3) + tenacity.wait_fixed(5))
         # Test it a few time since it's random
