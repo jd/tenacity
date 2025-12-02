@@ -13,12 +13,12 @@ jobs:
       id-token: write
       contents: write
     steps:
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@v6.0.0
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - uses: actions/setup-python@v6.0.0
+      - uses: actions/setup-python@v6.1.0
         with:
           python-version: 3.14
 
