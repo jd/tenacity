@@ -37,7 +37,7 @@ class TornadoRetrying(BaseRetrying):
         super().__init__(**kwargs)
         self.sleep = sleep
 
-    @gen.coroutine  # type: ignore[misc]
+    @gen.coroutine  # type: ignore[untyped-decorator]
     def __call__(
         self,
         fn: "typing.Callable[..., typing.Union[typing.Generator[typing.Any, typing.Any, _RetValT], Future[_RetValT]]]",
