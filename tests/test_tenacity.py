@@ -660,6 +660,58 @@ class TestRetryConditions(unittest.TestCase):
         self.assertFalse(r(tenacity.Future.construct(1, 3, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 1, True)))
 
+    async def test_retry_and_func(self):
+        def test():
+            attempts = 0
+            called = False
+
+            def lt_3(x: float) -> bool:
+                return x < 3
+
+            def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return True
+
+            retry_strategy = tenacity.retry_if_result(lt_3) & should_retry  # type: ignore[operator]
+            for attempt in Retrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+                attempt.retry_state.set_result(attempts)
+
+            self.assertTrue(called)
+            return attempts
+
+        result = test()
+
+        self.assertEqual(3, result)
+
+    async def test_retry_rand_func(self):
+        def test():
+            attempts = 0
+            called = False
+
+            def lt_3(x: float) -> bool:
+                return x < 3
+
+            def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return True
+
+            retry_strategy = should_retry & tenacity.retry_if_result(lt_3)  # type: ignore[operator]
+            for attempt in Retrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+                attempt.retry_state.set_result(attempts)
+
+            self.assertTrue(called)
+            return attempts
+
+        result = test()
+
+        self.assertEqual(3, result)
+
     def test_retry_or(self):
         retry = tenacity.retry_if_result(
             lambda x: x == "foo"
@@ -673,6 +725,64 @@ class TestRetryConditions(unittest.TestCase):
         self.assertFalse(r(tenacity.Future.construct(1, "foobar", False)))
         self.assertFalse(r(tenacity.Future.construct(1, 2.2, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 42, True)))
+
+    def test_retry_or_func(self):
+        def test():
+            attempts = 0
+            called = False
+
+            def lt_3(x: float) -> bool:
+                return x < 3
+
+            def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return False
+
+            retry_strategy = tenacity.retry_if_result(lt_3) | should_retry  # type: ignore[operator]
+            for attempt in Retrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+
+                assert attempt.retry_state.outcome  # help mypy
+                if not attempt.retry_state.outcome.failed:
+                    attempt.retry_state.set_result(attempts)
+
+            self.assertTrue(called)
+            return attempts
+
+        result = test()
+
+        self.assertEqual(3, result)
+
+    def test_retry_ror_func(self):
+        def test():
+            attempts = 0
+            called = False
+
+            def lt_3(x: float) -> bool:
+                return x < 3
+
+            def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return False
+
+            retry_strategy = should_retry | tenacity.retry_if_result(lt_3)  # type: ignore[operator]
+            for attempt in Retrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+
+                assert attempt.retry_state.outcome  # help mypy
+                if not attempt.retry_state.outcome.failed:
+                    attempt.retry_state.set_result(attempts)
+
+            self.assertTrue(called)
+            return attempts
+
+        result = test()
+
+        self.assertEqual(3, result)
 
     def _raise_try_again(self):
         self._attempts += 1
