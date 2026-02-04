@@ -107,11 +107,15 @@ class AsyncRetrying(BaseRetrying):
         self.begin()
 
         retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
+        is_async = _utils.is_coroutine_callable(fn)
         while True:
             do = await self.iter(retry_state=retry_state)
             if isinstance(do, DoAttempt):
                 try:
-                    result = await fn(*args, **kwargs)
+                    if is_async:
+                        result = await fn(*args, **kwargs)
+                    else:
+                        result = fn(*args, **kwargs)
                 except BaseException:  # noqa: B902
                     retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]
                 else:
