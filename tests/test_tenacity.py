@@ -17,7 +17,6 @@
 import datetime
 import logging
 import re
-import sys
 import time
 import typing
 import unittest
@@ -28,6 +27,7 @@ from fractions import Fraction
 from unittest import mock
 
 import pytest
+from typeguard import check_type
 
 import tenacity
 from tenacity import RetryCallState, RetryError, Retrying, retry
@@ -1729,17 +1729,8 @@ class TestRetryException(unittest.TestCase):
 
 
 class TestRetryTyping(unittest.TestCase):
-    @pytest.mark.skipif(
-        sys.version_info < (3, 0), reason="typeguard not supported for python 2"
-    )
     def test_retry_type_annotations(self):
         """The decorator should maintain types of decorated functions."""
-        # Just in case this is run with unit-test, return early for py2
-        if sys.version_info < (3, 0):
-            return
-
-        # Function-level import because we can't install this for python 2.
-        from typeguard import check_type
 
         def num_to_str(number):
             # type: (int) -> str

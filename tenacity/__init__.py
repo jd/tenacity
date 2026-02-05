@@ -101,12 +101,7 @@ WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Any])
 
 
-dataclass_kwargs = {}
-if sys.version_info >= (3, 10):
-    dataclass_kwargs.update({"slots": True})
-
-
-@dataclasses.dataclass(**dataclass_kwargs)
+@dataclasses.dataclass(slots=True)
 class IterState:
     actions: t.List[t.Callable[["RetryCallState"], t.Any]] = dataclasses.field(
         default_factory=list
@@ -486,13 +481,7 @@ class Retrying(BaseRetrying):
                 return do  # type: ignore[no-any-return]
 
 
-if sys.version_info >= (3, 9):
-    FutureGenericT = futures.Future[t.Any]
-else:
-    FutureGenericT = futures.Future
-
-
-class Future(FutureGenericT):
+class Future(futures.Future[t.Any]):
     """Encapsulates a (future or past) attempted call to a target function."""
 
     def __init__(self, attempt_number: int) -> None:
