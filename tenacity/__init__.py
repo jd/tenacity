@@ -99,6 +99,8 @@ if t.TYPE_CHECKING:
 
 WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Any])
+P = t.ParamSpec("P")
+R = t.TypeVar("R")
 
 
 @dataclasses.dataclass(slots=True)
@@ -589,7 +591,27 @@ def retry(func: WrappedFn) -> WrappedFn: ...
 
 @t.overload
 def retry(
-    sleep: t.Callable[[t.Union[int, float]], t.Union[None, t.Awaitable[None]]] = sleep,
+    *,
+    sleep: t.Callable[[t.Union[int, float]], t.Awaitable[None]],
+    stop: "StopBaseT" = ...,
+    wait: "WaitBaseT" = ...,
+    retry: "t.Union[RetryBaseT, tasyncio.retry.RetryBaseT]" = ...,
+    before: t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]] = ...,
+    after: t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]] = ...,
+    before_sleep: t.Optional[
+        t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]]
+    ] = ...,
+    reraise: bool = ...,
+    retry_error_cls: t.Type["RetryError"] = ...,
+    retry_error_callback: t.Optional[
+        t.Callable[["RetryCallState"], t.Union[t.Any, t.Awaitable[t.Any]]]
+    ] = ...,
+) -> t.Callable[[t.Callable[P, R | t.Awaitable[R]]], t.Callable[P, t.Awaitable[R]]]: ...
+
+
+@t.overload
+def retry(
+    sleep: t.Callable[[t.Union[int, float]], None] = sleep,
     stop: "StopBaseT" = stop_never,
     wait: "WaitBaseT" = wait_none(),
     retry: "t.Union[RetryBaseT, tasyncio.retry.RetryBaseT]" = retry_if_exception_type(),
@@ -628,7 +650,10 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
                     f"this will probably hang indefinitely (did you mean retry={f.__class__.__name__}(...)?)"
                 )
             r: "BaseRetrying"
-            if _utils.is_coroutine_callable(f):
+            sleep = dkw.get("sleep")
+            if _utils.is_coroutine_callable(f) or (
+                sleep is not None and _utils.is_coroutine_callable(sleep)
+            ):
                 r = AsyncRetrying(*dargs, **dkw)
             elif (
                 tornado

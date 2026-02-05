@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Passing an async ``sleep`` callable (e.g. ``trio.sleep``) to ``@retry``
+    now correctly uses ``AsyncRetrying``, even when the decorated function is
+    synchronous. Previously, the async sleep would silently not be awaited,
+    resulting in no delay between retries.
