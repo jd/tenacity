@@ -7,7 +7,6 @@ queue_rules:
         - author = jd
         - "#approved-reviews-by >= 1"
         - author = dependabot[bot]
-      - "check-success=test (3.9, py39)"
       - "check-success=test (3.10, py310)"
       - "check-success=test (3.11, py311)"
       - "check-success=test (3.12, py312)"
