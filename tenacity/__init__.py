@@ -587,8 +587,8 @@ class RetryCallState:
 class _AsyncRetryDecorator(t.Protocol):
     @t.overload
     def __call__(
-        self, fn: t.Callable[P, types.CoroutineType[t.Any, t.Any, R]]
-    ) -> t.Callable[P, types.CoroutineType[t.Any, t.Any, R]]: ...
+        self, fn: "t.Callable[P, types.CoroutineType[t.Any, t.Any, R]]"
+    ) -> "t.Callable[P, types.CoroutineType[t.Any, t.Any, R]]": ...
     @t.overload
     def __call__(
         self, fn: t.Callable[P, t.Coroutine[t.Any, t.Any, R]]
