@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    The ``@retry`` decorator's type overloads for the ``sleep=`` parameter
+    (e.g. ``sleep=trio.sleep``) have been improved. Previously, the
+    async-sleep overload used ``R | Awaitable[R]`` as the return type
+    bound, which was ambiguous: for ``async def f() -> T``, pyright could
+    infer ``R = Coroutine[Any, Any, T]`` instead of ``R = T``, producing
+    false-positive type errors in downstream code.

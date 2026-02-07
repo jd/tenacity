@@ -20,6 +20,7 @@ import functools
 import sys
 import threading
 import time
+import types
 import typing as t
 import warnings
 from abc import ABC, abstractmethod
@@ -87,8 +88,6 @@ except ImportError:
     tornado = None
 
 if t.TYPE_CHECKING:
-    import types
-
     from typing_extensions import Self
 
     from . import asyncio as tasyncio
@@ -585,6 +584,23 @@ class RetryCallState:
         return f"<{clsname} {id(self)}: attempt #{self.attempt_number}; slept for {slept}; last result: {result}>"
 
 
+class _AsyncRetryDecorator(t.Protocol):
+    @t.overload
+    def __call__(
+        self, fn: "t.Callable[P, types.CoroutineType[t.Any, t.Any, R]]"
+    ) -> "t.Callable[P, types.CoroutineType[t.Any, t.Any, R]]": ...
+    @t.overload
+    def __call__(
+        self, fn: t.Callable[P, t.Coroutine[t.Any, t.Any, R]]
+    ) -> t.Callable[P, t.Coroutine[t.Any, t.Any, R]]: ...
+    @t.overload
+    def __call__(
+        self, fn: t.Callable[P, t.Awaitable[R]]
+    ) -> t.Callable[P, t.Awaitable[R]]: ...
+    @t.overload
+    def __call__(self, fn: t.Callable[P, R]) -> t.Callable[P, t.Awaitable[R]]: ...
+
+
 @t.overload
 def retry(func: WrappedFn) -> WrappedFn: ...
 
@@ -606,7 +622,7 @@ def retry(
     retry_error_callback: t.Optional[
         t.Callable[["RetryCallState"], t.Union[t.Any, t.Awaitable[t.Any]]]
     ] = ...,
-) -> t.Callable[[t.Callable[P, R | t.Awaitable[R]]], t.Callable[P, t.Awaitable[R]]]: ...
+) -> _AsyncRetryDecorator: ...
 
 
 @t.overload
