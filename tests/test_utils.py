@@ -39,3 +39,19 @@ def test_is_coroutine_callable() -> None:
     assert _utils.is_coroutine_callable(partial_async_class) is True
     assert _utils.is_coroutine_callable(partial_sync_class) is False
     assert _utils.is_coroutine_callable(partial_lambda_fn) is False
+
+
+def test_find_ordinal() -> None:
+    assert _utils.find_ordinal(1) == "st"
+    assert _utils.find_ordinal(2) == "nd"
+    assert _utils.find_ordinal(3) == "rd"
+    assert _utils.find_ordinal(4) == "th"
+    assert _utils.find_ordinal(11) == "th"
+    assert _utils.find_ordinal(12) == "th"
+    assert _utils.find_ordinal(13) == "th"
+    assert _utils.find_ordinal(21) == "st"
+    assert _utils.find_ordinal(22) == "nd"
+    assert _utils.find_ordinal(23) == "rd"
+    assert _utils.find_ordinal(111) == "th"
+    assert _utils.find_ordinal(112) == "th"
+    assert _utils.find_ordinal(113) == "th"
