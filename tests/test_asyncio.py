@@ -29,7 +29,7 @@ else:
 import pytest
 
 import tenacity
-from tenacity import AsyncRetrying, RetryError
+from tenacity import AsyncRetrying, RetryCallState, RetryError
 from tenacity import asyncio as tasyncio
 from tenacity import retry, retry_if_exception, retry_if_result, stop_after_attempt
 from tenacity.wait import wait_fixed
@@ -313,6 +313,103 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(4, result)
 
     @asynctest
+    async def test_retry_with_async_result_or_func(self):
+        async def test():
+            attempts = 0
+            called = False
+
+            async def lt_3(x: float) -> bool:
+                return x < 3
+
+            def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return False
+
+            retry_strategy = tasyncio.retry_if_result(lt_3) | should_retry  # type: ignore[operator]
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+
+                assert attempt.retry_state.outcome  # help mypy
+                if not attempt.retry_state.outcome.failed:
+                    attempt.retry_state.set_result(attempts)
+
+            self.assertTrue(called)
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(3, result)
+
+    @asynctest
+    async def test_retry_with_async_result_or_async_func(self):
+        async def test():
+            attempts = 0
+            called = False
+
+            async def lt_3(x: float) -> bool:
+                return x < 3
+
+            async def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return False
+
+            retry_strategy = tasyncio.retry_if_result(lt_3) | should_retry  # type: ignore[operator]
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+
+                assert attempt.retry_state.outcome  # help mypy
+                if not attempt.retry_state.outcome.failed:
+                    attempt.retry_state.set_result(attempts)
+
+            self.assertTrue(called)
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(3, result)
+
+    @asynctest
+    async def test_sync_retry_with_async_result_or_async_func(self):
+        called = False
+
+        async def test():
+            attempts = 0
+
+            def lt_3(x: float) -> bool:
+                return x < 3
+
+            async def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return False
+
+            retry_strategy = tenacity.retry_if_result(lt_3) | should_retry  # type: ignore[operator]
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+
+                assert attempt.retry_state.outcome  # help mypy
+                if not attempt.retry_state.outcome.failed:
+                    attempt.retry_state.set_result(attempts)
+
+            return attempts
+
+        try:
+            await test()
+        except TypeError as exc:
+            self.assertEqual(
+                str(exc),
+                "Cannot use async functions in a sync context. Make sure you use "
+                "the correct retrying object and the corresponding async strategies",
+            )
+        else:
+            self.fail("This is an invalid retry combination that should have failed")
+
+    @asynctest
     async def test_retry_with_async_result_ror(self):
         async def test():
             attempts = 0
@@ -344,6 +441,103 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(4, result)
 
     @asynctest
+    async def test_retry_with_async_result_ror_func(self):
+        async def test():
+            attempts = 0
+            called = False
+
+            async def lt_3(x: float) -> bool:
+                return x < 3
+
+            def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return False
+
+            retry_strategy = should_retry | tasyncio.retry_if_result(lt_3)  # type: ignore[operator]
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+
+                assert attempt.retry_state.outcome  # help mypy
+                if not attempt.retry_state.outcome.failed:
+                    attempt.retry_state.set_result(attempts)
+
+            self.assertTrue(called)
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(3, result)
+
+    @asynctest
+    async def test_retry_with_async_result_ror_async_func(self):
+        async def test():
+            attempts = 0
+            called = False
+
+            async def lt_3(x: float) -> bool:
+                return x < 3
+
+            async def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return False
+
+            retry_strategy = should_retry | tasyncio.retry_if_result(lt_3)  # type: ignore[operator]
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+
+                assert attempt.retry_state.outcome  # help mypy
+                if not attempt.retry_state.outcome.failed:
+                    attempt.retry_state.set_result(attempts)
+
+            self.assertTrue(called)
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(3, result)
+
+    @asynctest
+    async def test_sync_retry_with_async_result_ror_async_func(self):
+        called = False
+
+        async def test():
+            attempts = 0
+
+            def lt_3(x: float) -> bool:
+                return x < 3
+
+            async def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return False
+
+            retry_strategy = should_retry | tenacity.retry_if_result(lt_3)  # type: ignore[operator]
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+
+                assert attempt.retry_state.outcome  # help mypy
+                if not attempt.retry_state.outcome.failed:
+                    attempt.retry_state.set_result(attempts)
+
+            return attempts
+
+        try:
+            await test()
+        except TypeError as exc:
+            self.assertEqual(
+                str(exc),
+                "Cannot use async functions in a sync context. Make sure you use "
+                "the correct retrying object and the corresponding async strategies",
+            )
+        else:
+            self.fail("This is an invalid retry combination that should have failed")
+
+    @asynctest
     async def test_retry_with_async_result_and(self):
         async def test():
             attempts = 0
@@ -367,6 +561,94 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(3, result)
 
     @asynctest
+    async def test_retry_with_async_result_and_func(self):
+        async def test():
+            attempts = 0
+            called = False
+
+            async def lt_3(x: float) -> bool:
+                return x < 3
+
+            def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return True
+
+            retry_strategy = tasyncio.retry_if_result(lt_3) & should_retry  # type: ignore[operator]
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+                attempt.retry_state.set_result(attempts)
+
+            self.assertTrue(called)
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(3, result)
+
+    @asynctest
+    async def test_retry_with_async_result_and_async_func(self):
+        async def test():
+            attempts = 0
+            called = False
+
+            async def lt_3(x: float) -> bool:
+                return x < 3
+
+            async def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return True
+
+            retry_strategy = tasyncio.retry_if_result(lt_3) & should_retry  # type: ignore[operator]
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+                attempt.retry_state.set_result(attempts)
+
+            self.assertTrue(called)
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(3, result)
+
+    @asynctest
+    async def test_sync_retry_with_async_result_and_async_func(self):
+        called = False
+
+        async def test():
+            attempts = 0
+
+            def lt_3(x: float) -> bool:
+                return x < 3
+
+            async def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return True
+
+            retry_strategy = tenacity.retry_if_result(lt_3) & should_retry  # type: ignore[operator]
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+                attempt.retry_state.set_result(attempts)
+
+            return attempts
+
+        try:
+            await test()
+        except TypeError as exc:
+            self.assertEqual(
+                str(exc),
+                "Cannot use async functions in a sync context. Make sure you use "
+                "the correct retrying object and the corresponding async strategies",
+            )
+        else:
+            self.fail("This is an invalid retry combination that should have failed")
+
+    @asynctest
     async def test_retry_with_async_result_rand(self):
         async def test():
             attempts = 0
@@ -388,6 +670,94 @@ class TestContextManager(unittest.TestCase):
         result = await test()
 
         self.assertEqual(3, result)
+
+    @asynctest
+    async def test_retry_with_async_result_rand_func(self):
+        async def test():
+            attempts = 0
+            called = False
+
+            async def lt_3(x: float) -> bool:
+                return x < 3
+
+            def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return True
+
+            retry_strategy = should_retry & tasyncio.retry_if_result(lt_3)  # type: ignore[operator]
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+                attempt.retry_state.set_result(attempts)
+
+            self.assertTrue(called)
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(3, result)
+
+    @asynctest
+    async def test_retry_with_async_result_rand_async_func(self):
+        async def test():
+            attempts = 0
+            called = False
+
+            async def lt_3(x: float) -> bool:
+                return x < 3
+
+            async def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return True
+
+            retry_strategy = should_retry & tasyncio.retry_if_result(lt_3)  # type: ignore[operator]
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+                attempt.retry_state.set_result(attempts)
+
+            self.assertTrue(called)
+            return attempts
+
+        result = await test()
+
+        self.assertEqual(3, result)
+
+    @asynctest
+    async def test_sync_retry_with_async_result_rand_async_func(self):
+        called = False
+
+        async def test():
+            attempts = 0
+
+            def lt_3(x: float) -> bool:
+                return x < 3
+
+            async def should_retry(retry_state: RetryCallState) -> bool:
+                nonlocal called
+                called = True
+                return True
+
+            retry_strategy = should_retry & tenacity.retry_if_result(lt_3)  # type: ignore[operator]
+            async for attempt in tasyncio.AsyncRetrying(retry=retry_strategy):
+                with attempt:
+                    attempts += 1
+                attempt.retry_state.set_result(attempts)
+
+            return attempts
+
+        try:
+            await test()
+        except TypeError as exc:
+            self.assertEqual(
+                str(exc),
+                "Cannot use async functions in a sync context. Make sure you use "
+                "the correct retrying object and the corresponding async strategies",
+            )
+        else:
+            self.fail("This is an invalid retry combination that should have failed")
 
     @asynctest
     async def test_async_retying_iterator(self):

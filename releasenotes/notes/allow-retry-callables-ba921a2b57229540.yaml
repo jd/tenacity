@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Allow for callables to be combined as retry values. This will only
+    work when used combined with their corresponding implementation
+    retry objects, e.g. only async functions will work when used together
+    with async retry strategies.

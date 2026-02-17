@@ -18,6 +18,13 @@ import abc
 import re
 import typing
 
+from . import _utils
+
+try:
+    import tornado
+except ImportError:
+    tornado = None
+
 if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
 
@@ -30,15 +37,29 @@ class retry_base(abc.ABC):
         pass
 
     def __and__(self, other: "retry_base") -> "retry_all":
-        return other.__rand__(self)
+        if isinstance(other, retry_base):
+            # Delegate to the other object to allow for specific
+            # implementations, such as asyncio
+            return other.__rand__(self)
+        return retry_all(other, self)
 
     def __rand__(self, other: "retry_base") -> "retry_all":
+        # This is automatically invoked for inheriting classes,
+        # so it helps to keep the abstraction and delegate specific
+        # implementations, such as asyncio
         return retry_all(other, self)
 
     def __or__(self, other: "retry_base") -> "retry_any":
-        return other.__ror__(self)
+        if isinstance(other, retry_base):
+            # Delegate to the other object to allow for specific
+            # implementations, such as asyncio
+            return other.__ror__(self)
+        return retry_any(other, self)
 
     def __ror__(self, other: "retry_base") -> "retry_any":
+        # This is automatically invoked for inheriting classes,
+        # so it helps to keep the abstraction and delegate specific
+        # implementations, such as asyncio
         return retry_any(other, self)
 
 
@@ -269,7 +290,22 @@ class retry_any(retry_base):
         self.retries = retries
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
-        return any(r(retry_state) for r in self.retries)
+        result = False
+        for r in self.retries:
+            if _utils.is_coroutine_callable(r) or (
+                tornado
+                and hasattr(tornado.gen, "is_coroutine_function")
+                and tornado.gen.is_coroutine_function(r)
+            ):
+                raise TypeError(
+                    "Cannot use async functions in a sync context. Make sure "
+                    "you use the correct retrying object and the corresponding "
+                    "async strategies"
+                )
+            result = result or r(retry_state)
+            if result:
+                break
+        return result
 
 
 class retry_all(retry_base):
@@ -279,4 +315,19 @@ class retry_all(retry_base):
         self.retries = retries
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
-        return all(r(retry_state) for r in self.retries)
+        result = True
+        for r in self.retries:
+            if _utils.is_coroutine_callable(r) or (
+                tornado
+                and hasattr(tornado.gen, "is_coroutine_function")
+                and tornado.gen.is_coroutine_function(r)
+            ):
+                raise TypeError(
+                    "Cannot use async functions in a sync context. Make sure "
+                    "you use the correct retrying object and the corresponding "
+                    "async strategies"
+                )
+            result = result and r(retry_state)
+            if not result:
+                break
+        return result
