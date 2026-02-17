@@ -39,6 +39,10 @@ class LoggerProtocol(typing.Protocol):
 
 def find_ordinal(pos_num: int) -> str:
     # See: https://en.wikipedia.org/wiki/English_numerals#Ordinal_numbers
+
+    if 11 <= (pos_num % 100) <= 13:
+        return "th"
+
     if pos_num == 0:
         return "th"
     elif pos_num == 1:
