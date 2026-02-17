@@ -541,9 +541,15 @@ class TestWaitConditions(unittest.TestCase):
             self.assertEqual(fn(make_retry_state(8, 0)), 60)
             self.assertEqual(fn(make_retry_state(9, 0)), 60)
 
-        fn = tenacity.wait_exponential_jitter(10, 5)
+        max_wait = 5
+        fn = tenacity.wait_exponential_jitter(10, max_wait)
         for _ in range(1000):
-            self.assertEqual(fn(make_retry_state(1, 0)), 5)
+            self._assert_inclusive_range(fn(make_retry_state(1, 0)), 0, max_wait)
+
+        min_wait = 5
+        fn = tenacity.wait_exponential_jitter(min=min_wait)
+        for _ in range(1000):
+            self._assert_inclusive_range(fn(make_retry_state(1, 0)), min_wait, 6)
 
         # Default arguments exist
         fn = tenacity.wait_exponential_jitter()

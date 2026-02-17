@@ -17,6 +17,7 @@
 import abc
 import random
 import typing
+import warnings
 
 from tenacity import _utils
 
@@ -239,35 +240,41 @@ class wait_random_exponential(wait_exponential):
         return random.uniform(self.min, high)
 
 
-class wait_exponential_jitter(wait_base):
+class wait_exponential_jitter(wait_exponential):
     """Wait strategy that applies exponential backoff and jitter.
 
-    It allows for a customized initial wait, maximum wait and jitter.
+    It allows for a customized multiplier, max wait, jitter and min wait.
 
     This implements the strategy described here:
     https://cloud.google.com/storage/docs/retry-strategy
 
-    The wait time is min(initial * 2**n + random.uniform(0, jitter), maximum)
+    The wait time is max(min, min(multiplier * 2**n + random.uniform(0, jitter), max))
     where n is the retry count.
     """
 
     def __init__(
         self,
-        initial: float = 1,
-        max: float = _utils.MAX_WAIT,  # noqa
-        exp_base: float = 2,
-        jitter: float = 1,
+        multiplier: typing.Union[int, float] = 1,
+        max: _utils.time_unit_type = _utils.MAX_WAIT,  # noqa
+        exp_base: typing.Union[int, float] = 2,
+        jitter: _utils.time_unit_type = 1,
+        min: _utils.time_unit_type = 0,  # noqa
+        initial: typing.Union[int, float, None] = None,
     ) -> None:
-        self.initial = initial
-        self.max = max
-        self.exp_base = exp_base
-        self.jitter = jitter
+        if initial is not None and multiplier != 1:
+            msg = (
+                "Received both `multiplier` and `initial` arguments. "
+                "`initial` is deprecated, use `multiplier` instead."
+            )
+            raise ValueError(msg)
+        elif initial is not None:
+            msg = "`initial` is deprecated, use `multiplier` instead."
+            warnings.warn(msg, DeprecationWarning)
+            multiplier = initial
+
+        super().__init__(multiplier, max, exp_base, min)
+        self.jitter = _utils.to_seconds(jitter)
 
     def __call__(self, retry_state: "RetryCallState") -> float:
-        jitter = random.uniform(0, self.jitter)
-        try:
-            exp = self.exp_base ** (retry_state.attempt_number - 1)
-            result = self.initial * exp + jitter
-        except OverflowError:
-            result = self.max
-        return max(0, min(result, self.max))
+        result = super().__call__(retry_state) + random.uniform(0, self.jitter)
+        return max(self.min, min(result, self.max))
