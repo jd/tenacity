@@ -19,32 +19,27 @@ jobs:
       matrix:
         include:
           - python: "3.10"
-            tox: py310
+            task: check
           - python: "3.11"
-            tox: py311
+            task: check
           - python: "3.12"
-            tox: py312
+            task: check
           - python: "3.13"
-            tox: py313
+            task: check
           - python: "3.14"
-            tox: py314,py314-trio
+            task: check
           - python: "3.14"
-            tox: pep8
+            task: lint
           - python: "3.14"
-            tox: mypy
+            task: mypy
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
-      - name: Setup Python 🔧
-        uses: actions/setup-python@v6.2.0
-        with:
-          python-version: ${{ matrix.python }}
-          allow-prereleases: true
+      - name: Setup uv 🔧
+        uses: astral-sh/setup-uv@v5
 
       - name: Build 🔧 & Test 🔍
-        run: |
-          pip install tox
-          tox -e ${{ matrix.tox }}
+        run: uv run --python ${{ matrix.python }} poe ${{ matrix.task }}
