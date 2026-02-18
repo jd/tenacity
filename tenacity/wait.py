@@ -41,9 +41,7 @@ class wait_base(abc.ABC):
         return self.__add__(other)
 
 
-WaitBaseT = typing.Union[
-    wait_base, typing.Callable[["RetryCallState"], typing.Union[float, int]]
-]
+WaitBaseT = wait_base | typing.Callable[["RetryCallState"], float | int]
 
 
 class wait_fixed(wait_base):
@@ -189,9 +187,9 @@ class wait_exponential(wait_base):
 
     def __init__(
         self,
-        multiplier: typing.Union[int, float] = 1,
+        multiplier: int | float = 1,
         max: _utils.time_unit_type = _utils.MAX_WAIT,  # noqa
-        exp_base: typing.Union[int, float] = 2,
+        exp_base: int | float = 2,
         min: _utils.time_unit_type = 0,  # noqa
     ) -> None:
         self.multiplier = multiplier

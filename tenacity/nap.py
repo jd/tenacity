@@ -37,7 +37,7 @@ class sleep_using_event:
     def __init__(self, event: "threading.Event") -> None:
         self.event = event
 
-    def __call__(self, timeout: typing.Optional[float]) -> None:
+    def __call__(self, timeout: float | None) -> None:
         # NOTE(harlowja): this may *not* actually wait for timeout
         # seconds if the event is set (ie this may eject out early).
         self.event.wait(timeout=timeout)

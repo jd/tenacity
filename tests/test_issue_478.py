@@ -1,7 +1,6 @@
 import asyncio
 import typing
 import unittest
-
 from functools import wraps
 
 from tenacity import RetryCallState, retry
@@ -60,7 +59,7 @@ class TestIssue478(unittest.TestCase):
         except Exception as exc:
             assert str(exc) == "Error is not working"
         else:
-            assert False, "No exception caught"
+            raise AssertionError("No exception caught")
 
         assert results == [
             "Error is not working",
@@ -108,7 +107,7 @@ class TestIssue478(unittest.TestCase):
         except Exception as exc:
             assert str(exc) == "Error is not working"
         else:
-            assert False, "No exception caught"
+            raise AssertionError("No exception caught")
 
         assert results == [
             "Error is not working",

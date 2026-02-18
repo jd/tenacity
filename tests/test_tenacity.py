@@ -364,7 +364,7 @@ class TestWaitConditions(unittest.TestCase):
             )
         )
         # Test it a few time since it's random
-        for i in range(1000):
+        for _i in range(1000):
             w = r.wait(make_retry_state(1, 5))
             self.assertLess(w, 8)
             self.assertGreaterEqual(w, 5)
@@ -390,7 +390,7 @@ class TestWaitConditions(unittest.TestCase):
     def test_wait_double_sum(self):
         r = Retrying(wait=tenacity.wait_random(0, 3) + tenacity.wait_fixed(5))
         # Test it a few time since it's random
-        for i in range(1000):
+        for _i in range(1000):
             w = r.wait(make_retry_state(1, 5))
             self.assertLess(w, 8)
             self.assertGreaterEqual(w, 5)
@@ -402,7 +402,7 @@ class TestWaitConditions(unittest.TestCase):
             + tenacity.wait_fixed(5)
         )
         # Test it a few time since it's random
-        for i in range(1000):
+        for _i in range(1000):
             w = r.wait(make_retry_state(1, 5))
             self.assertLess(w, 9)
             self.assertGreaterEqual(w, 6)
@@ -1302,10 +1302,7 @@ class TestRetryWith:
 
     def test_retry_error_callback_should_be_preserved(self):
         def return_text(retry_state):
-            return "Calling {} keeps raising errors after {} attempts".format(
-                retry_state.fn.__name__,
-                retry_state.attempt_number,
-            )
+            return f"Calling {retry_state.fn.__name__} keeps raising errors after {retry_state.attempt_number} attempts"
 
         @retry(stop=tenacity.stop_after_attempt(10), retry_error_callback=return_text)
         def _retryable():
@@ -1555,7 +1552,7 @@ class TestStatistics(unittest.TestCase):
         self.assertEqual({}, _foobar.statistics)
         try:
             _foobar()
-        except Exception:  # noqa: B902
+        except Exception:
             pass
         self.assertEqual(2, _foobar.statistics["attempt_number"])
 

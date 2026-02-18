@@ -42,7 +42,7 @@ class retry_base(abc.ABC):
         return retry_any(other, self)
 
 
-RetryBaseT = typing.Union[retry_base, typing.Callable[["RetryCallState"], bool]]
+RetryBaseT = retry_base | typing.Callable[["RetryCallState"], bool]
 
 
 class _retry_never(retry_base):
@@ -89,10 +89,8 @@ class retry_if_exception_type(retry_if_exception):
 
     def __init__(
         self,
-        exception_types: typing.Union[
-            typing.Type[BaseException],
-            typing.Tuple[typing.Type[BaseException], ...],
-        ] = Exception,
+        exception_types: type[BaseException]
+        | tuple[type[BaseException], ...] = Exception,
     ) -> None:
         self.exception_types = exception_types
         super().__init__(lambda e: isinstance(e, exception_types))
@@ -103,10 +101,8 @@ class retry_if_not_exception_type(retry_if_exception):
 
     def __init__(
         self,
-        exception_types: typing.Union[
-            typing.Type[BaseException],
-            typing.Tuple[typing.Type[BaseException], ...],
-        ] = Exception,
+        exception_types: type[BaseException]
+        | tuple[type[BaseException], ...] = Exception,
     ) -> None:
         self.exception_types = exception_types
         super().__init__(lambda e: not isinstance(e, exception_types))
@@ -117,10 +113,8 @@ class retry_unless_exception_type(retry_if_exception):
 
     def __init__(
         self,
-        exception_types: typing.Union[
-            typing.Type[BaseException],
-            typing.Tuple[typing.Type[BaseException], ...],
-        ] = Exception,
+        exception_types: type[BaseException]
+        | tuple[type[BaseException], ...] = Exception,
     ) -> None:
         self.exception_types = exception_types
         super().__init__(lambda e: not isinstance(e, exception_types))
@@ -148,10 +142,8 @@ class retry_if_exception_cause_type(retry_base):
 
     def __init__(
         self,
-        exception_types: typing.Union[
-            typing.Type[BaseException],
-            typing.Tuple[typing.Type[BaseException], ...],
-        ] = Exception,
+        exception_types: type[BaseException]
+        | tuple[type[BaseException], ...] = Exception,
     ) -> None:
         self.exception_cause_types = exception_types
 
@@ -206,8 +198,8 @@ class retry_if_exception_message(retry_if_exception):
 
     def __init__(
         self,
-        message: typing.Optional[str] = None,
-        match: typing.Union[None, str, typing.Pattern[str]] = None,
+        message: str | None = None,
+        match: None | str | typing.Pattern[str] = None,
     ) -> None:
         if message and match:
             raise TypeError(
@@ -241,8 +233,8 @@ class retry_if_not_exception_message(retry_if_exception_message):
 
     def __init__(
         self,
-        message: typing.Optional[str] = None,
-        match: typing.Union[None, str, typing.Pattern[str]] = None,
+        message: str | None = None,
+        match: None | str | typing.Pattern[str] = None,
     ) -> None:
         super().__init__(message, match)
         # invert predicate
