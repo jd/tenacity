@@ -72,6 +72,12 @@ check = ["test", "docs"]
 mypy = "mypy"
 reno = "reno"
 
+[tool.poe.tasks.fmt]
+sequence = [
+    { cmd = "ruff check --fix ." },
+    { cmd = "ruff format ." },
+]
+
 [tool.poe.tasks.lint]
 sequence = [
     { cmd = "ruff check ." },
