@@ -106,6 +106,3 @@ exclude = ["tenacity/_version\\.py"]
 module = "tornado.*"
 ignore_missing_imports = true
 
-[[tool.mypy.overrides]]
-module = ["tenacity.tornadoweb", "tests.test_tornado"]
-ignore_errors = true
