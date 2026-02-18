@@ -3,8 +3,10 @@ import logging
 import random
 import unittest.mock
 
-from tenacity import _utils  # noqa
-from tenacity import after_log
+from tenacity import (
+    _utils,  # noqa
+    after_log,
+)
 
 from . import test_tenacity
 
