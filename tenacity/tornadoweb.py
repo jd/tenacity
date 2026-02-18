@@ -29,6 +29,8 @@ _RetValT = typing.TypeVar("_RetValT")
 
 
 class TornadoRetrying(BaseRetrying):
+    sleep: typing.Callable[..., "Future[None]"]
+
     def __init__(
         self,
         sleep: "typing.Callable[[float], Future[None]]" = gen.sleep,
@@ -37,8 +39,8 @@ class TornadoRetrying(BaseRetrying):
         super().__init__(**kwargs)
         self.sleep = sleep
 
-    @gen.coroutine  # type: ignore[untyped-decorator]
-    def __call__(
+    @gen.coroutine
+    def __call__(  # type: ignore[override]
         self,
         fn: "typing.Callable[..., typing.Union[typing.Generator[typing.Any, typing.Any, _RetValT], Future[_RetValT]]]",
         *args: typing.Any,

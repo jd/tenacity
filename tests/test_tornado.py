@@ -38,7 +38,7 @@ def _retryable_coroutine_with_2_attempts(thing):
     thing.go()
 
 
-class TestTornado(testing.AsyncTestCase):  # type: ignore[misc]
+class TestTornado(testing.AsyncTestCase):
     @testing.gen_test
     def test_retry(self):
         assert gen.is_coroutine_function(_retryable_coroutine)
