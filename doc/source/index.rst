@@ -618,13 +618,13 @@ Sleeps are done asynchronously too.
     async def my_async_tornado_function(http_client, url):
         await http_client.fetch(url)
 
-You can even use alternative event loops such as `curio` by passing the correct sleep function:
+You can use alternative event loops by passing the correct sleep function:
 
 .. code-block:: python
 
-    @retry(sleep=curio.sleep)
-    async def my_async_curio_function():
-        await asks.get('https://example.org')
+    @retry(sleep=trio.sleep)
+    async def my_async_trio_function_with_sleep():
+        ...
 
 Contribute
 ----------
