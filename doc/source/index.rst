@@ -636,4 +636,11 @@ Contribute
 #. Add a `changelog <#Changelogs>`_
 #. Make the docs better (or more detailed, or more easier to read, or ...)
 
+Running the test suite locally::
+
+    uv run poe check    # run tests + build docs
+    uv run poe lint     # run ruff linter
+    uv run poe mypy     # run type checker
+    uv run poe all      # run everything
+
 .. _`the repository`: https://github.com/jd/tenacity
