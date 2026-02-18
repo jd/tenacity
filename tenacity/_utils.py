@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import contextlib
 import functools
 import inspect
 import sys
@@ -44,16 +45,15 @@ def find_ordinal(pos_num: int) -> str:
 
     if pos_num == 0:
         return "th"
-    elif pos_num == 1:
+    if pos_num == 1:
         return "st"
-    elif pos_num == 2:
+    if pos_num == 2:
         return "nd"
-    elif pos_num == 3:
+    if pos_num == 3:
         return "rd"
-    elif 4 <= pos_num <= 20:
+    if 4 <= pos_num <= 20:
         return "th"
-    else:
-        return find_ordinal(pos_num % 10)
+    return find_ordinal(pos_num % 10)
 
 
 def to_ordinal(pos_num: int) -> str:
@@ -69,20 +69,15 @@ def get_callback_name(cb: typing.Callable[..., typing.Any]) -> str:
     try:
         segments.append(cb.__qualname__)
     except AttributeError:
-        try:
+        with contextlib.suppress(AttributeError):
             segments.append(cb.__name__)
-        except AttributeError:
-            pass
     if not segments:
         return repr(cb)
-    else:
-        try:
-            # When running under sphinx it appears this can be none?
-            if cb.__module__:
-                segments.insert(0, cb.__module__)
-        except AttributeError:
-            pass
-        return ".".join(segments)
+    with contextlib.suppress(AttributeError):
+        # When running under sphinx it appears this can be none?
+        if cb.__module__:
+            segments.insert(0, cb.__module__)
+    return ".".join(segments)
 
 
 time_unit_type = int | float | timedelta

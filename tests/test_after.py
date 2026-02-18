@@ -4,7 +4,7 @@ import random
 import unittest.mock
 
 from tenacity import (
-    _utils,  # noqa
+    _utils,
     after_log,
 )
 

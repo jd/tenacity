@@ -14,6 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import contextlib
 import datetime
 import logging
 import re
@@ -509,9 +510,7 @@ class TestWaitConditions(unittest.TestCase):
     def test_wait_random_exponential_statistically(self):
         fn = tenacity.wait_random_exponential(0.5, 60.0)
 
-        attempt = []
-        for i in range(10):
-            attempt.append([fn(make_retry_state(i, 0)) for _ in range(4000)])
+        attempt = [[fn(make_retry_state(i, 0)) for _ in range(4000)] for i in range(10)]
 
         def mean(lst):
             return float(sum(lst)) / float(len(lst))
@@ -907,7 +906,7 @@ class CapturingHandler(logging.Handler):
 
 
 def current_time_ms():
-    return int(round(time.time() * 1000))
+    return round(time.time() * 1000)
 
 
 @retry(
@@ -1220,7 +1219,7 @@ class TestDecoratorWrapper(unittest.TestCase):
         self.assertTrue(_retryable_default_f(NoCustomErrorAfterCount(5)))
 
     def test_retry_function_object(self):
-        """Test that funсtools.wraps doesn't cause problems with callable objects.
+        """Test that functools.wraps doesn't cause problems with callable objects.
 
         It raises an error upon trying to wrap it in Py2, because __name__
         attribute is missing. It's fixed in Py3 but was never backported.
@@ -1347,8 +1346,6 @@ class TestBeforeAfterAttempts(unittest.TestCase):
         def _test_after():
             if TestBeforeAfterAttempts._attempt_number < 2:
                 raise Exception("testing after_attempts handler")
-            else:
-                pass
 
         _test_after()
 
@@ -1550,10 +1547,8 @@ class TestStatistics(unittest.TestCase):
             raise ValueError(42)
 
         self.assertEqual({}, _foobar.statistics)
-        try:
+        with contextlib.suppress(Exception):
             _foobar()
-        except Exception:
-            pass
         self.assertEqual(2, _foobar.statistics["attempt_number"])
 
 
@@ -1761,10 +1756,10 @@ def reports_deprecation_warning():
 
 
 class TestMockingSleep:
-    RETRY_ARGS = dict(
-        wait=tenacity.wait_fixed(0.1),
-        stop=tenacity.stop_after_attempt(5),
-    )
+    RETRY_ARGS = {
+        "wait": tenacity.wait_fixed(0.1),
+        "stop": tenacity.stop_after_attempt(5),
+    }
 
     def _fail(self):
         raise NotImplementedError()

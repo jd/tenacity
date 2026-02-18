@@ -72,8 +72,7 @@ class retry_if_exception(async_retry_base):
             if exception is None:
                 raise RuntimeError("outcome failed but the exception is None")
             return await self.predicate(exception)
-        else:
-            return False
+        return False
 
 
 class retry_if_result(async_retry_base):
@@ -90,8 +89,7 @@ class retry_if_result(async_retry_base):
 
         if not retry_state.outcome.failed:
             return await self.predicate(retry_state.outcome.result())
-        else:
-            return False
+        return False
 
 
 class retry_any(async_retry_base):

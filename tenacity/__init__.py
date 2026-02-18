@@ -20,7 +20,6 @@ import functools
 import sys
 import threading
 import time
-import types
 import typing as t
 import warnings
 from abc import ABC, abstractmethod
@@ -94,6 +93,8 @@ if t.TYPE_CHECKING:
         from typing import Self
     else:
         from typing_extensions import Self
+
+    import types
 
     from . import asyncio as tasyncio
     from .retry import RetryBaseT
@@ -211,10 +212,9 @@ class AttemptManager:
         if exc_type is not None and exc_value is not None:
             self.retry_state.set_exception((exc_type, exc_value, traceback))
             return True  # Swallow exception.
-        else:
-            # We don't have the result, actually.
-            self.retry_state.set_result(None)
-            return None
+        # We don't have the result, actually.
+        self.retry_state.set_result(None)
+        return None
 
 
 class BaseRetrying(ABC):
@@ -308,7 +308,7 @@ class BaseRetrying(ABC):
                   statistics from each thread).
         """
         if not hasattr(self._local, "statistics"):
-            self._local.statistics = t.cast(dict[str, t.Any], {})
+            self._local.statistics = t.cast("dict[str, t.Any]", {})
         return self._local.statistics  # type: ignore[no-any-return]
 
     @property
@@ -410,7 +410,7 @@ class BaseRetrying(ABC):
                 return
 
             def exc_check(rs: "RetryCallState") -> None:
-                fut = t.cast(Future, rs.outcome)
+                fut = t.cast("Future", rs.outcome)
                 retry_exc = self.retry_error_cls(fut)
                 if self.reraise:
                     raise retry_exc.reraise()
@@ -651,33 +651,32 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
     # support both @retry and @retry() as valid syntax
     if len(dargs) == 1 and callable(dargs[0]):
         return retry()(dargs[0])
-    else:
 
-        def wrap(f: WrappedFn) -> WrappedFn:
-            if isinstance(f, retry_base):
-                warnings.warn(
-                    f"Got retry_base instance ({f.__class__.__name__}) as callable argument, "
-                    f"this will probably hang indefinitely (did you mean retry={f.__class__.__name__}(...)?)",
-                    stacklevel=2,
-                )
-            r: BaseRetrying
-            sleep = dkw.get("sleep")
-            if _utils.is_coroutine_callable(f) or (
-                sleep is not None and _utils.is_coroutine_callable(sleep)
-            ):
-                r = AsyncRetrying(*dargs, **dkw)
-            elif (
-                tornado
-                and hasattr(tornado.gen, "is_coroutine_function")
-                and tornado.gen.is_coroutine_function(f)
-            ):
-                r = TornadoRetrying(*dargs, **dkw)
-            else:
-                r = Retrying(*dargs, **dkw)
+    def wrap(f: WrappedFn) -> WrappedFn:
+        if isinstance(f, retry_base):
+            warnings.warn(
+                f"Got retry_base instance ({f.__class__.__name__}) as callable argument, "
+                f"this will probably hang indefinitely (did you mean retry={f.__class__.__name__}(...)?)",
+                stacklevel=2,
+            )
+        r: BaseRetrying
+        sleep = dkw.get("sleep")
+        if _utils.is_coroutine_callable(f) or (
+            sleep is not None and _utils.is_coroutine_callable(sleep)
+        ):
+            r = AsyncRetrying(*dargs, **dkw)
+        elif (
+            tornado
+            and hasattr(tornado.gen, "is_coroutine_function")
+            and tornado.gen.is_coroutine_function(f)
+        ):
+            r = TornadoRetrying(*dargs, **dkw)
+        else:
+            r = Retrying(*dargs, **dkw)
 
-            return r.wraps(f)
+        return r.wraps(f)
 
-        return wrap
+    return wrap
 
 
 from tenacity.asyncio import AsyncRetrying  # noqa: E402
@@ -687,59 +686,59 @@ if tornado:
 
 
 __all__ = [
-    "retry_base",
+    "NO_RESULT",
+    "AsyncRetrying",
+    "AttemptManager",
+    "BaseAction",
+    "BaseRetrying",
+    "DoAttempt",
+    "DoSleep",
+    "Future",
+    "RetryAction",
+    "RetryCallState",
+    "RetryError",
+    "Retrying",
+    "TryAgain",
+    "WrappedFn",
+    "after_log",
+    "after_nothing",
+    "before_log",
+    "before_nothing",
+    "before_sleep_log",
+    "before_sleep_nothing",
+    "retry",
     "retry_all",
     "retry_always",
     "retry_any",
+    "retry_base",
     "retry_if_exception",
-    "retry_if_exception_type",
     "retry_if_exception_cause_type",
+    "retry_if_exception_message",
+    "retry_if_exception_type",
+    "retry_if_not_exception_message",
     "retry_if_not_exception_type",
     "retry_if_not_result",
     "retry_if_result",
     "retry_never",
     "retry_unless_exception_type",
-    "retry_if_exception_message",
-    "retry_if_not_exception_message",
     "sleep",
     "sleep_using_event",
     "stop_after_attempt",
     "stop_after_delay",
-    "stop_before_delay",
     "stop_all",
     "stop_any",
+    "stop_before_delay",
     "stop_never",
     "stop_when_event_set",
     "wait_chain",
     "wait_combine",
     "wait_exception",
     "wait_exponential",
+    "wait_exponential_jitter",
     "wait_fixed",
+    "wait_full_jitter",
     "wait_incrementing",
     "wait_none",
     "wait_random",
     "wait_random_exponential",
-    "wait_full_jitter",
-    "wait_exponential_jitter",
-    "before_log",
-    "before_nothing",
-    "after_log",
-    "after_nothing",
-    "before_sleep_log",
-    "before_sleep_nothing",
-    "retry",
-    "WrappedFn",
-    "TryAgain",
-    "NO_RESULT",
-    "DoAttempt",
-    "DoSleep",
-    "BaseAction",
-    "RetryAction",
-    "RetryError",
-    "AttemptManager",
-    "BaseRetrying",
-    "Retrying",
-    "Future",
-    "RetryCallState",
-    "AsyncRetrying",
 ]
