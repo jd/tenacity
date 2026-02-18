@@ -34,6 +34,10 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/jd/tenacity"
+Documentation = "https://tenacity.readthedocs.io"
+Source = "https://github.com/jd/tenacity"
+Issues = "https://github.com/jd/tenacity/issues"
+Changelog = "https://tenacity.readthedocs.io/en/latest/changelog.html"
 
 [project.optional-dependencies]
 doc = [
