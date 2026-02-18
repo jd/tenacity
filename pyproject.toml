@@ -1,25 +1,107 @@
 [build-system]
-# Minimum requirements for the build system to execute.
-# PEP 508 specifications for PEP 518.
-# Banned setuptools versions have well-known issues
-requires = [
-  "setuptools >= 21.0.0,!=24.0.0,!=34.0.0,!=34.0.1,!=34.0.2,!=34.0.3,!=34.1.0,!=34.1.1,!=34.2.0,!=34.3.0,!=34.3.1,!=34.3.2,!=36.2.0",  # PSF/ZPL
-  "setuptools_scm[toml]>=3.4",
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "tenacity/_version.py"
+
+[project]
+name = "tenacity"
+dynamic = ["version"]
+description = "Retry code until it succeeds"
+readme = "README.rst"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "Julien Danjou", email = "julien@danjou.info" },
 ]
-build-backend="setuptools.build_meta"
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/jd/tenacity"
+
+[project.optional-dependencies]
+doc = [
+    "reno",
+    "sphinx",
+]
+test = [
+    "pytest",
+    "tornado>=4.5",
+    "typeguard",
+]
+
+[dependency-groups]
+dev = [
+    "poethepoet",
+    "pytest",
+    "tornado>=4.5",
+    "typeguard",
+    "ruff",
+    "mypy",
+    "sphinx",
+    "reno",
+    "trio",
+]
+
+[tool.poe.tasks]
+test = "pytest"
+docs-doctest = "sphinx-build -a -E -W -b doctest doc/source doc/build"
+docs-html = "sphinx-build -a -E -W -b html doc/source doc/build"
+docs = ["docs-doctest", "docs-html"]
+check = ["test", "docs"]
+mypy = "mypy"
+reno = "reno"
+
+[tool.poe.tasks.lint]
+sequence = [
+    { cmd = "ruff check ." },
+    { cmd = "ruff format --check ." },
+]
+
+[tool.poe.tasks.all]
+sequence = [
+    { ref = "lint" },
+    { ref = "mypy" },
+    { ref = "check" },
+]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "once::DeprecationWarning",
+]
 
 [tool.ruff]
 line-length = 88
 indent-width = 4
 target-version = "py310"
+exclude = ["tenacity/_version.py"]
 
 [tool.mypy]
 strict = true
 files = ["tenacity", "tests"]
 show_error_codes = true
+exclude = ["tenacity/_version\\.py"]
 
 [[tool.mypy.overrides]]
 module = "tornado.*"
 ignore_missing_imports = true
 
-[tool.setuptools_scm]
+[[tool.mypy.overrides]]
+module = ["tenacity.tornadoweb", "tests.test_tornado"]
+ignore_errors = true

@@ -3,10 +3,11 @@ dist
 *.pyc
 *.egg-info
 build
-.tox/
+.venv/
+uv.lock
 AUTHORS
 ChangeLog
-.eggs/
 doc/_build
 
+tenacity/_version.py
 /.pytest_cache
