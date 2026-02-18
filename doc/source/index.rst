@@ -594,14 +594,14 @@ in retry strategies like ``retry_if_result``. This can be done accessing the
 Async and retry
 ~~~~~~~~~~~~~~~
 
-Finally, ``retry`` works also on asyncio, Trio, and Tornado (>= 4.5) coroutines.
+Finally, ``retry`` works also on asyncio, Trio, and Tornado coroutines.
 Sleeps are done asynchronously too.
 
 .. code-block:: python
 
     @retry
-    async def my_asyncio_function(loop):
-        await loop.getaddrinfo('8.8.8.8', 53)
+    async def my_asyncio_function():
+        await asyncio.getaddrinfo('8.8.8.8', 53)
 
 .. code-block:: python
 
@@ -612,9 +612,8 @@ Sleeps are done asynchronously too.
 .. code-block:: python
 
     @retry
-    @tornado.gen.coroutine
-    def my_async_tornado_function(http_client, url):
-        yield http_client.fetch(url)
+    async def my_async_tornado_function(http_client, url):
+        await http_client.fetch(url)
 
 You can even use alternative event loops such as `curio` by passing the correct sleep function:
 
