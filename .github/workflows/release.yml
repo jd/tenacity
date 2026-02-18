@@ -7,11 +7,10 @@ on:
 jobs:
   pypi-publish:
     name: upload release to PyPI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: release
     permissions:
       id-token: write
-      contents: write
     steps:
       - uses: actions/checkout@v6.0.2
         with:
