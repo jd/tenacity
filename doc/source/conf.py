@@ -17,9 +17,12 @@
 
 import os
 import sys
+from importlib.metadata import version as pkg_version
 
 master_doc = "index"
 project = "Tenacity"
+release = pkg_version("tenacity")
+version = ".".join(release.split(".")[:2])
 
 # Add tenacity to the path, so sphinx can find the functions for autodoc.
 sys.path.insert(0, os.path.abspath("../.."))
