@@ -29,72 +29,60 @@ from concurrent import futures
 from . import _utils
 
 # Import all built-in after strategies for easier usage.
-from .after import (
-    after_log,  # noqa
-    after_nothing,  # noqa
-)
+from .after import after_log, after_nothing
 
 # Import all built-in before strategies for easier usage.
-from .before import (
-    before_log,  # noqa
-    before_nothing,  # noqa
-)
+from .before import before_log, before_nothing
 
 # Import all built-in before sleep strategies for easier usage.
-from .before_sleep import (
-    before_sleep_log,  # noqa
-    before_sleep_nothing,  # noqa
-)
+from .before_sleep import before_sleep_log, before_sleep_nothing
 
 # Import all nap strategies for easier usage.
-from .nap import (
-    sleep,  # noqa
-    sleep_using_event,  # noqa
-)
+from .nap import sleep, sleep_using_event
 
 # Import all built-in retry strategies for easier usage.
 from .retry import (
-    retry_all,  # noqa
-    retry_always,  # noqa
-    retry_any,  # noqa
-    retry_base,  # noqa
-    retry_if_exception,  # noqa
-    retry_if_exception_cause_type,  # noqa
-    retry_if_exception_message,  # noqa
-    retry_if_exception_type,  # noqa
-    retry_if_not_exception_message,  # noqa
-    retry_if_not_exception_type,  # noqa
-    retry_if_not_result,  # noqa
-    retry_if_result,  # noqa
-    retry_never,  # noqa
-    retry_unless_exception_type,  # noqa
+    retry_all,
+    retry_always,
+    retry_any,
+    retry_base,
+    retry_if_exception,
+    retry_if_exception_cause_type,
+    retry_if_exception_message,
+    retry_if_exception_type,
+    retry_if_not_exception_message,
+    retry_if_not_exception_type,
+    retry_if_not_result,
+    retry_if_result,
+    retry_never,
+    retry_unless_exception_type,
 )
 
 # Import all built-in stop strategies for easier usage.
 from .stop import (
-    stop_after_attempt,  # noqa
-    stop_after_delay,  # noqa
-    stop_all,  # noqa
-    stop_any,  # noqa
-    stop_before_delay,  # noqa
-    stop_never,  # noqa
-    stop_when_event_set,  # noqa
+    stop_after_attempt,
+    stop_after_delay,
+    stop_all,
+    stop_any,
+    stop_before_delay,
+    stop_never,
+    stop_when_event_set,
 )
 
 # Import all built-in wait strategies for easier usage.
 from .wait import (
-    wait_chain,  # noqa
-    wait_combine,  # noqa
-    wait_exception,  # noqa
-    wait_exponential,  # noqa
-    wait_exponential_jitter,  # noqa
-    wait_fixed,  # noqa
-    wait_incrementing,  # noqa
-    wait_none,  # noqa
-    wait_random,  # noqa
-    wait_random_exponential,  # noqa
+    wait_chain,
+    wait_combine,
+    wait_exception,
+    wait_exponential,
+    wait_exponential_jitter,
+    wait_fixed,
+    wait_incrementing,
+    wait_none,
+    wait_random,
+    wait_random_exponential,
 )
-from .wait import wait_random_exponential as wait_full_jitter  # noqa
+from .wait import wait_random_exponential as wait_full_jitter
 
 try:
     import tornado
@@ -379,14 +367,14 @@ class BaseRetrying(ABC):
         self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start
         self.iter_state.stop_run_result = self.stop(retry_state)
 
-    def iter(self, retry_state: "RetryCallState") -> t.Union[DoAttempt, DoSleep, t.Any]:  # noqa
+    def iter(self, retry_state: "RetryCallState") -> DoAttempt | DoSleep | t.Any:
         self._begin_iter(retry_state)
         result = None
         for action in self.iter_state.actions:
             result = action(retry_state)
         return result
 
-    def _begin_iter(self, retry_state: "RetryCallState") -> None:  # noqa
+    def _begin_iter(self, retry_state: "RetryCallState") -> None:
         self.iter_state.reset()
 
         fut = retry_state.outcome
