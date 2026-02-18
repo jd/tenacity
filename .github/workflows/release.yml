@@ -18,17 +18,10 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - uses: actions/setup-python@v6.2.0
-        with:
-          python-version: 3.14
-
-      - name: Install build
-        run: |
-          pip install setuptools-scm wheel
+      - uses: astral-sh/setup-uv@v5
 
       - name: Build
-        run: |
-          python setup.py sdist bdist_wheel
+        run: uv build
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

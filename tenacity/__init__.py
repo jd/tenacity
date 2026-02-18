@@ -85,7 +85,7 @@ from .before_sleep import before_sleep_nothing  # noqa
 try:
     import tornado
 except ImportError:
-    tornado = None
+    tornado = None  # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
     from typing_extensions import Self
