@@ -15,8 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import sys
 from importlib.metadata import version as pkg_version
 
 master_doc = "index"
@@ -24,21 +22,8 @@ project = "Tenacity"
 release = pkg_version("tenacity")
 version = ".".join(release.split(".")[:2])
 
-# Add tenacity to the path, so sphinx can find the functions for autodoc.
-sys.path.insert(0, os.path.abspath("../.."))
-
 extensions = [
     "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
     "reno.sphinxext",
 ]
-
-# -- Options for sphinx.ext.doctest  -----------------------------------------
-
-# doctest_default_flags =
-cwd = os.path.abspath(os.path.dirname(__file__))
-tenacity_path = os.path.join(cwd, os.pardir, os.pardir)
-doctest_path = [tenacity_path]
-# doctest_global_setup =
-# doctest_global_cleanup =
-# doctest_test_doctest_blocks =
