@@ -102,7 +102,10 @@ except ImportError:
     tornado = None  # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
-    from typing_extensions import Self
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
 
     from . import asyncio as tasyncio
     from .retry import RetryBaseT
