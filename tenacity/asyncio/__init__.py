@@ -20,23 +20,28 @@ import sys
 import typing as t
 
 import tenacity
-from tenacity import AttemptManager
-from tenacity import BaseRetrying
-from tenacity import DoAttempt
-from tenacity import DoSleep
-from tenacity import RetryCallState
-from tenacity import RetryError
-from tenacity import after_nothing
-from tenacity import before_nothing
-from tenacity import _utils
+from tenacity import (
+    AttemptManager,
+    BaseRetrying,
+    DoAttempt,
+    DoSleep,
+    RetryCallState,
+    RetryError,
+    _utils,
+    after_nothing,
+    before_nothing,
+)
+
+from ..retry import RetryBaseT as SyncRetryBaseT
 
 # Import all built-in retry strategies for easier usage.
-from .retry import RetryBaseT
-from .retry import retry_all  # noqa
-from .retry import retry_any  # noqa
-from .retry import retry_if_exception  # noqa
-from .retry import retry_if_result  # noqa
-from ..retry import RetryBaseT as SyncRetryBaseT
+from .retry import (
+    RetryBaseT,
+    retry_all,  # noqa
+    retry_any,  # noqa
+    retry_if_exception,  # noqa
+    retry_if_result,  # noqa
+)
 
 if t.TYPE_CHECKING:
     from tenacity.stop import StopBaseT
@@ -52,8 +57,8 @@ def _portable_async_sleep(seconds: float) -> t.Awaitable[None]:
     # can skip further checks.
     if "trio" in sys.modules:
         # If trio is available, then sniffio is too
-        import trio
         import sniffio
+        import trio
 
         if sniffio.current_async_library() == "trio":
             return trio.sleep(seconds)
@@ -68,25 +73,21 @@ class AsyncRetrying(BaseRetrying):
     def __init__(
         self,
         sleep: t.Callable[
-            [t.Union[int, float]], t.Union[None, t.Awaitable[None]]
+            [int | float], None | t.Awaitable[None]
         ] = _portable_async_sleep,
         stop: "StopBaseT" = tenacity.stop.stop_never,
         wait: "WaitBaseT" = tenacity.wait.wait_none(),
-        retry: "t.Union[SyncRetryBaseT, RetryBaseT]" = tenacity.retry_if_exception_type(),
+        retry: "SyncRetryBaseT | RetryBaseT" = tenacity.retry_if_exception_type(),
         before: t.Callable[
-            ["RetryCallState"], t.Union[None, t.Awaitable[None]]
+            ["RetryCallState"], None | t.Awaitable[None]
         ] = before_nothing,
-        after: t.Callable[
-            ["RetryCallState"], t.Union[None, t.Awaitable[None]]
-        ] = after_nothing,
-        before_sleep: t.Optional[
-            t.Callable[["RetryCallState"], t.Union[None, t.Awaitable[None]]]
-        ] = None,
+        after: t.Callable[["RetryCallState"], None | t.Awaitable[None]] = after_nothing,
+        before_sleep: t.Callable[["RetryCallState"], None | t.Awaitable[None]]
+        | None = None,
         reraise: bool = False,
-        retry_error_cls: t.Type["RetryError"] = RetryError,
-        retry_error_callback: t.Optional[
-            t.Callable[["RetryCallState"], t.Union[t.Any, t.Awaitable[t.Any]]]
-        ] = None,
+        retry_error_cls: type["RetryError"] = RetryError,
+        retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
+        | None = None,
     ) -> None:
         super().__init__(
             sleep=sleep,  # type: ignore[arg-type]
@@ -116,7 +117,7 @@ class AsyncRetrying(BaseRetrying):
                         result = await fn(*args, **kwargs)
                     else:
                         result = fn(*args, **kwargs)
-                except BaseException:  # noqa: B902
+                except BaseException:
                     retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]
                 else:
                     retry_state.set_result(result)
@@ -148,9 +149,7 @@ class AsyncRetrying(BaseRetrying):
             retry_state
         )
 
-    async def iter(
-        self, retry_state: "RetryCallState"
-    ) -> t.Union[DoAttempt, DoSleep, t.Any]:  # noqa: A003
+    async def iter(self, retry_state: "RetryCallState") -> DoAttempt | DoSleep | t.Any:  # noqa: A003
         self._begin_iter(retry_state)
         result = None
         for action in self.iter_state.actions:

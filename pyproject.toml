@@ -102,6 +102,14 @@ indent-width = 4
 target-version = "py310"
 exclude = ["tenacity/_version.py"]
 
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+    "B008",  # function calls in default arguments (intentional API design)
+    "B905",  # zip() without strict= (not needed in existing code)
+    "E501",  # line too long (formatter handles what it can)
+]
+
 [tool.mypy]
 strict = true
 files = ["tenacity", "tests"]

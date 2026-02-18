@@ -19,7 +19,6 @@ import sys
 import typing
 from datetime import timedelta
 
-
 # sys.maxsize:
 # An integer giving the maximum value a variable of type Py_ssize_t can take.
 MAX_WAIT = sys.maxsize / 2
@@ -86,7 +85,7 @@ def get_callback_name(cb: typing.Callable[..., typing.Any]) -> str:
         return ".".join(segments)
 
 
-time_unit_type = typing.Union[int, float, timedelta]
+time_unit_type = int | float | timedelta
 
 
 def to_seconds(time_unit: time_unit_type) -> float:
@@ -101,7 +100,7 @@ def is_coroutine_callable(call: typing.Callable[..., typing.Any]) -> bool:
     if inspect.iscoroutinefunction(call):
         return True
     partial_call = isinstance(call, functools.partial) and call.func
-    dunder_call = partial_call or getattr(call, "__call__", None)
+    dunder_call = partial_call or getattr(call, "__call__", None)  # noqa: B004
     return inspect.iscoroutinefunction(dunder_call)
 
 

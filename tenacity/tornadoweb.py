@@ -15,12 +15,9 @@
 import sys
 import typing
 
-from tenacity import BaseRetrying
-from tenacity import DoAttempt
-from tenacity import DoSleep
-from tenacity import RetryCallState
-
 from tornado import gen
+
+from tenacity import BaseRetrying, DoAttempt, DoSleep, RetryCallState
 
 if typing.TYPE_CHECKING:
     from tornado.concurrent import Future
@@ -42,7 +39,7 @@ class TornadoRetrying(BaseRetrying):
     @gen.coroutine
     def __call__(  # type: ignore[override]
         self,
-        fn: "typing.Callable[..., typing.Union[typing.Generator[typing.Any, typing.Any, _RetValT], Future[_RetValT]]]",
+        fn: "typing.Callable[..., typing.Generator[typing.Any, typing.Any, _RetValT] | Future[_RetValT]]",
         *args: typing.Any,
         **kwargs: typing.Any,
     ) -> "typing.Generator[typing.Any, typing.Any, _RetValT]":
@@ -54,7 +51,7 @@ class TornadoRetrying(BaseRetrying):
             if isinstance(do, DoAttempt):
                 try:
                     result = yield fn(*args, **kwargs)
-                except BaseException:  # noqa: B902
+                except BaseException:
                     retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]
                 else:
                     retry_state.set_result(result)

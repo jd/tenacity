@@ -29,9 +29,15 @@ else:
 import pytest
 
 import tenacity
-from tenacity import AsyncRetrying, RetryError
+from tenacity import (
+    AsyncRetrying,
+    RetryError,
+    retry,
+    retry_if_exception,
+    retry_if_result,
+    stop_after_attempt,
+)
 from tenacity import asyncio as tasyncio
-from tenacity import retry, retry_if_exception, retry_if_result, stop_after_attempt
 from tenacity.wait import wait_fixed
 
 from .test_tenacity import (

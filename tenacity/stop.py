@@ -38,7 +38,7 @@ class stop_base(abc.ABC):
         return stop_any(self, other)
 
 
-StopBaseT = typing.Union[stop_base, typing.Callable[["RetryCallState"], bool]]
+StopBaseT = stop_base | typing.Callable[["RetryCallState"], bool]
 
 
 class stop_any(stop_base):
