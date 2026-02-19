@@ -39,10 +39,11 @@ def after_log(
             fn_name = "<unknown>"
         else:
             fn_name = _utils.get_callback_name(retry_state.fn)
+        secs = retry_state.seconds_since_start
         logger.log(
             log_level,
             f"Finished call to '{fn_name}' "
-            f"after {sec_format % retry_state.seconds_since_start}(s), "
+            f"after {sec_format % secs if secs is not None else '?'}(s), "
             f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
         )
 
