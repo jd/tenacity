@@ -1,4 +1,3 @@
-# mypy: disable-error-code="no-untyped-def,no-untyped-call"
 # Copyright 2016 Étienne Bersac
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +15,9 @@
 import asyncio
 import inspect
 import unittest
+from collections.abc import Callable, Coroutine
 from functools import wraps
+from typing import Any, TypeVar
 from unittest import mock
 
 try:
@@ -31,6 +32,7 @@ import pytest
 import tenacity
 from tenacity import (
     AsyncRetrying,
+    RetryCallState,
     RetryError,
     retry,
     retry_if_exception,
@@ -46,71 +48,73 @@ from .test_tenacity import (
     current_time_ms,
 )
 
+_F = TypeVar("_F", bound=Callable[..., Coroutine[Any, Any, Any]])
 
-def asynctest(callable_):
+
+def asynctest(callable_: _F) -> Callable[..., Any]:
     @wraps(callable_)
-    def wrapper(*a, **kw):
+    def wrapper(*a: Any, **kw: Any) -> Any:
         return asyncio.run(callable_(*a, **kw))
 
     return wrapper
 
 
-async def _async_function(thing):
+async def _async_function(thing: NoIOErrorAfterCount) -> Any:
     await asyncio.sleep(0.00001)
     return thing.go()
 
 
 @retry
-async def _retryable_coroutine(thing):
+async def _retryable_coroutine(thing: NoIOErrorAfterCount) -> Any:
     await asyncio.sleep(0.00001)
     return thing.go()
 
 
 @retry(stop=stop_after_attempt(2))
-async def _retryable_coroutine_with_2_attempts(thing):
+async def _retryable_coroutine_with_2_attempts(thing: NoIOErrorAfterCount) -> Any:
     await asyncio.sleep(0.00001)
     return thing.go()
 
 
 class TestAsyncio(unittest.TestCase):
     @asynctest
-    async def test_retry(self):
+    async def test_retry(self) -> None:
         thing = NoIOErrorAfterCount(5)
         await _retryable_coroutine(thing)
         assert thing.counter == thing.count
 
     @asynctest
-    async def test_iscoroutinefunction(self):
+    async def test_iscoroutinefunction(self) -> None:
         assert asyncio.iscoroutinefunction(_retryable_coroutine)
         assert inspect.iscoroutinefunction(_retryable_coroutine)
 
     @asynctest
-    async def test_retry_using_async_retying(self):
+    async def test_retry_using_async_retying(self) -> None:
         thing = NoIOErrorAfterCount(5)
         retrying = AsyncRetrying()
         await retrying(_async_function, thing)
         assert thing.counter == thing.count
 
     @asynctest
-    async def test_stop_after_attempt(self):
+    async def test_stop_after_attempt(self) -> None:
         thing = NoIOErrorAfterCount(2)
         try:
             await _retryable_coroutine_with_2_attempts(thing)
         except RetryError:
             assert thing.counter == 2
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         repr(tasyncio.AsyncRetrying())
 
-    def test_retry_attributes(self):
+    def test_retry_attributes(self) -> None:
         assert hasattr(_retryable_coroutine, "retry")
         assert hasattr(_retryable_coroutine, "retry_with")
 
-    def test_retry_preserves_argument_defaults(self):
-        async def function_with_defaults(a=1):
+    def test_retry_preserves_argument_defaults(self) -> None:
+        async def function_with_defaults(a: int = 1) -> int:
             return a
 
-        async def function_with_kwdefaults(*, a=1):
+        async def function_with_kwdefaults(*, a: int = 1) -> int:
             return a
 
         retrying = AsyncRetrying(
@@ -128,10 +132,10 @@ class TestAsyncio(unittest.TestCase):
         )
 
     @asynctest
-    async def test_attempt_number_is_correct_for_interleaved_coroutines(self):
-        attempts = []
+    async def test_attempt_number_is_correct_for_interleaved_coroutines(self) -> None:
+        attempts: list[Any] = []
 
-        def after(retry_state):
+        def after(retry_state: RetryCallState) -> None:
             attempts.append((retry_state.args[0], retry_state.attempt_number))
 
         thing1 = NoIOErrorAfterCount(3)
@@ -157,11 +161,11 @@ class TestAsyncio(unittest.TestCase):
 
 @unittest.skipIf(not have_trio, "trio not installed")
 class TestTrio(unittest.TestCase):
-    def test_trio_basic(self):
+    def test_trio_basic(self) -> None:
         thing = NoIOErrorAfterCount(5)
 
         @retry
-        async def trio_function():
+        async def trio_function() -> Any:
             await trio.sleep(0.00001)
             return thing.go()
 
@@ -172,7 +176,7 @@ class TestTrio(unittest.TestCase):
 
 class TestContextManager(unittest.TestCase):
     @asynctest
-    async def test_do_max_attempts(self):
+    async def test_do_max_attempts(self) -> None:
         attempts = 0
         retrying = tasyncio.AsyncRetrying(stop=stop_after_attempt(3))
         try:
@@ -186,7 +190,7 @@ class TestContextManager(unittest.TestCase):
         assert attempts == 3
 
     @asynctest
-    async def test_reraise(self):
+    async def test_reraise(self) -> None:
         class CustomError(Exception):
             pass
 
@@ -202,7 +206,7 @@ class TestContextManager(unittest.TestCase):
             raise Exception
 
     @asynctest
-    async def test_sleeps(self):
+    async def test_sleeps(self) -> None:
         start = current_time_ms()
         try:
             async for attempt in tasyncio.AsyncRetrying(
@@ -216,8 +220,8 @@ class TestContextManager(unittest.TestCase):
         self.assertLess(t, 1.1)
 
     @asynctest
-    async def test_retry_with_result(self):
-        async def test():
+    async def test_retry_with_result(self) -> None:
+        async def test() -> int:
             attempts = 0
 
             # mypy doesn't have great lambda support
@@ -235,8 +239,8 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(3, result)
 
     @asynctest
-    async def test_retry_with_async_result(self):
-        async def test():
+    async def test_retry_with_async_result(self) -> None:
+        async def test() -> int:
             attempts = 0
 
             async def lt_3(x: float) -> bool:
@@ -259,8 +263,8 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(3, result)
 
     @asynctest
-    async def test_retry_with_async_exc(self):
-        async def test():
+    async def test_retry_with_async_exc(self) -> None:
+        async def test() -> int:
             attempts = 0
 
             class CustomException(Exception):
@@ -288,8 +292,8 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(3, result)
 
     @asynctest
-    async def test_retry_with_async_result_or(self):
-        async def test():
+    async def test_retry_with_async_result_or(self) -> None:
+        async def test() -> int:
             attempts = 0
 
             async def lt_3(x: float) -> bool:
@@ -319,8 +323,8 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(4, result)
 
     @asynctest
-    async def test_retry_with_async_result_ror(self):
-        async def test():
+    async def test_retry_with_async_result_ror(self) -> None:
+        async def test() -> int:
             attempts = 0
 
             def lt_3(x: float) -> bool:
@@ -350,8 +354,8 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(4, result)
 
     @asynctest
-    async def test_retry_with_async_result_and(self):
-        async def test():
+    async def test_retry_with_async_result_and(self) -> None:
+        async def test() -> int:
             attempts = 0
 
             async def lt_3(x: float) -> bool:
@@ -373,8 +377,8 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(3, result)
 
     @asynctest
-    async def test_retry_with_async_result_rand(self):
-        async def test():
+    async def test_retry_with_async_result_rand(self) -> None:
+        async def test() -> int:
             attempts = 0
 
             async def lt_3(x: float) -> bool:
@@ -396,7 +400,7 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(3, result)
 
     @asynctest
-    async def test_async_retying_iterator(self):
+    async def test_async_retying_iterator(self) -> None:
         thing = NoIOErrorAfterCount(5)
         with pytest.raises(TypeError):
             for attempts in AsyncRetrying():
@@ -406,7 +410,7 @@ class TestContextManager(unittest.TestCase):
 
 class TestDecoratorWrapper(unittest.TestCase):
     @asynctest
-    async def test_retry_function_attributes(self):
+    async def test_retry_function_attributes(self) -> None:
         """Test that the wrapped function attributes are exposed as intended.
 
         - statistics contains the value for the latest function run
@@ -469,13 +473,13 @@ async def my_async_sleep(x: float) -> None:
 
 
 @retry(sleep=my_async_sleep)
-async def foo():
+async def foo() -> None:
     pass
 
 
 class TestSyncFunctionWithAsyncSleep(unittest.TestCase):
     @asynctest
-    async def test_sync_function_with_async_sleep(self):
+    async def test_sync_function_with_async_sleep(self) -> None:
         """A sync function with an async sleep callable uses AsyncRetrying."""
         mock_sleep = mock.AsyncMock()
 
@@ -486,10 +490,10 @@ class TestSyncFunctionWithAsyncSleep(unittest.TestCase):
             wait=wait_fixed(1),
             retry=retry_if_result(lambda x: x is None),
         )
-        def sync_function():
+        def sync_function() -> Any:
             return thing.go()
 
-        result = await sync_function()
+        result = await sync_function()  # type: ignore[no-untyped-call]
         assert result is True
         assert mock_sleep.await_count == 2
 

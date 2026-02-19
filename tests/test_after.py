@@ -1,4 +1,3 @@
-# mypy: disable-error-code="no-untyped-def,no-untyped-call"
 import logging
 import random
 import unittest.mock
@@ -24,7 +23,7 @@ class TestAfterLogFormat(unittest.TestCase):
         )
         self.previous_attempt_number = random.randint(1, 512)
 
-    def test_01_default(self):
+    def test_01_default(self) -> None:
         """Test log formatting."""
         log = unittest.mock.MagicMock(spec="logging.Logger.log")
         logger = unittest.mock.MagicMock(spec="logging.Logger", log=log)
@@ -51,7 +50,7 @@ class TestAfterLogFormat(unittest.TestCase):
             f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
         )
 
-    def test_02_custom_sec_format(self):
+    def test_02_custom_sec_format(self) -> None:
         """Test log formatting with custom int format.."""
         log = unittest.mock.MagicMock(spec="logging.Logger.log")
         logger = unittest.mock.MagicMock(spec="logging.Logger", log=log)
