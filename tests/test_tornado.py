@@ -1,4 +1,3 @@
-# mypy: disable-error-code="no-untyped-def,no-untyped-call"
 # Copyright 2017 Elisey Zanko
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +13,8 @@
 # limitations under the License.
 
 import unittest
+from collections.abc import Generator
+from typing import Any
 
 from tornado import gen, testing
 
@@ -24,28 +25,30 @@ from .test_tenacity import NoIOErrorAfterCount
 
 @retry
 @gen.coroutine
-def _retryable_coroutine(thing):
+def _retryable_coroutine(thing: NoIOErrorAfterCount) -> Generator[Any, Any, None]:
     yield gen.sleep(0.00001)
     thing.go()
 
 
 @retry(stop=stop_after_attempt(2))
 @gen.coroutine
-def _retryable_coroutine_with_2_attempts(thing):
+def _retryable_coroutine_with_2_attempts(
+    thing: NoIOErrorAfterCount,
+) -> Generator[Any, Any, None]:
     yield gen.sleep(0.00001)
     thing.go()
 
 
 class TestTornado(testing.AsyncTestCase):
     @testing.gen_test
-    def test_retry(self):
+    def test_retry(self) -> Generator[Any, Any, None]:
         assert gen.is_coroutine_function(_retryable_coroutine)
         thing = NoIOErrorAfterCount(5)
         yield _retryable_coroutine(thing)
         assert thing.counter == thing.count
 
     @testing.gen_test
-    def test_stop_after_attempt(self):
+    def test_stop_after_attempt(self) -> Generator[Any, Any, None]:
         assert gen.is_coroutine_function(_retryable_coroutine)
         thing = NoIOErrorAfterCount(2)
         try:
@@ -53,10 +56,10 @@ class TestTornado(testing.AsyncTestCase):
         except RetryError:
             assert thing.counter == 2
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         repr(tornadoweb.TornadoRetrying())
 
-    def test_old_tornado(self):
+    def test_old_tornado(self) -> None:
         old_attr = gen.is_coroutine_function
         try:
             del gen.is_coroutine_function
@@ -64,7 +67,7 @@ class TestTornado(testing.AsyncTestCase):
             # is_coroutine_function was introduced in tornado 4.5;
             # verify that we don't *completely* fall over on old versions
             @retry
-            def retryable(thing):
+            def retryable(thing: NoIOErrorAfterCount) -> None:
                 pass
 
         finally:
