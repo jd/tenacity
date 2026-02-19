@@ -33,7 +33,7 @@ class LoggerProtocol(typing.Protocol):
     """
 
     def log(
-        self, level: int, msg: str, /, *args: typing.Any, **kwargs: typing.Any
+        self, level: int, msg: str, *args: typing.Any, **kwargs: typing.Any
     ) -> typing.Any: ...
 
 
