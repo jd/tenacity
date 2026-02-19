@@ -32,18 +32,17 @@ from tenacity import (
     before_nothing,
 )
 
-from ..retry import RetryBaseT as SyncRetryBaseT
-
 # Import all built-in retry strategies for easier usage.
 from .retry import (
     RetryBaseT,
-    retry_all,  # noqa
-    retry_any,  # noqa
-    retry_if_exception,  # noqa
-    retry_if_result,  # noqa
+    retry_all,
+    retry_any,
+    retry_if_exception,
+    retry_if_result,
 )
 
 if t.TYPE_CHECKING:
+    from tenacity.retry import RetryBaseT as SyncRetryBaseT
     from tenacity.stop import StopBaseT
     from tenacity.wait import WaitBaseT
 
@@ -149,7 +148,7 @@ class AsyncRetrying(BaseRetrying):
             retry_state
         )
 
-    async def iter(self, retry_state: "RetryCallState") -> DoAttempt | DoSleep | t.Any:  # noqa: A003
+    async def iter(self, retry_state: "RetryCallState") -> DoAttempt | DoSleep | t.Any:
         self._begin_iter(retry_state)
         result = None
         for action in self.iter_state.actions:
@@ -169,9 +168,9 @@ class AsyncRetrying(BaseRetrying):
             do = await self.iter(retry_state=self._retry_state)
             if do is None:
                 raise StopAsyncIteration
-            elif isinstance(do, DoAttempt):
+            if isinstance(do, DoAttempt):
                 return AttemptManager(retry_state=self._retry_state)
-            elif isinstance(do, DoSleep):
+            if isinstance(do, DoSleep):
                 self._retry_state.prepare_for_next_attempt()
                 await self.sleep(do)  # type: ignore[misc]
             else:
@@ -200,10 +199,10 @@ class AsyncRetrying(BaseRetrying):
 
 
 __all__ = [
+    "AsyncRetrying",
+    "WrappedFn",
     "retry_all",
     "retry_any",
     "retry_if_exception",
     "retry_if_result",
-    "WrappedFn",
-    "AsyncRetrying",
 ]

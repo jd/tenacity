@@ -66,7 +66,7 @@ class wait_random(wait_base):
 
     def __init__(
         self, min: _utils.time_unit_type = 0, max: _utils.time_unit_type = 1
-    ) -> None:  # noqa
+    ) -> None:
         self.wait_random_min = _utils.to_seconds(min)
         self.wait_random_max = _utils.to_seconds(max)
 
@@ -161,7 +161,7 @@ class wait_incrementing(wait_base):
         self,
         start: _utils.time_unit_type = 0,
         increment: _utils.time_unit_type = 100,
-        max: _utils.time_unit_type = _utils.MAX_WAIT,  # noqa
+        max: _utils.time_unit_type = _utils.MAX_WAIT,
     ) -> None:
         self.start = _utils.to_seconds(start)
         self.increment = _utils.to_seconds(increment)
@@ -188,9 +188,9 @@ class wait_exponential(wait_base):
     def __init__(
         self,
         multiplier: int | float = 1,
-        max: _utils.time_unit_type = _utils.MAX_WAIT,  # noqa
+        max: _utils.time_unit_type = _utils.MAX_WAIT,
         exp_base: int | float = 2,
-        min: _utils.time_unit_type = 0,  # noqa
+        min: _utils.time_unit_type = 0,
     ) -> None:
         self.multiplier = multiplier
         self.min = _utils.to_seconds(min)
@@ -252,7 +252,7 @@ class wait_exponential_jitter(wait_base):
     def __init__(
         self,
         initial: float = 1,
-        max: float = _utils.MAX_WAIT,  # noqa
+        max: float = _utils.MAX_WAIT,
         exp_base: float = 2,
         jitter: float = 1,
     ) -> None:
