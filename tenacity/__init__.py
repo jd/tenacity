@@ -114,14 +114,12 @@ class IterState:
         default_factory=list
     )
     retry_run_result: bool = False
-    delay_since_first_attempt: int = 0
     stop_run_result: bool = False
     is_explicit_retry: bool = False
 
     def reset(self) -> None:
         self.actions = []
         self.retry_run_result = False
-        self.delay_since_first_attempt = 0
         self.stop_run_result = False
         self.is_explicit_retry = False
 
