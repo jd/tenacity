@@ -294,8 +294,8 @@ class BaseRetrying(ABC):
         may not) have useful and/or informational keys and values when
         running is underway and/or completed.
 
-        .. warning:: The keys in this dictionary **should** be some what
-                     stable (not changing), but there existence **may**
+        .. warning:: The keys in this dictionary **should** be somewhat
+                     stable (not changing), but their existence **may**
                      change between major releases as new statistics are
                      gathered or removed so before accessing keys ensure that
                      they actually exist and handle when they do not.
@@ -303,7 +303,7 @@ class BaseRetrying(ABC):
         .. note:: The values in this dictionary are local to the thread
                   running call (so if multiple threads share the same retrying
                   object - either directly or indirectly) they will each have
-                  there own view of statistics they have collected (in the
+                  their own view of statistics they have collected (in the
                   future we may provide a way to aggregate the various
                   statistics from each thread).
         """
@@ -320,7 +320,7 @@ class BaseRetrying(ABC):
     def wraps(self, f: WrappedFn) -> WrappedFn:
         """Wrap a function for retrying.
 
-        :param f: A function to wraps for retrying.
+        :param f: A function to wrap for retrying.
         """
 
         @functools.wraps(
