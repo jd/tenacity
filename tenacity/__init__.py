@@ -413,7 +413,7 @@ class BaseRetrying(ABC):
                 fut = t.cast("Future", rs.outcome)
                 retry_exc = self.retry_error_cls(fut)
                 if self.reraise:
-                    raise retry_exc.reraise()
+                    retry_exc.reraise()
                 raise retry_exc from fut.exception()
 
             self._add_action_func(exc_check)
