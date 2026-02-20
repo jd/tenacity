@@ -87,6 +87,7 @@ class AsyncRetrying(BaseRetrying):
         retry_error_cls: type["RetryError"] = RetryError,
         retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
         | None = None,
+        name: str | None = None,
     ) -> None:
         super().__init__(
             sleep=sleep,  # type: ignore[arg-type]
@@ -99,6 +100,7 @@ class AsyncRetrying(BaseRetrying):
             reraise=reraise,
             retry_error_cls=retry_error_cls,
             retry_error_callback=retry_error_callback,
+            name=name,
         )
 
     async def __call__(  # type: ignore[override]

@@ -55,11 +55,7 @@ def before_sleep_log(
             verb, value = "returned", retry_state.outcome.result()
             local_exc_info = False  # exc_info does not apply when no exception
 
-        if retry_state.fn is None:
-            # NOTE(sileht): can't really happen, but we must please mypy
-            fn_name = "<unknown>"
-        else:
-            fn_name = _utils.get_callback_name(retry_state.fn)
+        fn_name = retry_state.get_fn_name()
 
         logger.log(
             log_level,

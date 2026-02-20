@@ -34,11 +34,7 @@ def after_log(
     """After call strategy that logs to some logger the finished attempt."""
 
     def log_it(retry_state: "RetryCallState") -> None:
-        if retry_state.fn is None:
-            # NOTE(sileht): can't really happen, but we must please mypy
-            fn_name = "<unknown>"
-        else:
-            fn_name = _utils.get_callback_name(retry_state.fn)
+        fn_name = retry_state.get_fn_name()
         secs = retry_state.seconds_since_start
         logger.log(
             log_level,

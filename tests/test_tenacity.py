@@ -111,6 +111,73 @@ class TestBase(unittest.TestCase):
         )
 
 
+class TestRetryingName(unittest.TestCase):
+    def test_str_default(self) -> None:
+        """Without a name, str() returns '<unknown>'."""
+        assert str(Retrying()) == "<unknown>"
+
+    def test_str_with_name(self) -> None:
+        """With a name, str() returns the given name."""
+        assert str(Retrying(name="my_block")) == "my_block"
+
+    def test_str_preserved_by_copy(self) -> None:
+        """copy() preserves the name."""
+        r = Retrying(name="my_block")
+        assert str(r.copy()) == "my_block"
+
+    def test_str_overridden_by_copy(self) -> None:
+        """copy() allows overriding the name."""
+        r = Retrying(name="original")
+        assert str(r.copy(name="overridden")) == "overridden"
+
+    def test_get_fn_name_decorator(self) -> None:
+        """get_fn_name() returns the function's qualified name when used as decorator."""
+        captured: list[RetryCallState] = []
+
+        @tenacity.retry(
+            stop=tenacity.stop_after_attempt(1),
+            after=lambda rs: captured.append(rs),
+        )
+        def my_func() -> None:
+            raise ValueError
+
+        with contextlib.suppress(Exception):
+            my_func()
+        assert captured
+        assert "my_func" in captured[0].get_fn_name()
+
+    def test_get_fn_name_context_manager_no_name(self) -> None:
+        """get_fn_name() returns '<unknown>' in context manager mode without a name."""
+        r = Retrying(stop=tenacity.stop_after_attempt(1))
+        rs = RetryCallState(r, None, (), {})
+        assert rs.get_fn_name() == "<unknown>"
+
+    def test_get_fn_name_context_manager_with_name(self) -> None:
+        """get_fn_name() returns the given name in context manager mode."""
+        r = Retrying(name="ws_listener", stop=tenacity.stop_after_attempt(1))
+        rs = RetryCallState(r, None, (), {})
+        assert rs.get_fn_name() == "ws_listener"
+
+    def test_logging_uses_name(self) -> None:
+        """before_log uses the name parameter in context manager mode."""
+        import unittest.mock
+
+        log = unittest.mock.MagicMock()
+        logger = unittest.mock.MagicMock(log=log)
+
+        with contextlib.suppress(Exception):
+            for attempt in Retrying(
+                name="my_block",
+                before=tenacity.before_log(logger, logging.INFO),
+                stop=tenacity.stop_after_attempt(1),
+            ):
+                with attempt:
+                    raise ValueError
+
+        args = log.call_args[0]
+        assert "my_block" in args[1]
+
+
 class TestStopConditions(unittest.TestCase):
     def test_never_stop(self) -> None:
         r = Retrying()
