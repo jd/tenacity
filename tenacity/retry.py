@@ -198,19 +198,19 @@ class retry_if_exception_message(retry_if_exception):
         message: str | None = None,
         match: None | str | re.Pattern[str] = None,
     ) -> None:
-        if message and match:
+        if message is not None and match is not None:
             raise TypeError(
                 f"{self.__class__.__name__}() takes either 'message' or 'match', not both"
             )
 
         # set predicate
-        if message:
+        if message is not None:
 
             def message_fnc(exception: BaseException) -> bool:
                 return message == str(exception)
 
             predicate = message_fnc
-        elif match:
+        elif match is not None:
             prog = re.compile(match)
 
             def match_fnc(exception: BaseException) -> bool:
