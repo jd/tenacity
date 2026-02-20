@@ -38,14 +38,9 @@ class TestAfterLogFormat(unittest.TestCase):
             logger=logger, log_level=self.log_level
         )  # use default sec_format
         fun(retry_state)
-        fn_name = (
-            "<unknown>"
-            if retry_state.fn is None
-            else _utils.get_callback_name(retry_state.fn)
-        )
         log.assert_called_once_with(
             self.log_level,
-            f"Finished call to '{fn_name}' "
+            f"Finished call to '{retry_state.get_fn_name()}' "
             f"after {sec_format % retry_state.seconds_since_start}(s), "
             f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
         )
@@ -61,14 +56,9 @@ class TestAfterLogFormat(unittest.TestCase):
 
         fun = after_log(logger=logger, log_level=self.log_level)
         fun(retry_state)
-        fn_name = (
-            "<unknown>"
-            if retry_state.fn is None
-            else _utils.get_callback_name(retry_state.fn)
-        )
         log.assert_called_once_with(
             self.log_level,
-            f"Finished call to '{fn_name}' "
+            f"Finished call to '{retry_state.get_fn_name()}' "
             f"after ?(s), "
             f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
         )
@@ -86,14 +76,9 @@ class TestAfterLogFormat(unittest.TestCase):
         )
         fun = after_log(logger=logger, log_level=self.log_level, sec_format=sec_format)
         fun(retry_state)
-        fn_name = (
-            "<unknown>"
-            if retry_state.fn is None
-            else _utils.get_callback_name(retry_state.fn)
-        )
         log.assert_called_once_with(
             self.log_level,
-            f"Finished call to '{fn_name}' "
+            f"Finished call to '{retry_state.get_fn_name()}' "
             f"after {sec_format % retry_state.seconds_since_start}(s), "
             f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
         )

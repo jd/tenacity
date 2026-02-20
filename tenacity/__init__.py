@@ -228,6 +228,7 @@ class BaseRetrying(ABC):
         reraise: bool = False,
         retry_error_cls: type[RetryError] = RetryError,
         retry_error_callback: t.Callable[["RetryCallState"], t.Any] | None = None,
+        name: str | None = None,
     ):
         self.sleep = sleep
         self.stop = stop
@@ -240,6 +241,7 @@ class BaseRetrying(ABC):
         self._local = threading.local()
         self.retry_error_cls = retry_error_cls
         self.retry_error_callback = retry_error_callback
+        self._name = name
 
     def copy(
         self,
@@ -255,6 +257,7 @@ class BaseRetrying(ABC):
         retry_error_callback: t.Callable[["RetryCallState"], t.Any]
         | None
         | object = _unset,
+        name: str | None | object = _unset,
     ) -> "Self":
         """Copy this object with some parameters changed if needed."""
         return self.__class__(
@@ -270,7 +273,11 @@ class BaseRetrying(ABC):
             retry_error_callback=_first_set(
                 retry_error_callback, self.retry_error_callback
             ),
+            name=_first_set(name, self._name),
         )
+
+    def __str__(self) -> str:
+        return self._name if self._name is not None else "<unknown>"
 
     def __repr__(self) -> str:
         return (
@@ -280,7 +287,8 @@ class BaseRetrying(ABC):
             f"sleep={self.sleep}, "
             f"retry={self.retry}, "
             f"before={self.before}, "
-            f"after={self.after})>"
+            f"after={self.after}, "
+            f"name={self._name!r})>"
         )
 
     @property
@@ -541,6 +549,17 @@ class RetryCallState:
         self.next_action: RetryAction | None = None
         #: Next sleep time as decided by the retry manager.
         self.upcoming_sleep: float = 0.0
+
+    def get_fn_name(self) -> str:
+        """Get the name of the function being retried.
+
+        Returns the fully-qualified name of the wrapped function when used as a
+        decorator, the ``name`` passed to the retrying object when used as a
+        context manager, or ``"<unknown>"`` if neither is available.
+        """
+        if self.fn is not None:
+            return _utils.get_callback_name(self.fn)
+        return str(self.retry_object)
 
     @property
     def seconds_since_start(self) -> float | None:
