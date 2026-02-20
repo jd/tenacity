@@ -416,6 +416,35 @@ RetryCallState
 ~~~~~~~~~~~~~~
 
 ``retry_state`` argument is an object of :class:`~tenacity.RetryCallState` class.
+Its most useful attributes are:
+
+* ``attempt_number`` — number of the current attempt (starts at 1)
+* ``outcome`` — a :class:`concurrent.futures.Future` holding the last result or exception
+* ``seconds_since_start`` — total elapsed seconds from the first attempt to the last outcome (``None`` if no outcome yet)
+* ``idle_for`` — cumulative seconds spent sleeping between attempts
+* ``start_time`` — :func:`time.monotonic` timestamp of the first attempt
+
+For example, to log the total elapsed time after all retries:
+
+.. testcode::
+
+    import logging
+
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+
+    logger = logging.getLogger(__name__)
+
+    def log_elapsed(retry_state):
+        logger.info('Finished after %.3fs', retry_state.seconds_since_start)
+
+    @retry(stop=stop_after_attempt(3), after=log_elapsed)
+    def raise_my_exception():
+        raise MyException("Fail")
+
+    try:
+        raise_my_exception()
+    except RetryError:
+        pass
 
 Other Custom Callbacks
 ~~~~~~~~~~~~~~~~~~~~~~
