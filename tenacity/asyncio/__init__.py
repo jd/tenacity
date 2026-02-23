@@ -27,6 +27,7 @@ from tenacity import (
     DoSleep,
     RetryCallState,
     RetryError,
+    _RetryDecorated,
     _utils,
     after_nothing,
     before_nothing,
@@ -48,6 +49,8 @@ if t.TYPE_CHECKING:
 
 WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Awaitable[t.Any]])
+P = t.ParamSpec("P")
+R = t.TypeVar("R")
 
 
 def _portable_async_sleep(seconds: float) -> t.Awaitable[None]:
@@ -178,7 +181,7 @@ class AsyncRetrying(BaseRetrying):
             else:
                 raise StopAsyncIteration
 
-    def wraps(self, fn: WrappedFn) -> WrappedFn:
+    def wraps(self, fn: t.Callable[P, R]) -> _RetryDecorated[P, R]:
         wrapped = super().wraps(fn)
         # Ensure wrapper is recognized as a coroutine function.
 
@@ -190,14 +193,14 @@ class AsyncRetrying(BaseRetrying):
             # calling the same wrapped functions multiple times in the same stack
             copy = self.copy()
             async_wrapped.statistics = copy.statistics  # type: ignore[attr-defined]
-            return await copy(fn, *args, **kwargs)
+            return await copy(fn, *args, **kwargs)  # type: ignore[type-var]
 
         # Preserve attributes
         async_wrapped.retry = self  # type: ignore[attr-defined]
         async_wrapped.retry_with = wrapped.retry_with  # type: ignore[attr-defined]
         async_wrapped.statistics = {}  # type: ignore[attr-defined]
 
-        return async_wrapped  # type: ignore[return-value]
+        return t.cast("_RetryDecorated[P, R]", async_wrapped)
 
 
 __all__ = [

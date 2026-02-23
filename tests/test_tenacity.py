@@ -1177,7 +1177,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 _retryable_test_with_unless_exception_type_name(NameErrorUntilCount(5))
             )
         except NameError as e:
-            s = _retryable_test_with_unless_exception_type_name.statistics  # type: ignore[attr-defined]
+            s = _retryable_test_with_unless_exception_type_name.statistics
             self.assertTrue(s["attempt_number"] == 6)
             print(e)
         else:
@@ -1192,7 +1192,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 )
             )
         except NameError as e:
-            s = _retryable_test_with_unless_exception_type_no_input.statistics  # type: ignore[attr-defined]
+            s = _retryable_test_with_unless_exception_type_no_input.statistics
             self.assertTrue(s["attempt_number"] == 6)
             print(e)
         else:
@@ -1215,7 +1215,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 _retryable_test_if_exception_message_message(NoCustomErrorAfterCount(3))
             )
         except CustomError:
-            print(_retryable_test_if_exception_message_message.statistics)  # type: ignore[attr-defined]
+            print(_retryable_test_if_exception_message_message.statistics)
             self.fail("CustomError should've been retried from errormessage")
 
     def test_retry_if_not_exception_message(self) -> None:
@@ -1226,7 +1226,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 )
             )
         except CustomError:
-            s = _retryable_test_if_not_exception_message_message.statistics  # type: ignore[attr-defined]
+            s = _retryable_test_if_not_exception_message_message.statistics
             self.assertTrue(s["attempt_number"] == 1)
 
     def test_retry_if_not_exception_message_delay(self) -> None:
@@ -1235,7 +1235,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 _retryable_test_not_exception_message_delay(NameErrorUntilCount(3))
             )
         except NameError:
-            s = _retryable_test_not_exception_message_delay.statistics  # type: ignore[attr-defined]
+            s = _retryable_test_not_exception_message_delay.statistics
             print(s["attempt_number"])
             self.assertTrue(s["attempt_number"] == 4)
 
@@ -1255,7 +1255,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 )
             )
         except CustomError:
-            s = _retryable_test_if_not_exception_message_message.statistics  # type: ignore[attr-defined]
+            s = _retryable_test_if_not_exception_message_message.statistics
             self.assertTrue(s["attempt_number"] == 1)
 
     def test_retry_if_exception_cause_type(self) -> None:
@@ -1283,17 +1283,18 @@ class TestDecoratorWrapper(unittest.TestCase):
         wrapped_kwdefaults_function = retrying.wraps(function_with_kwdefaults)
 
         self.assertEqual(
-            function_with_defaults.__defaults__, wrapped_defaults_function.__defaults__
+            function_with_defaults.__defaults__,
+            wrapped_defaults_function.__defaults__,  # type: ignore[attr-defined]
         )
         self.assertEqual(
             function_with_kwdefaults.__kwdefaults__,
-            wrapped_kwdefaults_function.__kwdefaults__,
+            wrapped_kwdefaults_function.__kwdefaults__,  # type: ignore[attr-defined]
         )
 
     def test_defaults(self) -> None:
-        self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))  # type: ignore[no-untyped-call]
+        self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))
         self.assertTrue(_retryable_default_f(NoNameErrorAfterCount(5)))
-        self.assertTrue(_retryable_default(NoCustomErrorAfterCount(5)))  # type: ignore[no-untyped-call]
+        self.assertTrue(_retryable_default(NoCustomErrorAfterCount(5)))
         self.assertTrue(_retryable_default_f(NoCustomErrorAfterCount(5)))
 
     def test_retry_function_object(self) -> None:
@@ -1329,11 +1330,11 @@ class TestDecoratorWrapper(unittest.TestCase):
             "idle_for": mock.ANY,
             "start_time": mock.ANY,
         }
-        self.assertEqual(_retryable_test_with_stop.statistics, expected_stats)  # type: ignore[attr-defined]
-        self.assertEqual(_retryable_test_with_stop.retry.statistics, {})  # type: ignore[attr-defined]
+        self.assertEqual(_retryable_test_with_stop.statistics, expected_stats)
+        self.assertEqual(_retryable_test_with_stop.retry.statistics, {})
 
         with mock.patch.object(
-            _retryable_test_with_stop.retry,  # type: ignore[attr-defined]
+            _retryable_test_with_stop.retry,
             "stop",
             tenacity.stop_after_attempt(1),
         ):
@@ -1346,9 +1347,9 @@ class TestDecoratorWrapper(unittest.TestCase):
                     "idle_for": mock.ANY,
                     "start_time": mock.ANY,
                 }
-                self.assertEqual(_retryable_test_with_stop.statistics, expected_stats)  # type: ignore[attr-defined]
+                self.assertEqual(_retryable_test_with_stop.statistics, expected_stats)
                 self.assertEqual(exc.last_attempt.attempt_number, 1)
-                self.assertEqual(_retryable_test_with_stop.retry.statistics, {})  # type: ignore[attr-defined]
+                self.assertEqual(_retryable_test_with_stop.retry.statistics, {})
             else:
                 self.fail("RetryError should have been raised after 1 attempt")
 
@@ -1356,7 +1357,7 @@ class TestDecoratorWrapper(unittest.TestCase):
 class TestRetryWith:
     def test_redefine_wait(self) -> None:
         start = current_time_ms()
-        result = _retryable_test_with_wait.retry_with(wait=tenacity.wait_fixed(0.1))(  # type: ignore[attr-defined]
+        result = _retryable_test_with_wait.retry_with(wait=tenacity.wait_fixed(0.1))(
             NoneReturnUntilAfterCount(5)
         )
         t = current_time_ms() - start
@@ -1364,7 +1365,7 @@ class TestRetryWith:
         assert result is True
 
     def test_redefine_stop(self) -> None:
-        result = _retryable_test_with_stop.retry_with(  # type: ignore[attr-defined]
+        result = _retryable_test_with_stop.retry_with(
             stop=tenacity.stop_after_attempt(5)
         )(NoneReturnUntilAfterCount(4))
         assert result is True
@@ -1375,7 +1376,7 @@ class TestRetryWith:
             raise Exception("raised for test purposes")
 
         with pytest.raises(Exception) as exc_ctx:
-            _retryable.retry_with(stop=tenacity.stop_after_attempt(2))()  # type: ignore[attr-defined]
+            _retryable.retry_with(stop=tenacity.stop_after_attempt(2))()
 
         assert exc_ctx.type is ValueError, "Should remap to specific exception type"
 
@@ -1387,7 +1388,7 @@ class TestRetryWith:
         def _retryable() -> None:
             raise Exception("raised for test purposes")
 
-        result = _retryable.retry_with(stop=tenacity.stop_after_attempt(5))()  # type: ignore[attr-defined]
+        result = _retryable.retry_with(stop=tenacity.stop_after_attempt(5))()
         assert result == "Calling _retryable keeps raising errors after 5 attempts"
 
 
@@ -1619,19 +1620,19 @@ class TestStatistics(unittest.TestCase):
         def _foobar() -> int:
             return 42
 
-        self.assertEqual({}, _foobar.statistics)  # type: ignore[attr-defined]
+        self.assertEqual({}, _foobar.statistics)
         _foobar()
-        self.assertEqual(1, _foobar.statistics["attempt_number"])  # type: ignore[attr-defined]
+        self.assertEqual(1, _foobar.statistics["attempt_number"])
 
     def test_stats_failing(self) -> None:
         @retry(stop=tenacity.stop_after_attempt(2))
         def _foobar() -> None:
             raise ValueError(42)
 
-        self.assertEqual({}, _foobar.statistics)  # type: ignore[attr-defined]
+        self.assertEqual({}, _foobar.statistics)
         with contextlib.suppress(Exception):
             _foobar()
-        self.assertEqual(2, _foobar.statistics["attempt_number"])  # type: ignore[attr-defined]
+        self.assertEqual(2, _foobar.statistics["attempt_number"])
 
 
 class TestRetryErrorCallback(unittest.TestCase):
