@@ -124,11 +124,12 @@ class TestAsyncio(unittest.TestCase):
         wrapped_kwdefaults_function = retrying.wraps(function_with_kwdefaults)
 
         self.assertEqual(
-            function_with_defaults.__defaults__, wrapped_defaults_function.__defaults__
+            function_with_defaults.__defaults__,
+            wrapped_defaults_function.__defaults__,  # type: ignore[attr-defined]
         )
         self.assertEqual(
             function_with_kwdefaults.__kwdefaults__,
-            wrapped_kwdefaults_function.__kwdefaults__,
+            wrapped_kwdefaults_function.__kwdefaults__,  # type: ignore[attr-defined]
         )
 
     @asynctest
@@ -142,8 +143,8 @@ class TestAsyncio(unittest.TestCase):
         thing2 = NoIOErrorAfterCount(3)
 
         await asyncio.gather(
-            _retryable_coroutine.retry_with(after=after)(thing1),  # type: ignore[attr-defined]
-            _retryable_coroutine.retry_with(after=after)(thing2),  # type: ignore[attr-defined]
+            _retryable_coroutine.retry_with(after=after)(thing1),
+            _retryable_coroutine.retry_with(after=after)(thing2),
         )
 
         # There's no waiting on retry, only a wait in the coroutine, so the
@@ -429,16 +430,16 @@ class TestDecoratorWrapper(unittest.TestCase):
             "start_time": mock.ANY,
         }
         self.assertEqual(
-            _retryable_coroutine_with_2_attempts.statistics,  # type: ignore[attr-defined]
+            _retryable_coroutine_with_2_attempts.statistics,
             expected_stats,
         )
         self.assertEqual(
-            _retryable_coroutine_with_2_attempts.retry.statistics,  # type: ignore[attr-defined]
+            _retryable_coroutine_with_2_attempts.retry.statistics,
             {},
         )
 
         with mock.patch.object(
-            _retryable_coroutine_with_2_attempts.retry,  # type: ignore[attr-defined]
+            _retryable_coroutine_with_2_attempts.retry,
             "stop",
             tenacity.stop_after_attempt(1),
         ):
@@ -454,12 +455,12 @@ class TestDecoratorWrapper(unittest.TestCase):
                     "start_time": mock.ANY,
                 }
                 self.assertEqual(
-                    _retryable_coroutine_with_2_attempts.statistics,  # type: ignore[attr-defined]
+                    _retryable_coroutine_with_2_attempts.statistics,
                     expected_stats,
                 )
                 self.assertEqual(exc.last_attempt.attempt_number, 1)
                 self.assertEqual(
-                    _retryable_coroutine_with_2_attempts.retry.statistics,  # type: ignore[attr-defined]
+                    _retryable_coroutine_with_2_attempts.retry.statistics,
                     {},
                 )
             else:
@@ -493,7 +494,7 @@ class TestSyncFunctionWithAsyncSleep(unittest.TestCase):
         def sync_function() -> Any:
             return thing.go()
 
-        result = await sync_function()  # type: ignore[no-untyped-call]
+        result = await sync_function()
         assert result is True
         assert mock_sleep.await_count == 2
 

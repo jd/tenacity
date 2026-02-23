@@ -323,7 +323,7 @@ class BaseRetrying(ABC):
             self._local.iter_state = IterState()
         return self._local.iter_state  # type: ignore[no-any-return]
 
-    def wraps(self, f: WrappedFn) -> WrappedFn:
+    def wraps(self, f: t.Callable[P, R]) -> "_RetryDecorated[P, R]":
         """Wrap a function for retrying.
 
         :param f: A function to wrap for retrying.
@@ -339,7 +339,7 @@ class BaseRetrying(ABC):
             wrapped_f.statistics = copy.statistics  # type: ignore[attr-defined]
             return copy(f, *args, **kw)
 
-        def retry_with(*args: t.Any, **kwargs: t.Any) -> WrappedFn:
+        def retry_with(*args: t.Any, **kwargs: t.Any) -> "_RetryDecorated[P, R]":
             return self.copy(*args, **kwargs).wraps(f)
 
         # Preserve attributes
@@ -347,7 +347,7 @@ class BaseRetrying(ABC):
         wrapped_f.retry_with = retry_with  # type: ignore[attr-defined]
         wrapped_f.statistics = {}  # type: ignore[attr-defined]
 
-        return wrapped_f  # type: ignore[return-value]
+        return t.cast("_RetryDecorated[P, R]", wrapped_f)
 
     def begin(self) -> None:
         self.statistics.clear()
@@ -604,25 +604,41 @@ class RetryCallState:
         return f"<{clsname} {id(self)}: attempt #{self.attempt_number}; slept for {slept}; last result: {result}>"
 
 
+class _RetryDecorated(t.Protocol[P, R]):
+    """Protocol for functions decorated with @retry.
+
+    Provides the original callable signature plus retry control attributes.
+    """
+
+    retry: "BaseRetrying"
+    statistics: dict[str, t.Any]
+
+    def retry_with(self, *args: t.Any, **kwargs: t.Any) -> "_RetryDecorated[P, R]": ...
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
+
+
 class _AsyncRetryDecorator(t.Protocol):
     @t.overload
     def __call__(
         self, fn: "t.Callable[P, types.CoroutineType[t.Any, t.Any, R]]"
-    ) -> "t.Callable[P, types.CoroutineType[t.Any, t.Any, R]]": ...
+    ) -> "_RetryDecorated[P, types.CoroutineType[t.Any, t.Any, R]]": ...
     @t.overload
     def __call__(
         self, fn: t.Callable[P, t.Coroutine[t.Any, t.Any, R]]
-    ) -> t.Callable[P, t.Coroutine[t.Any, t.Any, R]]: ...
+    ) -> "_RetryDecorated[P, t.Coroutine[t.Any, t.Any, R]]": ...
     @t.overload
     def __call__(
         self, fn: t.Callable[P, t.Awaitable[R]]
-    ) -> t.Callable[P, t.Awaitable[R]]: ...
+    ) -> "_RetryDecorated[P, t.Awaitable[R]]": ...
     @t.overload
-    def __call__(self, fn: t.Callable[P, R]) -> t.Callable[P, t.Awaitable[R]]: ...
+    def __call__(
+        self, fn: t.Callable[P, R]
+    ) -> "_RetryDecorated[P, t.Awaitable[R]]": ...
 
 
 @t.overload
-def retry(func: WrappedFn) -> WrappedFn: ...
+def retry(func: t.Callable[P, R]) -> _RetryDecorated[P, R]: ...
 
 
 @t.overload
@@ -656,7 +672,7 @@ def retry(
     retry_error_cls: type["RetryError"] = RetryError,
     retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
     | None = None,
-) -> t.Callable[[WrappedFn], WrappedFn]: ...
+) -> t.Callable[[t.Callable[P, R]], _RetryDecorated[P, R]]: ...
 
 
 def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
@@ -669,7 +685,7 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
     if len(dargs) == 1 and callable(dargs[0]):
         return retry()(dargs[0])
 
-    def wrap(f: WrappedFn) -> WrappedFn:
+    def wrap(f: t.Callable[P, R]) -> _RetryDecorated[P, R]:
         if isinstance(f, retry_base):
             warnings.warn(
                 f"Got retry_base instance ({f.__class__.__name__}) as callable argument, "
