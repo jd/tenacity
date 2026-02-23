@@ -510,6 +510,52 @@ Here's an example with a custom ``before_sleep`` function:
         pass
 
 
+Common Patterns
+~~~~~~~~~~~~~~~
+
+**Running setup code between retries** (e.g. reconnecting):
+
+.. testcode::
+
+    def reconnect(retry_state):
+        print("Reconnecting before next attempt...")
+
+    @retry(stop=stop_after_attempt(3), before_sleep=reconnect)
+    def send_data():
+        raise MyException("connection lost")
+
+    try:
+        send_data()
+    except RetryError:
+        pass
+
+.. testoutput::
+   :hide:
+
+   ...
+
+The ``before_sleep`` callback runs after a failed attempt and before sleeping,
+making it ideal for re-establishing connections, refreshing tokens, or any
+other setup that needs to happen before the next attempt.
+
+**Accessing the attempt number inside the function** using the iterator API:
+
+.. testcode::
+
+    from tenacity import Retrying
+
+    for attempt in Retrying(stop=stop_after_attempt(3)):
+        with attempt:
+            print(f"Attempt {attempt.retry_state.attempt_number}")
+            if attempt.retry_state.attempt_number < 3:
+                raise MyException("not yet")
+
+.. testoutput::
+   :hide:
+
+   ...
+
+
 Changing Arguments at Run Time
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
