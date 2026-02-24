@@ -191,6 +191,21 @@ class TestContextManager(unittest.TestCase):
         assert attempts == 3
 
     @asynctest
+    async def test_async_with_attempt_manager(self) -> None:
+        """AttemptManager supports async with for use inside async for."""
+        attempts = 0
+        retrying = tasyncio.AsyncRetrying(stop=stop_after_attempt(3))
+        try:
+            async for attempt in retrying:
+                async with attempt:
+                    attempts += 1
+                    raise Exception
+        except RetryError:
+            pass
+
+        assert attempts == 3
+
+    @asynctest
     async def test_reraise(self) -> None:
         class CustomError(Exception):
             pass
