@@ -106,6 +106,13 @@ class retry_any(async_retry_base):
                 break
         return result
 
+    def __ror__(  # type: ignore[misc,override]
+        self, other: "retry_base | async_retry_base"
+    ) -> "retry_any":
+        if isinstance(other, retry_any):
+            return retry_any(*other.retries, *self.retries)
+        return retry_any(other, *self.retries)
+
 
 class retry_all(async_retry_base):
     """Retries if all the retries condition are valid."""
@@ -120,3 +127,10 @@ class retry_all(async_retry_base):
             if not result:
                 break
         return result
+
+    def __rand__(  # type: ignore[misc,override]
+        self, other: "retry_base | async_retry_base"
+    ) -> "retry_all":
+        if isinstance(other, retry_all):
+            return retry_all(*other.retries, *self.retries)
+        return retry_all(other, *self.retries)

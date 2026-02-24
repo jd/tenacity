@@ -31,6 +31,7 @@ from typeguard import check_type
 
 import tenacity
 from tenacity import RetryCallState, RetryError, Retrying, retry
+from tenacity.retry import retry_all, retry_any
 
 _unset = object()
 
@@ -776,6 +777,26 @@ class TestRetryConditions(unittest.TestCase):
         # plain_callable & retry_base (exercises __rand__ via reflection)
         retry2 = my_retry & tenacity.retry_if_result(lambda x: x == 1)
         self.assertTrue(retry2(retry_state))
+
+    def test_retry_or_coalesces(self) -> None:
+        """Multiple | operations flatten into a single retry_any."""
+        a = tenacity.retry_if_exception_type(IOError)
+        b = tenacity.retry_if_exception_type(OSError)
+        c = tenacity.retry_if_exception_type(ValueError)
+
+        combined = a | b | c
+        self.assertIsInstance(combined, retry_any)
+        self.assertEqual(len(combined.retries), 3)
+
+    def test_retry_and_coalesces(self) -> None:
+        """Multiple & operations flatten into a single retry_all."""
+        a = tenacity.retry_if_result(lambda x: x == 1)
+        b = tenacity.retry_if_result(lambda x: x > 0)
+        c = tenacity.retry_if_result(lambda x: x < 10)
+
+        combined = a & b & c
+        self.assertIsInstance(combined, retry_all)
+        self.assertEqual(len(combined.retries), 3)
 
     def _raise_try_again(self) -> None:
         self._attempts += 1

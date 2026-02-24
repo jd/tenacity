@@ -32,17 +32,29 @@ class retry_base(abc.ABC):
     def __and__(self, other: "RetryBaseT") -> "retry_all":
         if isinstance(other, retry_base):
             return other.__rand__(self)
+        # Plain callable: flatten if self is already a retry_all
+        if isinstance(self, retry_all):
+            return retry_all(*self.retries, other)
         return retry_all(self, other)
 
     def __rand__(self, other: "RetryBaseT") -> "retry_all":
+        # Flatten if other is already a retry_all
+        if isinstance(other, retry_all):
+            return retry_all(*other.retries, self)
         return retry_all(other, self)
 
     def __or__(self, other: "RetryBaseT") -> "retry_any":
         if isinstance(other, retry_base):
             return other.__ror__(self)
+        # Plain callable: flatten if self is already a retry_any
+        if isinstance(self, retry_any):
+            return retry_any(*self.retries, other)
         return retry_any(self, other)
 
     def __ror__(self, other: "RetryBaseT") -> "retry_any":
+        # Flatten if other is already a retry_any
+        if isinstance(other, retry_any):
+            return retry_any(*other.retries, self)
         return retry_any(other, self)
 
 
@@ -264,6 +276,11 @@ class retry_any(retry_base):
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return any(r(retry_state) for r in self.retries)
 
+    def __ror__(self, other: "RetryBaseT") -> "retry_any":
+        if isinstance(other, retry_any):
+            return retry_any(*other.retries, *self.retries)
+        return retry_any(other, *self.retries)
+
 
 class retry_all(retry_base):
     """Retries if all the retries condition are valid."""
@@ -273,3 +290,8 @@ class retry_all(retry_base):
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return all(r(retry_state) for r in self.retries)
+
+    def __rand__(self, other: "RetryBaseT") -> "retry_all":
+        if isinstance(other, retry_all):
+            return retry_all(*other.retries, *self.retries)
+        return retry_all(other, *self.retries)
