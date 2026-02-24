@@ -1375,7 +1375,7 @@ class TestDecoratorWrapper(unittest.TestCase):
 
         - statistics contains the value for the latest function run
         - retry object can be modified to change its behaviour (useful to patch in tests)
-        - retry object statistics do not contain valid information
+        - retry object statistics are synced with function statistics
         """
 
         self.assertTrue(_retryable_test_with_stop(NoneReturnUntilAfterCount(2)))
@@ -1387,7 +1387,7 @@ class TestDecoratorWrapper(unittest.TestCase):
             "start_time": mock.ANY,
         }
         self.assertEqual(_retryable_test_with_stop.statistics, expected_stats)
-        self.assertEqual(_retryable_test_with_stop.retry.statistics, {})
+        self.assertEqual(_retryable_test_with_stop.retry.statistics, expected_stats)
 
         with mock.patch.object(
             _retryable_test_with_stop.retry,
@@ -1405,7 +1405,9 @@ class TestDecoratorWrapper(unittest.TestCase):
                 }
                 self.assertEqual(_retryable_test_with_stop.statistics, expected_stats)
                 self.assertEqual(exc.last_attempt.attempt_number, 1)
-                self.assertEqual(_retryable_test_with_stop.retry.statistics, {})
+                self.assertEqual(
+                    _retryable_test_with_stop.retry.statistics, expected_stats
+                )
             else:
                 self.fail("RetryError should have been raised after 1 attempt")
 
@@ -1764,6 +1766,37 @@ class TestStatistics(unittest.TestCase):
         with contextlib.suppress(Exception):
             _foobar()
         self.assertEqual(2, _foobar.statistics["attempt_number"])
+
+    def test_retry_object_statistics_synced(self) -> None:
+        """Test that func.retry.statistics is synced with func.statistics."""
+
+        @retry(stop=tenacity.stop_after_attempt(3))
+        def _foobar() -> int:
+            return 42
+
+        _foobar()
+        self.assertEqual(
+            _foobar.retry.statistics["attempt_number"],
+            _foobar.statistics["attempt_number"],
+        )
+
+    def test_retry_object_statistics_during_execution(self) -> None:
+        """Test that func.retry.statistics is accessible during execution."""
+        attempts: list[int] = []
+
+        @retry(
+            stop=tenacity.stop_after_attempt(3),
+            retry=tenacity.retry_if_exception_type(ValueError),
+            reraise=True,
+        )
+        def _foobar() -> int:
+            attempts.append(_foobar.retry.statistics["attempt_number"])
+            if len(attempts) < 3:
+                raise ValueError("retry")
+            return 42
+
+        _foobar()
+        self.assertEqual(attempts, [1, 2, 3])
 
 
 class TestRetryErrorCallback(unittest.TestCase):
