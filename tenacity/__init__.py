@@ -26,6 +26,7 @@ from abc import ABC, abstractmethod
 from concurrent import futures
 
 from . import _utils
+from .config import dict_config
 
 # Import all built-in after strategies for easier usage.
 from .after import after_log, after_nothing
@@ -682,6 +683,11 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
     :param dargs: positional arguments passed to Retrying object
     :param dkw: keyword arguments passed to the Retrying object
     """
+
+    # getting default config values previously saved by the user
+    # and overriding with the new ones
+    dkw = dict_config.get_config(override=dkw)
+
     # support both @retry and @retry() as valid syntax
     if len(dargs) == 1 and callable(dargs[0]):
         return retry()(dargs[0])

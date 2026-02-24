@@ -30,7 +30,7 @@ import pytest
 from typeguard import check_type
 
 import tenacity
-from tenacity import RetryCallState, RetryError, Retrying, retry
+from tenacity import RetryCallState, RetryError, Retrying, retry, dict_config
 
 _unset = object()
 
@@ -1894,6 +1894,68 @@ class TestMockingSleep:
         with pytest.raises(RetryError):
             fail_faster()
         assert mock_sleep.call_count == 1
+
+
+class TestRetryDefaults(unittest.TestCase):
+    def setUp(self):
+        # Reset config before each test
+        dict_config.reset_config()
+
+    def test_set_and_get_config(self):
+        # Set new configuration attributes
+        dict_config.set_config(
+            stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1)
+        )
+        self.assertIsInstance(dict_config.get("stop"), tenacity.stop_after_attempt)
+        self.assertIsInstance(dict_config.get("wait"), tenacity.wait_fixed)
+
+    def test_override_config(self):
+        # Set initial configuration
+        dict_config.set_config(
+            stop=tenacity.stop_after_attempt(3), wait=tenacity.wait_fixed(1)
+        )
+
+        # Override specific attribute
+        custom_config = dict_config.get_config(
+            override={"wait": tenacity.wait_fixed(2)}
+        )
+        self.assertIsInstance(custom_config["wait"], tenacity.wait_fixed)
+        self.assertIsInstance(custom_config["stop"], tenacity.stop_after_attempt)
+
+    def test_delete_config(self):
+        # Set and then delete configuration attribute
+        dict_config.set_attribute("stop", tenacity.stop_after_attempt(3))
+        self.assertIn("stop", dict_config)
+        dict_config.delete_attribute("stop")
+        self.assertNotIn("stop", dict_config)
+        with self.assertRaises(KeyError):
+            dict_config.delete_attribute("stop")
+
+    def test_retry_with_default_config(self):
+        # Set default configuration
+        dict_config.set_config(
+            stop=tenacity.stop_after_attempt(2), wait=tenacity.wait_fixed(0.1)
+        )
+
+        @retry
+        def failing_func():
+            raise ValueError("This should trigger retries")
+
+        with self.assertRaises(tenacity.RetryError):
+            failing_func()  # Should raise a RetryError
+
+    def test_retry_with_override(self):
+        # Set default configuration
+        dict_config.set_config(
+            stop=tenacity.stop_after_attempt(2), wait=tenacity.wait_fixed(0.1)
+        )
+
+        @retry(reraise=True)
+        def failing_func():
+            raise ValueError("This should trigger retries")
+
+        with self.assertRaises(ValueError):
+            failing_func()  # Should raise a ValueError
 
 
 if __name__ == "__main__":
