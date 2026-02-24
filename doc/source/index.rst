@@ -618,6 +618,38 @@ statistics should be read from the function `statistics` attribute.
 
    ...
 
+Disabling Retries
+~~~~~~~~~~~~~~~~~
+
+You can disable retrying entirely by passing ``enabled=False``. When disabled,
+the decorated function is called directly without any retry logic. This is
+useful during development or testing when you want fast feedback on failures:
+
+.. testcode::
+
+    import os
+
+    @retry(
+        enabled=os.getenv("ENABLE_RETRIES", "1") != "0",
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(1),
+    )
+    def call_api():
+        pass  # your code here
+
+    call_api()
+
+You can also use ``retry_with`` to disable retries on a per-call basis:
+
+.. testcode::
+
+    @retry(stop=stop_after_attempt(5))
+    def call_api():
+        pass  # your code here
+
+    # In tests:
+    call_api.retry_with(enabled=False)()
+
 Retrying code block
 ~~~~~~~~~~~~~~~~~~~
 
