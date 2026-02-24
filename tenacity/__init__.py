@@ -214,6 +214,17 @@ class AttemptManager:
         self.retry_state.set_result(None)
         return None
 
+    async def __aenter__(self) -> None:
+        pass
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: t.Optional["types.TracebackType"],
+    ) -> bool | None:
+        return self.__exit__(exc_type, exc_value, traceback)
+
 
 class BaseRetrying(ABC):
     def __init__(
