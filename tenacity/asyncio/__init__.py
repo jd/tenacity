@@ -199,12 +199,51 @@ class AsyncRetrying(BaseRetrying):
             async_wrapped.statistics = copy.statistics  # type: ignore[attr-defined]
             return await copy(fn, *args, **kwargs)  # type: ignore[type-var]
 
-        # Preserve attributes
-        async_wrapped.retry = self  # type: ignore[attr-defined]
-        async_wrapped.retry_with = wrapped.retry_with  # type: ignore[attr-defined]
-        async_wrapped.statistics = {}  # type: ignore[attr-defined]
+        @functools.wraps(
+            fn, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__")
+        )
+        async def async_wrapped_gen(
+            *args: t.Any, **kwargs: t.Any
+        ) -> t.AsyncGenerator[t.Any, t.Any]:
+            if not self.enabled:
+                async for item in fn(*args, **kwargs):  # type: ignore[misc]
+                    yield item
+                return
+            copy = self.copy()
+            async_wrapped_gen.statistics = copy.statistics  # type: ignore[attr-defined]
+            copy.begin()
+            retry_state = RetryCallState(
+                retry_object=copy, fn=fn, args=args, kwargs=kwargs
+            )
+            while True:
+                do = await copy.iter(retry_state=retry_state)
+                if isinstance(do, DoAttempt):
+                    try:
+                        async for item in fn(*args, **kwargs):  # type: ignore[misc]
+                            yield item
+                    except GeneratorExit:
+                        raise
+                    except BaseException:
+                        retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]
+                    else:
+                        retry_state.set_result(None)
+                elif isinstance(do, DoSleep):
+                    retry_state.prepare_for_next_attempt()
+                    await self.sleep(do)  # type: ignore[misc]
+                else:
+                    return
 
-        return t.cast("_RetryDecorated[P, R]", async_wrapped)
+        if _utils.is_async_gen_callable(fn):
+            result_f = async_wrapped_gen
+        else:
+            result_f = async_wrapped
+
+        # Preserve attributes
+        result_f.retry = self  # type: ignore[attr-defined]
+        result_f.retry_with = wrapped.retry_with  # type: ignore[attr-defined]
+        result_f.statistics = {}  # type: ignore[attr-defined]
+
+        return t.cast("_RetryDecorated[P, R]", result_f)
 
 
 __all__ = [

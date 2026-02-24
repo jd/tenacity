@@ -531,5 +531,93 @@ class TestSyncFunctionWithAsyncSleep(unittest.TestCase):
         assert mock_sleep.await_count == 2
 
 
+class TestAsyncGeneratorRetry(unittest.TestCase):
+    @asynctest
+    async def test_async_generator_retry_on_exception(self) -> None:
+        attempts = 0
+
+        @retry(
+            stop=stop_after_attempt(3),
+            retry=tenacity.retry_if_exception_type(ValueError),
+            reraise=True,
+        )
+        async def gen_with_errors() -> Any:
+            nonlocal attempts
+            attempts += 1
+            if attempts < 3:
+                raise ValueError("not yet")
+            yield 1
+            yield 2
+            yield 3
+
+        result = [item async for item in gen_with_errors()]
+        assert result == [1, 2, 3]
+        assert attempts == 3
+
+    @asynctest
+    async def test_async_generator_yields_all_values(self) -> None:
+        @retry
+        async def simple_gen() -> Any:
+            yield 10
+            yield 20
+            yield 30
+
+        result = [item async for item in simple_gen()]
+        assert result == [10, 20, 30]
+
+    @asynctest
+    async def test_async_generator_stop_after_attempt(self) -> None:
+        @retry(
+            stop=stop_after_attempt(2),
+            retry=tenacity.retry_if_exception_type(RuntimeError),
+        )
+        async def always_fails() -> Any:
+            raise RuntimeError("always")
+            yield  # make it an async generator
+
+        with pytest.raises(RetryError):
+            async for _ in always_fails():
+                pass
+
+    def test_async_generator_has_retry_attributes(self) -> None:
+        @retry
+        async def my_gen() -> Any:
+            yield 1
+
+        assert hasattr(my_gen, "retry")
+        assert hasattr(my_gen, "statistics")
+        assert hasattr(my_gen, "retry_with")
+
+    @asynctest
+    async def test_async_generator_statistics_updated(self) -> None:
+        attempts = 0
+
+        @retry(
+            stop=stop_after_attempt(3),
+            retry=tenacity.retry_if_exception_type(ValueError),
+            reraise=True,
+        )
+        async def gen_stats() -> Any:
+            nonlocal attempts
+            attempts += 1
+            if attempts < 2:
+                raise ValueError("retry")
+            yield 42
+
+        result = [item async for item in gen_stats()]
+        assert result == [42]
+        assert gen_stats.statistics["attempt_number"] == 2  # type: ignore[attr-defined]
+
+    @asynctest
+    async def test_async_generator_enabled_false(self) -> None:
+        @retry(enabled=False)
+        async def my_gen() -> Any:
+            yield 1
+            yield 2
+
+        result = [item async for item in my_gen()]
+        assert result == [1, 2]
+
+
 if __name__ == "__main__":
     unittest.main()

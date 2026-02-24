@@ -733,6 +733,45 @@ You can use alternative event loops by passing the correct sleep function:
     async def my_async_trio_function_with_sleep():
         ...
 
+Retrying generators
+~~~~~~~~~~~~~~~~~~~
+
+``retry`` works on generator and async generator functions. If the generator
+raises an exception, the retry logic re-calls the generator function from the
+start.
+
+.. code-block:: python
+
+    @retry(retry=retry_if_exception_type(ConnectionError))
+    def stream_data():
+        for item in connect_to_source():
+            yield item
+
+    for item in stream_data():
+        process(item)
+
+.. code-block:: python
+
+    @retry(retry=retry_if_exception_type(ConnectionError))
+    async def async_stream_data():
+        async for item in connect_to_source():
+            yield item
+
+    async for item in async_stream_data():
+        process(item)
+
+.. note::
+
+    On retry, the generator function is called again from the beginning. Any
+    values already yielded during a failed attempt will be yielded again. If
+    you need exactly-once delivery, you should track progress outside the
+    generator.
+
+    Also note that generators passed *as arguments* to a retried function will
+    be exhausted after the first attempt and will not be rewound automatically
+    on retry. If you need to pass a generator as an argument, consider passing a
+    factory function instead.
+
 Contribute
 ----------
 
