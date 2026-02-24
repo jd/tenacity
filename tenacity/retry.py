@@ -29,16 +29,20 @@ class retry_base(abc.ABC):
     def __call__(self, retry_state: "RetryCallState") -> bool:
         pass
 
-    def __and__(self, other: "retry_base") -> "retry_all":
-        return other.__rand__(self)
+    def __and__(self, other: "RetryBaseT") -> "retry_all":
+        if isinstance(other, retry_base):
+            return other.__rand__(self)
+        return retry_all(self, other)
 
-    def __rand__(self, other: "retry_base") -> "retry_all":
+    def __rand__(self, other: "RetryBaseT") -> "retry_all":
         return retry_all(other, self)
 
-    def __or__(self, other: "retry_base") -> "retry_any":
-        return other.__ror__(self)
+    def __or__(self, other: "RetryBaseT") -> "retry_any":
+        if isinstance(other, retry_base):
+            return other.__ror__(self)
+        return retry_any(self, other)
 
-    def __ror__(self, other: "retry_base") -> "retry_any":
+    def __ror__(self, other: "RetryBaseT") -> "retry_any":
         return retry_any(other, self)
 
 
@@ -254,7 +258,7 @@ class retry_if_not_exception_message(retry_if_exception_message):
 class retry_any(retry_base):
     """Retries if any of the retries condition is valid."""
 
-    def __init__(self, *retries: retry_base) -> None:
+    def __init__(self, *retries: "RetryBaseT") -> None:
         self.retries = retries
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
@@ -264,7 +268,7 @@ class retry_any(retry_base):
 class retry_all(retry_base):
     """Retries if all the retries condition are valid."""
 
-    def __init__(self, *retries: retry_base) -> None:
+    def __init__(self, *retries: "RetryBaseT") -> None:
         self.retries = retries
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
