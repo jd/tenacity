@@ -291,6 +291,14 @@ class BaseRetrying(ABC):
             enabled=_first_set(enabled, self.enabled),
         )
 
+    def __getstate__(self) -> dict[str, t.Any]:
+        # Exclude threading.local which cannot be pickled
+        return {k: v for k, v in self.__dict__.items() if k != "_local"}
+
+    def __setstate__(self, state: dict[str, t.Any]) -> None:
+        self.__dict__.update(state)
+        self._local = threading.local()
+
     def __str__(self) -> str:
         return self._name if self._name is not None else "<unknown>"
 

@@ -16,6 +16,7 @@
 import contextlib
 import datetime
 import logging
+import pickle
 import re
 import time
 import typing
@@ -2007,6 +2008,62 @@ class TestMockingSleep:
         with pytest.raises(RetryError):
             fail_faster()
         assert mock_sleep.call_count == 1
+
+
+class TestPickle(unittest.TestCase):
+    def test_retrying_picklable(self) -> None:
+        """Retrying objects can be pickled for multiprocessing support."""
+        retrying = Retrying(stop=tenacity.stop_after_attempt(3))
+        pickled = pickle.dumps(retrying)
+        restored = pickle.loads(pickled)
+        assert isinstance(restored, Retrying)
+        assert isinstance(restored.stop, tenacity.stop_after_attempt)
+
+    def test_retrying_picklable_after_run(self) -> None:
+        """Retrying objects can be pickled even after being used."""
+        retrying = Retrying(stop=tenacity.stop_after_attempt(3))
+        # Access statistics to populate _local
+        _ = retrying.statistics
+        pickled = pickle.dumps(retrying)
+        restored = pickle.loads(pickled)
+        assert isinstance(restored, Retrying)
+        # Statistics should be reset on the restored object
+        assert restored.statistics == {}
+
+    def test_retry_strategies_picklable(self) -> None:
+        """All built-in retry strategies can be pickled."""
+        strategies = [
+            tenacity.retry_if_exception_type(ValueError),
+            tenacity.retry_if_not_exception_type(ValueError),
+            tenacity.retry_if_exception_message(message="fail"),
+            tenacity.retry_if_exception_message(match="fail.*"),
+            tenacity.retry_if_not_exception_message(message="fail"),
+        ]
+        for strategy in strategies:
+            restored = pickle.loads(pickle.dumps(strategy))
+            assert type(restored) is type(strategy)
+
+    def test_retrying_pickle_round_trip_works(self) -> None:
+        """A pickled-then-restored Retrying object retries correctly."""
+        retrying = Retrying(
+            stop=tenacity.stop_after_attempt(3),
+            retry=tenacity.retry_if_exception_type(ValueError),
+            reraise=True,
+        )
+        restored = pickle.loads(pickle.dumps(retrying))
+
+        calls = 0
+
+        def succeed_on_third() -> str:
+            nonlocal calls
+            calls += 1
+            if calls < 3:
+                raise ValueError("not yet")
+            return "ok"
+
+        result = restored(succeed_on_third)
+        assert result == "ok"
+        assert calls == 3
 
 
 if __name__ == "__main__":
