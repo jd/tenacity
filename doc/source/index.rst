@@ -733,6 +733,37 @@ You can use alternative event loops by passing the correct sleep function:
     async def my_async_trio_function_with_sleep():
         ...
 
+Generators
+~~~~~~~~~~
+
+``retry`` does not support generator or async generator functions. Decorating a
+generator with ``@retry`` will not retry on exceptions raised during iteration
+— the decorator wraps the function call itself, which for generators simply
+returns a generator object without executing any of the body.
+
+Also note that generators passed *as arguments* to a retried function will be
+exhausted after the first attempt and will not be rewound automatically on
+retry. If you need to pass a generator as an argument, consider passing a
+factory function instead:
+
+.. code-block:: python
+
+    # Bad: generator will be exhausted after the first attempt
+    @retry
+    def process(items):
+        for item in items:
+            do_work(item)
+
+    process(my_generator())  # retries will see an empty generator
+
+    # Good: pass a factory so a fresh generator is created on each attempt
+    @retry
+    def process(items_factory):
+        for item in items_factory():
+            do_work(item)
+
+    process(my_generator)  # each retry gets a fresh generator
+
 Contribute
 ----------
 
