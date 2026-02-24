@@ -99,6 +99,26 @@ def is_coroutine_callable(call: typing.Callable[..., typing.Any]) -> bool:
     return inspect.iscoroutinefunction(dunder_call)
 
 
+def is_generator_callable(call: typing.Callable[..., typing.Any]) -> bool:
+    if inspect.isclass(call):
+        return False
+    if inspect.isgeneratorfunction(call):
+        return True
+    partial_call = isinstance(call, functools.partial) and call.func
+    dunder_call = partial_call or getattr(call, "__call__", None)  # noqa: B004
+    return inspect.isgeneratorfunction(dunder_call)
+
+
+def is_async_gen_callable(call: typing.Callable[..., typing.Any]) -> bool:
+    if inspect.isclass(call):
+        return False
+    if inspect.isasyncgenfunction(call):
+        return True
+    partial_call = isinstance(call, functools.partial) and call.func
+    dunder_call = partial_call or getattr(call, "__call__", None)  # noqa: B004
+    return inspect.isasyncgenfunction(dunder_call)
+
+
 def wrap_to_async_func(
     call: typing.Callable[..., typing.Any],
 ) -> typing.Callable[..., typing.Awaitable[typing.Any]]:

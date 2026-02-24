@@ -356,15 +356,47 @@ class BaseRetrying(ABC):
             wrapped_f.statistics = copy.statistics  # type: ignore[attr-defined]
             return copy(f, *args, **kw)
 
+        @functools.wraps(
+            f, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__")
+        )
+        def wrapped_gen_f(
+            *args: t.Any, **kw: t.Any
+        ) -> t.Generator[t.Any, t.Any, t.Any]:
+            if not self.enabled:
+                yield from f(*args, **kw)
+                return
+            copy = self.copy()
+            wrapped_gen_f.statistics = copy.statistics  # type: ignore[attr-defined]
+            copy.begin()
+            retry_state = RetryCallState(retry_object=copy, fn=f, args=args, kwargs=kw)
+            while True:
+                do = copy.iter(retry_state=retry_state)
+                if isinstance(do, DoAttempt):
+                    try:
+                        result = yield from f(*args, **kw)
+                    except GeneratorExit:
+                        raise
+                    except BaseException:
+                        retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]
+                    else:
+                        retry_state.set_result(result)
+                elif isinstance(do, DoSleep):
+                    retry_state.prepare_for_next_attempt()
+                    copy.sleep(do)
+                else:
+                    return do
+
+        result_f = wrapped_gen_f if _utils.is_generator_callable(f) else wrapped_f
+
         def retry_with(*args: t.Any, **kwargs: t.Any) -> "_RetryDecorated[P, R]":
             return self.copy(*args, **kwargs).wraps(f)
 
         # Preserve attributes
-        wrapped_f.retry = self  # type: ignore[attr-defined]
-        wrapped_f.retry_with = retry_with  # type: ignore[attr-defined]
-        wrapped_f.statistics = {}  # type: ignore[attr-defined]
+        result_f.retry = self  # type: ignore[attr-defined]
+        result_f.retry_with = retry_with  # type: ignore[attr-defined]
+        result_f.statistics = {}  # type: ignore[attr-defined]
 
-        return t.cast("_RetryDecorated[P, R]", wrapped_f)
+        return t.cast("_RetryDecorated[P, R]", result_f)
 
     def begin(self) -> None:
         self.statistics.clear()
@@ -714,8 +746,10 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
             )
         r: BaseRetrying
         sleep = dkw.get("sleep")
-        if _utils.is_coroutine_callable(f) or (
-            sleep is not None and _utils.is_coroutine_callable(sleep)
+        if (
+            _utils.is_coroutine_callable(f)
+            or _utils.is_async_gen_callable(f)
+            or (sleep is not None and _utils.is_coroutine_callable(sleep))
         ):
             r = AsyncRetrying(*dargs, **dkw)
         elif (

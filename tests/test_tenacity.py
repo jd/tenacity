@@ -2009,5 +2009,108 @@ class TestMockingSleep:
         assert mock_sleep.call_count == 1
 
 
+class TestGeneratorRetry:
+    def test_generator_retry_on_exception(self) -> None:
+        attempts = 0
+
+        @retry(
+            stop=tenacity.stop_after_attempt(3),
+            retry=tenacity.retry_if_exception_type(ValueError),
+            reraise=True,
+        )
+        def gen_with_errors() -> typing.Generator[int, None, None]:
+            nonlocal attempts
+            attempts += 1
+            if attempts < 3:
+                raise ValueError("not yet")
+            yield 1
+            yield 2
+            yield 3
+
+        result = list(gen_with_errors())
+        assert result == [1, 2, 3]
+        assert attempts == 3
+
+    def test_generator_yields_all_values(self) -> None:
+        @retry
+        def simple_gen() -> typing.Generator[int, None, None]:
+            yield 10
+            yield 20
+            yield 30
+
+        result = list(simple_gen())
+        assert result == [10, 20, 30]
+
+    def test_generator_stop_after_attempt(self) -> None:
+        @retry(
+            stop=tenacity.stop_after_attempt(2),
+            retry=tenacity.retry_if_exception_type(RuntimeError),
+        )
+        def always_fails() -> typing.Generator[int, None, None]:
+            raise RuntimeError("always")
+            yield  # make it a generator
+
+        with pytest.raises(RetryError):
+            list(always_fails())
+
+    def test_generator_has_retry_attributes(self) -> None:
+        @retry
+        def my_gen() -> typing.Generator[int, None, None]:
+            yield 1
+
+        assert hasattr(my_gen, "retry")
+        assert hasattr(my_gen, "statistics")
+        assert hasattr(my_gen, "retry_with")
+
+    def test_generator_statistics_updated(self) -> None:
+        attempts = 0
+
+        @retry(
+            stop=tenacity.stop_after_attempt(3),
+            retry=tenacity.retry_if_exception_type(ValueError),
+            reraise=True,
+        )
+        def gen_stats() -> typing.Generator[int, None, None]:
+            nonlocal attempts
+            attempts += 1
+            if attempts < 2:
+                raise ValueError("retry")
+            yield 42
+
+        result = list(gen_stats())
+        assert result == [42]
+        assert gen_stats.statistics["attempt_number"] == 2  # type: ignore[attr-defined]
+
+    def test_generator_enabled_false(self) -> None:
+        @retry(enabled=False)
+        def my_gen() -> typing.Generator[int, None, None]:
+            yield 1
+            yield 2
+
+        result = list(my_gen())
+        assert result == [1, 2]
+
+    def test_generator_retry_with(self) -> None:
+        attempts = 0
+
+        @retry(
+            stop=tenacity.stop_after_attempt(5),
+            retry=tenacity.retry_if_exception_type(ValueError),
+        )
+        def gen_retry_with() -> typing.Generator[int, None, None]:
+            nonlocal attempts
+            attempts += 1
+            if attempts < 2:
+                raise ValueError("retry")
+            yield 1
+
+        faster = gen_retry_with.retry_with(  # type: ignore[attr-defined]
+            stop=tenacity.stop_after_attempt(1),
+        )
+        attempts = 0
+        with pytest.raises(RetryError):
+            list(faster())
+
+
 if __name__ == "__main__":
     unittest.main()
