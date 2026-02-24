@@ -1405,6 +1405,64 @@ class TestStatisticsKeys:
         assert succeeds_first_try.statistics["delay_since_first_attempt"] == 0
 
 
+class TestEnabled:
+    def test_enabled_false_skips_retry(self) -> None:
+        """When enabled=False, the function is called directly without retrying."""
+        call_count = 0
+
+        @retry(enabled=False, stop=tenacity.stop_after_attempt(3))
+        def always_fails() -> None:
+            nonlocal call_count
+            call_count += 1
+            raise ValueError("fail")
+
+        with pytest.raises(ValueError, match="fail"):
+            always_fails()
+        assert call_count == 1
+
+    def test_enabled_false_preserves_attributes(self) -> None:
+        """When enabled=False, .retry, .retry_with, .statistics are still available."""
+
+        @retry(enabled=False, stop=tenacity.stop_after_attempt(3))
+        def my_func() -> str:
+            return "ok"
+
+        assert hasattr(my_func, "retry")
+        assert hasattr(my_func, "retry_with")
+        assert hasattr(my_func, "statistics")
+        assert my_func() == "ok"
+
+    def test_enabled_false_via_retry_with(self) -> None:
+        """retry_with(enabled=False) disables retrying."""
+        call_count = 0
+
+        @retry(stop=tenacity.stop_after_attempt(3))
+        def always_fails() -> None:
+            nonlocal call_count
+            call_count += 1
+            raise ValueError("fail")
+
+        disabled = always_fails.retry_with(enabled=False)
+        with pytest.raises(ValueError, match="fail"):
+            disabled()
+        assert call_count == 1
+
+    def test_enabled_true_retries_normally(self) -> None:
+        """When enabled=True (default), retrying works as usual."""
+        call_count = 0
+
+        @retry(enabled=True, stop=tenacity.stop_after_attempt(3), reraise=True)
+        def fails_twice() -> bool:
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise ValueError("fail")
+            return True
+
+        assert fails_twice() is True
+        assert call_count == 3
+
+
 class TestRetryWith:
     def test_redefine_wait(self) -> None:
         start = current_time_ms()
