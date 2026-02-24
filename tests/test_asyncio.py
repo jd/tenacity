@@ -160,6 +160,23 @@ class TestAsyncio(unittest.TestCase):
         assert list(attempt_nos2) == [1, 2, 3]
 
 
+class TestAsyncEnabled(unittest.TestCase):
+    @asynctest
+    async def test_enabled_false_skips_retry(self) -> None:
+        """When enabled=False, async function is called directly without retrying."""
+        call_count = 0
+
+        @retry(enabled=False, stop=stop_after_attempt(3))
+        async def always_fails() -> None:
+            nonlocal call_count
+            call_count += 1
+            raise ValueError("fail")
+
+        with pytest.raises(ValueError, match="fail"):
+            await always_fails()
+        assert call_count == 1
+
+
 @unittest.skipIf(not have_trio, "trio not installed")
 class TestTrio(unittest.TestCase):
     def test_trio_basic(self) -> None:

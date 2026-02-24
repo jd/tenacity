@@ -91,6 +91,7 @@ class AsyncRetrying(BaseRetrying):
         retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
         | None = None,
         name: str | None = None,
+        enabled: bool = True,
     ) -> None:
         super().__init__(
             sleep=sleep,  # type: ignore[arg-type]
@@ -104,6 +105,7 @@ class AsyncRetrying(BaseRetrying):
             retry_error_cls=retry_error_cls,
             retry_error_callback=retry_error_callback,
             name=name,
+            enabled=enabled,
         )
 
     async def __call__(  # type: ignore[override]
@@ -189,6 +191,8 @@ class AsyncRetrying(BaseRetrying):
             fn, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__")
         )
         async def async_wrapped(*args: t.Any, **kwargs: t.Any) -> t.Any:
+            if not self.enabled:
+                return await fn(*args, **kwargs)  # type: ignore[misc]
             # Always create a copy to prevent overwriting the local contexts when
             # calling the same wrapped functions multiple times in the same stack
             copy = self.copy()

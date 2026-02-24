@@ -229,6 +229,7 @@ class BaseRetrying(ABC):
         retry_error_cls: type[RetryError] = RetryError,
         retry_error_callback: t.Callable[["RetryCallState"], t.Any] | None = None,
         name: str | None = None,
+        enabled: bool = True,
     ):
         self.sleep = sleep
         self.stop = stop
@@ -242,6 +243,7 @@ class BaseRetrying(ABC):
         self.retry_error_cls = retry_error_cls
         self.retry_error_callback = retry_error_callback
         self._name = name
+        self.enabled = enabled
 
     def copy(
         self,
@@ -258,6 +260,7 @@ class BaseRetrying(ABC):
         | None
         | object = _unset,
         name: str | None | object = _unset,
+        enabled: bool | object = _unset,
     ) -> "Self":
         """Copy this object with some parameters changed if needed."""
         return self.__class__(
@@ -274,6 +277,7 @@ class BaseRetrying(ABC):
                 retry_error_callback, self.retry_error_callback
             ),
             name=_first_set(name, self._name),
+            enabled=_first_set(enabled, self.enabled),
         )
 
     def __str__(self) -> str:
@@ -333,6 +337,8 @@ class BaseRetrying(ABC):
             f, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__")
         )
         def wrapped_f(*args: t.Any, **kw: t.Any) -> t.Any:
+            if not self.enabled:
+                return f(*args, **kw)
             # Always create a copy to prevent overwriting the local contexts when
             # calling the same wrapped functions multiple times in the same stack
             copy = self.copy()
@@ -656,6 +662,7 @@ def retry(
     retry_error_cls: type["RetryError"] = ...,
     retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
     | None = ...,
+    enabled: bool = ...,
 ) -> _AsyncRetryDecorator: ...
 
 
@@ -673,6 +680,7 @@ def retry(
     retry_error_cls: type["RetryError"] = RetryError,
     retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
     | None = None,
+    enabled: bool = True,
 ) -> t.Callable[[t.Callable[P, R]], _RetryDecorated[P, R]]: ...
 
 
