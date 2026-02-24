@@ -1354,6 +1354,23 @@ class TestDecoratorWrapper(unittest.TestCase):
                 self.fail("RetryError should have been raised after 1 attempt")
 
 
+class TestStatisticsKeys:
+    def test_delay_since_first_attempt_available_on_first_attempt(self) -> None:
+        """delay_since_first_attempt should be in statistics from the start."""
+
+        @retry(
+            stop=tenacity.stop_after_attempt(3),
+            retry=tenacity.retry_if_result(lambda x: x is None),
+        )
+        def succeeds_first_try() -> bool:
+            assert "delay_since_first_attempt" in succeeds_first_try.statistics
+            assert succeeds_first_try.statistics["delay_since_first_attempt"] == 0
+            return True
+
+        succeeds_first_try()
+        assert succeeds_first_try.statistics["delay_since_first_attempt"] == 0
+
+
 class TestRetryWith:
     def test_redefine_wait(self) -> None:
         start = current_time_ms()
