@@ -743,6 +743,40 @@ class TestRetryConditions(unittest.TestCase):
         self.assertFalse(r(tenacity.Future.construct(1, 2.2, False)))
         self.assertFalse(r(tenacity.Future.construct(1, 42, True)))
 
+    def test_retry_or_with_plain_function(self) -> None:
+        """Plain callables can be composed with retry_base via |."""
+
+        def my_retry(retry_state: tenacity.RetryCallState) -> bool:
+            return retry_state.outcome is not None and not retry_state.outcome.failed
+
+        # retry_base | plain_callable (exercises __or__ fallback)
+        retry = tenacity.retry_if_exception_type(Exception) | my_retry
+        retry_state = make_retry_state(
+            1, 1.0, last_result=tenacity.Future.construct(1, "ok", False)
+        )
+        self.assertTrue(retry(retry_state))
+
+        # plain_callable | retry_base (exercises __ror__ via reflection)
+        retry2 = my_retry | tenacity.retry_if_exception_type(Exception)
+        self.assertTrue(retry2(retry_state))
+
+    def test_retry_and_with_plain_function(self) -> None:
+        """Plain callables can be composed with retry_base via &."""
+
+        def my_retry(retry_state: tenacity.RetryCallState) -> bool:
+            return True
+
+        # retry_base & plain_callable (exercises __and__ fallback)
+        retry = tenacity.retry_if_result(lambda x: x == 1) & my_retry
+        retry_state = make_retry_state(
+            1, 1.0, last_result=tenacity.Future.construct(1, 1, False)
+        )
+        self.assertTrue(retry(retry_state))
+
+        # plain_callable & retry_base (exercises __rand__ via reflection)
+        retry2 = my_retry & tenacity.retry_if_result(lambda x: x == 1)
+        self.assertTrue(retry2(retry_state))
+
     def _raise_try_again(self) -> None:
         self._attempts += 1
         if self._attempts < 3:
