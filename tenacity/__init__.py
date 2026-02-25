@@ -362,6 +362,7 @@ class BaseRetrying(ABC):
             # calling the same wrapped functions multiple times in the same stack
             copy = self.copy()
             wrapped_f.statistics = copy.statistics  # type: ignore[attr-defined]
+            self._local.statistics = copy.statistics
             return copy(f, *args, **kw)
 
         def retry_with(*args: t.Any, **kwargs: t.Any) -> "_RetryDecorated[P, R]":

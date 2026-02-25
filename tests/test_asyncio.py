@@ -448,7 +448,7 @@ class TestDecoratorWrapper(unittest.TestCase):
 
         - statistics contains the value for the latest function run
         - retry object can be modified to change its behaviour (useful to patch in tests)
-        - retry object statistics do not contain valid information
+        - retry object statistics are synced with function statistics
         """
 
         self.assertTrue(
@@ -467,7 +467,7 @@ class TestDecoratorWrapper(unittest.TestCase):
         )
         self.assertEqual(
             _retryable_coroutine_with_2_attempts.retry.statistics,
-            {},
+            expected_stats,
         )
 
         with mock.patch.object(
@@ -493,7 +493,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 self.assertEqual(exc.last_attempt.attempt_number, 1)
                 self.assertEqual(
                     _retryable_coroutine_with_2_attempts.retry.statistics,
-                    {},
+                    expected_stats,
                 )
             else:
                 self.fail("RetryError should have been raised after 1 attempt")

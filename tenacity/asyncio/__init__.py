@@ -197,6 +197,7 @@ class AsyncRetrying(BaseRetrying):
             # calling the same wrapped functions multiple times in the same stack
             copy = self.copy()
             async_wrapped.statistics = copy.statistics  # type: ignore[attr-defined]
+            self._local.statistics = copy.statistics
             return await copy(fn, *args, **kwargs)  # type: ignore[type-var]
 
         # Preserve attributes
