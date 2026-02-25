@@ -108,7 +108,10 @@ class retry_if_exception_type(retry_if_exception):
         | tuple[type[BaseException], ...] = Exception,
     ) -> None:
         self.exception_types = exception_types
-        super().__init__(lambda e: isinstance(e, exception_types))
+        super().__init__(self._check)
+
+    def _check(self, e: BaseException) -> bool:
+        return isinstance(e, self.exception_types)
 
 
 class retry_if_not_exception_type(retry_if_exception):
@@ -120,7 +123,10 @@ class retry_if_not_exception_type(retry_if_exception):
         | tuple[type[BaseException], ...] = Exception,
     ) -> None:
         self.exception_types = exception_types
-        super().__init__(lambda e: not isinstance(e, exception_types))
+        super().__init__(self._check)
+
+    def _check(self, e: BaseException) -> bool:
+        return not isinstance(e, self.exception_types)
 
 
 class retry_unless_exception_type(retry_if_exception):
@@ -132,7 +138,10 @@ class retry_unless_exception_type(retry_if_exception):
         | tuple[type[BaseException], ...] = Exception,
     ) -> None:
         self.exception_types = exception_types
-        super().__init__(lambda e: not isinstance(e, exception_types))
+        super().__init__(self._check)
+
+    def _check(self, e: BaseException) -> bool:
+        return not isinstance(e, self.exception_types)
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.outcome is None:
@@ -219,40 +228,27 @@ class retry_if_exception_message(retry_if_exception):
                 f"{self.__class__.__name__}() takes either 'message' or 'match', not both"
             )
 
-        # set predicate
-        if message:
-
-            def message_fnc(exception: BaseException) -> bool:
-                return message == str(exception)
-
-            predicate = message_fnc
-        elif match:
-            prog = re.compile(match)
-
-            def match_fnc(exception: BaseException) -> bool:
-                return bool(prog.match(str(exception)))
-
-            predicate = match_fnc
-        else:
+        if not message and not match:
             raise TypeError(
                 f"{self.__class__.__name__}() missing 1 required argument 'message' or 'match'"
             )
 
-        super().__init__(predicate)
+        self.message = message
+        self.match = re.compile(match) if match else None
+        super().__init__(self._check)
+
+    def _check(self, exception: BaseException) -> bool:
+        if self.message:
+            return self.message == str(exception)
+        assert self.match is not None
+        return bool(self.match.match(str(exception)))
 
 
 class retry_if_not_exception_message(retry_if_exception_message):
     """Retries until an exception message equals or matches."""
 
-    def __init__(
-        self,
-        message: str | None = None,
-        match: None | str | re.Pattern[str] = None,
-    ) -> None:
-        super().__init__(message, match)
-        # invert predicate
-        if_predicate = self.predicate
-        self.predicate = lambda *args_, **kwargs_: not if_predicate(*args_, **kwargs_)
+    def _check(self, exception: BaseException) -> bool:
+        return not super()._check(exception)
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.outcome is None:
