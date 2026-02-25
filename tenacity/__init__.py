@@ -609,7 +609,7 @@ class RetryCallState:
     def set_exception(
         self,
         exc_info: tuple[
-            type[BaseException], BaseException, "types.TracebackType| None"
+            type[BaseException], BaseException, "types.TracebackType | None"
         ],
     ) -> None:
         ts = time.monotonic()
