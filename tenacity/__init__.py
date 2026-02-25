@@ -205,7 +205,7 @@ class AttemptManager:
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        traceback: t.Optional["types.TracebackType"],
+        traceback: "types.TracebackType | None",
     ) -> bool | None:
         if exc_type is not None and exc_value is not None:
             self.retry_state.set_exception((exc_type, exc_value, traceback))
@@ -221,7 +221,7 @@ class AttemptManager:
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        traceback: t.Optional["types.TracebackType"],
+        traceback: "types.TracebackType | None",
     ) -> bool | None:
         return self.__exit__(exc_type, exc_value, traceback)
 
@@ -259,8 +259,8 @@ class BaseRetrying(ABC):
     def copy(
         self,
         sleep: t.Callable[[int | float], None] | object = _unset,
-        stop: t.Union["StopBaseT", object] = _unset,
-        wait: t.Union["WaitBaseT", object] = _unset,
+        stop: "StopBaseT | object" = _unset,
+        wait: "WaitBaseT | object" = _unset,
         retry: retry_base | object = _unset,
         before: t.Callable[["RetryCallState"], None] | object = _unset,
         after: t.Callable[["RetryCallState"], None] | object = _unset,
