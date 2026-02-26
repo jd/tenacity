@@ -63,7 +63,7 @@ def _portable_async_sleep(seconds: float) -> t.Awaitable[None]:
         import trio
 
         if sniffio.current_async_library() == "trio":
-            return trio.sleep(seconds)
+            return trio.sleep(seconds)  # noqa: ASYNC105
     # Otherwise, assume asyncio
     # Lazy import asyncio as it's expensive (responsible for 25-50% of total import overhead).
     import asyncio

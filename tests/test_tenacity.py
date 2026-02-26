@@ -911,7 +911,7 @@ class NoNameErrorCauseAfterCount:
             try:
                 self.go2()
             except NameError as e:
-                raise OSError() from e
+                raise OSError from e
 
         return True
 
@@ -936,7 +936,7 @@ class NoIOErrorCauseAfterCount:
             try:
                 self.go2()
             except OSError as e:
-                raise NameError() from e
+                raise NameError from e
 
         return True
 
@@ -1994,7 +1994,7 @@ class TestMockingSleep:
     }
 
     def _fail(self) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @retry(**RETRY_ARGS)  # type: ignore[call-overload, untyped-decorator]
     def _decorated_fail(self) -> None:
