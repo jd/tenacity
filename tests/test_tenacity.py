@@ -21,9 +21,6 @@ import re
 import time
 import typing
 import unittest
-import warnings
-from contextlib import contextmanager
-from copy import copy
 from fractions import Fraction
 from unittest import mock
 
@@ -1988,18 +1985,6 @@ class TestRetryTyping(unittest.TestCase):
         check_type(with_raw_result, str)
         check_type(with_constructor, typing.Callable[[int], str])
         check_type(with_constructor_result, str)
-
-
-@contextmanager
-def reports_deprecation_warning() -> typing.Generator[None, None, None]:
-    __tracebackhide__ = True
-    oldfilters = copy(warnings.filters)
-    warnings.simplefilter("always")
-    try:
-        with pytest.warns(DeprecationWarning):
-            yield
-    finally:
-        warnings.filters = oldfilters
 
 
 class TestMockingSleep:
