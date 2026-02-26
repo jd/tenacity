@@ -232,7 +232,7 @@ class TestContextManager(unittest.TestCase):
                 stop=stop_after_attempt(1), reraise=True
             ):
                 with attempt:
-                    raise CustomError()
+                    raise CustomError
         except CustomError:
             pass
         else:
@@ -246,7 +246,7 @@ class TestContextManager(unittest.TestCase):
                 stop=stop_after_attempt(1), wait=wait_fixed(1)
             ):
                 with attempt:
-                    raise Exception()
+                    raise Exception
         except RetryError:
             pass
         t = current_time_ms() - start
@@ -312,7 +312,7 @@ class TestContextManager(unittest.TestCase):
                 with attempt:
                     attempts += 1
                     if attempts < 3:
-                        raise CustomException()
+                        raise CustomException
 
                 assert attempt.retry_state.outcome  # help mypy
                 if not attempt.retry_state.outcome.failed:
@@ -343,7 +343,7 @@ class TestContextManager(unittest.TestCase):
                 with attempt:
                     attempts += 1
                     if 2 < attempts < 4:
-                        raise CustomException()
+                        raise CustomException
 
                 assert attempt.retry_state.outcome  # help mypy
                 if not attempt.retry_state.outcome.failed:
@@ -374,7 +374,7 @@ class TestContextManager(unittest.TestCase):
                 with attempt:
                     attempts += 1
                     if 2 < attempts < 4:
-                        raise CustomException()
+                        raise CustomException
 
                 assert attempt.retry_state.outcome  # help mypy
                 if not attempt.retry_state.outcome.failed:

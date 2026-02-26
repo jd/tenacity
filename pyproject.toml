@@ -103,7 +103,7 @@ target-version = "py310"
 exclude = ["tenacity/_version.py"]
 
 [tool.ruff.lint]
-select = ["B", "C4", "E", "F", "FURB", "I", "PERF", "PGH", "PIE", "PYI", "RET", "RUF", "SIM", "TC", "UP", "W"]
+select = ["ASYNC", "B", "C4", "DTZ", "E", "EXE", "F", "FLY", "FURB", "I", "ICN", "ISC", "LOG", "PERF", "PGH", "PIE", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "SLOT", "T10", "TC", "UP", "W"]
 ignore = [
     "B008",  # function calls in default arguments (intentional API design)
     "B905",  # zip() without strict= (not needed in existing code)
