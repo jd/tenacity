@@ -103,11 +103,12 @@ target-version = "py310"
 exclude = ["tenacity/_version.py"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP", "B", "C4", "FURB", "PERF", "PIE", "RET", "RUF", "SIM", "TCH"]
+select = ["B", "C4", "E", "F", "FURB", "I", "PERF", "PGH", "PIE", "PYI", "RET", "RUF", "SIM", "TC", "UP", "W"]
 ignore = [
     "B008",  # function calls in default arguments (intentional API design)
     "B905",  # zip() without strict= (not needed in existing code)
     "E501",  # line too long (formatter handles what it can)
+    "PYI036",  # false positive on string-quoted __exit__ annotations
     "RUF003",  # ambiguous unicode characters in comments (copyright names)
     "RUF005",  # iterable unpacking vs concatenation (less readable for tuple +)
     "RUF012",  # mutable class default (test constant, never mutated)

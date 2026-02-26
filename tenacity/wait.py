@@ -187,9 +187,9 @@ class wait_exponential(wait_base):
 
     def __init__(
         self,
-        multiplier: int | float = 1,
+        multiplier: float = 1,
         max: _utils.time_unit_type = _utils.MAX_WAIT,
-        exp_base: int | float = 2,
+        exp_base: float = 2,
         min: _utils.time_unit_type = 0,
     ) -> None:
         self.multiplier = multiplier
