@@ -17,7 +17,7 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
 
       - name: Build
         run: uv build
