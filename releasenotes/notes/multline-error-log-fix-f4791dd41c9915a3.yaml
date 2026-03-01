@@ -1,0 +1,5 @@
+fixes:
+  - |
+    Strip the ``str`` representation of the exception to avoid multiline
+    log output from ``before_sleep()`` when some exceptions include ``\n``
+    characters at the end of their string representation.
