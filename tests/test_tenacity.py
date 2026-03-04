@@ -617,6 +617,55 @@ class TestWaitConditions(unittest.TestCase):
         fn = tenacity.wait_exponential_jitter()
         fn(make_retry_state(0, 0))
 
+    def test_wait_fibonacci(self) -> None:
+        # wait_fibonacci is purely stateful: it ignores retry_state and
+        # advances its internal Fibonacci sequence on each call.
+        fn = tenacity.wait_fibonacci()
+        expected = [1, 2, 3, 5, 8, 13, 21, 34]
+        for i, exp in enumerate(expected, 1):
+            self.assertEqual(fn(make_retry_state(i, 0)), exp)
+
+    def test_wait_fibonacci_with_max_wait(self) -> None:
+        for max_ in (10, datetime.timedelta(seconds=10)):
+            with self.subTest():
+                fn = tenacity.wait_fibonacci(max=max_)
+                # 1, 2, 3, 5, 8, 10, 10, 10
+                self.assertEqual(fn(make_retry_state(1, 0)), 1)
+                self.assertEqual(fn(make_retry_state(2, 0)), 2)
+                self.assertEqual(fn(make_retry_state(3, 0)), 3)
+                self.assertEqual(fn(make_retry_state(4, 0)), 5)
+                self.assertEqual(fn(make_retry_state(5, 0)), 8)
+                self.assertEqual(fn(make_retry_state(6, 0)), 10)
+                self.assertEqual(fn(make_retry_state(7, 0)), 10)
+                self.assertEqual(fn(make_retry_state(8, 0)), 10)
+
+    def test_wait_fibonacci_multiple_invocations(self) -> None:
+        sleep_intervals: list[float] = []
+        r = Retrying(
+            sleep=sleep_intervals.append,
+            wait=tenacity.wait_fibonacci(max=60),
+            stop=tenacity.stop_after_attempt(6),
+            retry=tenacity.retry_if_result(lambda x: x == 1),
+        )
+
+        @r.wraps
+        def always_return_1() -> int:
+            return 1
+
+        self.assertRaises(tenacity.RetryError, always_return_1)
+        self.assertEqual(sleep_intervals, [1, 2, 3, 5, 8])
+        sleep_intervals[:] = []
+
+        # Second invocation: wait_fibonacci is stateful, sequence continues.
+        # The first run consumed 6 Fibonacci values (5 sleeps + 1 extra wait
+        # call on the final attempt), so the second run picks up at position 7.
+        self.assertRaises(tenacity.RetryError, always_return_1)
+        self.assertEqual(sleep_intervals, [21, 34, 55, 60, 60])
+
+    def test_wait_fibonacci_default_args(self) -> None:
+        fn = tenacity.wait_fibonacci()
+        fn(make_retry_state(0, 0))
+
     def test_wait_retry_state_attributes(self) -> None:
         class ExtractCallState(Exception):
             pass
