@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add ``wait_fibonacci`` strategy that applies Fibonacci backoff.
+    This is a stateful wait strategy where wait times follow the Fibonacci
+    sequence (1, 2, 3, 5, 8, 13, ...) up to an optional maximum.
