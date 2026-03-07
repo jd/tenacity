@@ -30,7 +30,6 @@ from typeguard import check_type
 import tenacity
 from tenacity import RetryCallState, RetryError, Retrying, retry, stop_after_attempt
 from tenacity.retry import retry_all, retry_any, retry_unless_exception_cause_type
-
 _unset = object()
 
 
@@ -2083,8 +2082,7 @@ class TestPickle(unittest.TestCase):
         assert result == "ok"
         assert calls == 3
 
-
-def test_retry_unless_exception_cause_type_logic():
+def test_retry_unless_exception_cause_type_logic() -> None:
     class StopError(Exception):
         pass
 
@@ -2093,19 +2091,15 @@ def test_retry_unless_exception_cause_type_logic():
 
     stop_attempts = []
 
-    @retry(
-        retry=retry_unless_exception_cause_type(StopError), stop=stop_after_attempt(3)
-    )
-    def fail_with_stop():
+    @retry(retry=retry_unless_exception_cause_type(StopError), stop=stop_after_attempt(3))
+    def fail_with_stop() -> None:
         stop_attempts.append(1)
         raise RuntimeError from StopError()
 
     continue_attempts = []
 
-    @retry(
-        retry=retry_unless_exception_cause_type(StopError), stop=stop_after_attempt(3)
-    )
-    def fail_with_continue():
+    @retry(retry=retry_unless_exception_cause_type(StopError), stop=stop_after_attempt(3))
+    def fail_with_continue() -> None:
         continue_attempts.append(1)
         raise RuntimeError from ContinueError()
 
@@ -2119,6 +2113,6 @@ def test_retry_unless_exception_cause_type_logic():
         fail_with_continue()
     assert len(continue_attempts) == 3
 
-
+    
 if __name__ == "__main__":
     unittest.main()
