@@ -30,6 +30,7 @@ from typeguard import check_type
 import tenacity
 from tenacity import RetryCallState, RetryError, Retrying, retry, stop_after_attempt
 from tenacity.retry import retry_all, retry_any, retry_unless_exception_cause_type
+
 _unset = object()
 
 
@@ -2113,6 +2114,6 @@ def test_retry_unless_exception_cause_type_logic() -> None:
         fail_with_continue()
     assert len(continue_attempts) == 3
 
-    
+
 if __name__ == "__main__":
     unittest.main()
