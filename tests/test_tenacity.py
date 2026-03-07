@@ -2083,6 +2083,7 @@ class TestPickle(unittest.TestCase):
         assert result == "ok"
         assert calls == 3
 
+
 def test_retry_unless_exception_cause_type_logic() -> None:
     class StopError(Exception):
         pass
@@ -2092,14 +2093,18 @@ def test_retry_unless_exception_cause_type_logic() -> None:
 
     stop_attempts = []
 
-    @retry(retry=retry_unless_exception_cause_type(StopError), stop=stop_after_attempt(3))
+    @retry(
+        retry=retry_unless_exception_cause_type(StopError), stop=stop_after_attempt(3)
+    )
     def fail_with_stop() -> None:
         stop_attempts.append(1)
         raise RuntimeError from StopError()
 
     continue_attempts = []
 
-    @retry(retry=retry_unless_exception_cause_type(StopError), stop=stop_after_attempt(3))
+    @retry(
+        retry=retry_unless_exception_cause_type(StopError), stop=stop_after_attempt(3)
+    )
     def fail_with_continue() -> None:
         continue_attempts.append(1)
         raise RuntimeError from ContinueError()
