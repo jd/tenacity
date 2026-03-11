@@ -609,13 +609,54 @@ class TestWaitConditions(unittest.TestCase):
             self.assertEqual(fn(make_retry_state(8, 0)), 60)
             self.assertEqual(fn(make_retry_state(9, 0)), 60)
 
-        fn = tenacity.wait_exponential_jitter(10, 5)
+        with self.assertWarns(DeprecationWarning):
+            fn = tenacity.wait_exponential_jitter(10, 5)
         for _ in range(1000):
             self.assertEqual(fn(make_retry_state(1, 0)), 5)
 
         # Default arguments exist
         fn = tenacity.wait_exponential_jitter()
         fn(make_retry_state(0, 0))
+
+    def test_wait_exponential_jitter_min(self) -> None:
+        fn = tenacity.wait_exponential_jitter(initial=1, max=60, jitter=1, min=5)
+        for _ in range(1000):
+            # Even for attempt 1 (base wait=1 + jitter 0..1 = 1..2), min=5 applies
+            self._assert_inclusive_range(fn(make_retry_state(1, 0)), 5, 5)
+            self._assert_inclusive_range(fn(make_retry_state(2, 0)), 5, 5)
+            self._assert_inclusive_range(fn(make_retry_state(3, 0)), 5, 5)
+            # For attempt 4, base wait=8 + jitter 0..1 = 8..9, above min
+            self._assert_inclusive_range(fn(make_retry_state(4, 0)), 8, 9)
+
+    def test_wait_exponential_jitter_timedelta(self) -> None:
+        from datetime import timedelta
+
+        fn = tenacity.wait_exponential_jitter(
+            max=timedelta(seconds=60),
+            jitter=timedelta(seconds=1),
+            min=timedelta(seconds=5),
+        )
+        for _ in range(1000):
+            self._assert_inclusive_range(fn(make_retry_state(1, 0)), 5, 5)
+            self._assert_inclusive_range(fn(make_retry_state(5, 0)), 16, 17)
+            self.assertEqual(fn(make_retry_state(7, 0)), 60)
+
+    def test_wait_exponential_jitter_multiplier(self) -> None:
+        fn = tenacity.wait_exponential_jitter(multiplier=10, max=60, jitter=0)
+        self.assertEqual(fn(make_retry_state(1, 0)), 10)
+        self.assertEqual(fn(make_retry_state(2, 0)), 20)
+        self.assertEqual(fn(make_retry_state(3, 0)), 40)
+        self.assertEqual(fn(make_retry_state(4, 0)), 60)
+
+    def test_wait_exponential_jitter_initial_deprecated(self) -> None:
+        with self.assertWarns(DeprecationWarning):
+            fn = tenacity.wait_exponential_jitter(initial=10, max=60, jitter=0)
+        self.assertEqual(fn(make_retry_state(1, 0)), 10)
+        self.assertEqual(fn(make_retry_state(2, 0)), 20)
+
+    def test_wait_exponential_jitter_initial_and_multiplier_raises(self) -> None:
+        with self.assertRaises(ValueError):
+            tenacity.wait_exponential_jitter(initial=5, multiplier=10)
 
     def test_wait_retry_state_attributes(self) -> None:
         class ExtractCallState(Exception):
