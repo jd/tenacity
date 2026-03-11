@@ -17,6 +17,7 @@
 import abc
 import random
 import typing
+import warnings
 
 from tenacity import _utils
 
@@ -240,12 +241,12 @@ class wait_random_exponential(wait_exponential):
 class wait_exponential_jitter(wait_base):
     """Wait strategy that applies exponential backoff and jitter.
 
-    It allows for a customized initial wait, maximum wait, jitter and minimum.
+    It allows for a customized multiplier, maximum wait, jitter and minimum.
 
     This implements the strategy described here:
     https://cloud.google.com/storage/docs/retry-strategy
 
-    The wait time is max(min, min(initial * 2**n + random.uniform(0, jitter), maximum))
+    The wait time is max(min, min(multiplier * 2**n + random.uniform(0, jitter), maximum))
     where n is the retry count.
     """
 
@@ -256,8 +257,22 @@ class wait_exponential_jitter(wait_base):
         exp_base: float = 2,
         jitter: _utils.time_unit_type = 1,
         min: _utils.time_unit_type = 0,
+        multiplier: float = 1,
     ) -> None:
-        self.initial = initial
+        if initial != 1 and multiplier != 1:
+            raise ValueError(
+                "Cannot specify both 'initial' and 'multiplier' — use 'multiplier' only"
+            )
+
+        if initial != 1:
+            warnings.warn(
+                "The 'initial' parameter is deprecated, use 'multiplier' instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            multiplier = initial
+
+        self.multiplier = multiplier
         self.max = _utils.to_seconds(max)
         self.exp_base = exp_base
         self.jitter = _utils.to_seconds(jitter)
@@ -267,7 +282,7 @@ class wait_exponential_jitter(wait_base):
         jitter = random.uniform(0, self.jitter)
         try:
             exp = self.exp_base ** (retry_state.attempt_number - 1)
-            result = self.initial * exp + jitter
+            result = self.multiplier * exp + jitter
         except OverflowError:
             result = self.max
         return max(max(0, self.min), min(result, self.max))
