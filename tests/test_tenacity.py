@@ -28,8 +28,8 @@ import pytest
 from typeguard import check_type
 
 import tenacity
-from tenacity import RetryCallState, RetryError, Retrying, retry
-from tenacity.retry import retry_all, retry_any
+from tenacity import RetryCallState, RetryError, Retrying, retry, stop_after_attempt
+from tenacity.retry import retry_all, retry_any, retry_unless_exception_cause_type
 
 _unset = object()
 
@@ -2123,6 +2123,42 @@ class TestPickle(unittest.TestCase):
         result = restored(succeed_on_third)
         assert result == "ok"
         assert calls == 3
+
+
+def test_retry_unless_exception_cause_type_logic() -> None:
+    class StopError(Exception):
+        pass
+
+    class ContinueError(Exception):
+        pass
+
+    stop_attempts = []
+
+    @retry(
+        retry=retry_unless_exception_cause_type(StopError), stop=stop_after_attempt(3)
+    )
+    def fail_with_stop() -> None:
+        stop_attempts.append(1)
+        raise RuntimeError from StopError()
+
+    continue_attempts = []
+
+    @retry(
+        retry=retry_unless_exception_cause_type(StopError), stop=stop_after_attempt(3)
+    )
+    def fail_with_continue() -> None:
+        continue_attempts.append(1)
+        raise RuntimeError from ContinueError()
+
+    # Test 1: Should stop immediately (raise the raw RuntimeError)
+    with contextlib.suppress(RuntimeError):
+        fail_with_stop()
+    assert len(stop_attempts) == 1
+
+    # Test 2: Should retry 3 times (hits limit, raises RetryError)
+    with contextlib.suppress(RetryError):
+        fail_with_continue()
+    assert len(continue_attempts) == 3
 
 
 if __name__ == "__main__":

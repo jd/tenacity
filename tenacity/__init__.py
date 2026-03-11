@@ -54,6 +54,7 @@ from .retry import (
     retry_if_not_result,
     retry_if_result,
     retry_never,
+    retry_unless_exception_cause_type,
     retry_unless_exception_type,
 )
 
@@ -782,6 +783,7 @@ __all__ = [
     "retry_if_not_result",
     "retry_if_result",
     "retry_never",
+    "retry_unless_exception_cause_type",
     "retry_unless_exception_type",
     "sleep",
     "sleep_using_event",
