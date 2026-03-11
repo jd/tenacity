@@ -1,0 +1,10 @@
+---
+deprecations:
+  - |
+    The ``initial`` parameter of ``wait_exponential_jitter`` is deprecated in
+    favor of ``multiplier``, for consistency with ``wait_exponential``. Passing
+    ``initial`` still works but emits a ``DeprecationWarning``.
+features:
+  - |
+    Add ``multiplier`` parameter to ``wait_exponential_jitter``, consistent
+    with ``wait_exponential``.
