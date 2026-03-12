@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Add ``min`` parameter to ``wait_exponential_jitter`` to set a minimum wait
+    time floor, consistent with ``wait_exponential``. Also accept ``timedelta``
+    for ``max``, ``jitter``, and ``min`` parameters.
