@@ -207,6 +207,51 @@ class wait_exponential(wait_base):
         return max(max(0, self.min), min(result, self.max))
 
 
+class wait_fibonacci(wait_base):
+    """Wait strategy that applies a Fibonacci backoff.
+
+    Fibonacci backoff is a compromise between linear and exponential backoff.
+    It increases the wait time more slowly than a pure exponential strategy,
+    making it effective for scenarios where a resource might be unavailable
+    for a moderate duration and you want to minimize latency without
+    hammering the server.
+
+    .. note::
+        This strategy is stateful. The wait intervals increase with each
+        subsequent retry performed by this specific instance.
+
+    Example::
+
+        # Wait times: 1s, 2s, 3s, 5s, 8s, 13s... up to 60s
+        wait_fibonacci(max=60)
+    """
+
+    def __init__(
+        self,
+        max: _utils.time_unit_type = _utils.MAX_WAIT,
+    ) -> None:
+        """Initialize the wait strategy.
+
+        :param max: The maximum number of seconds to wait.
+        """
+        self.max = _utils.to_seconds(max)
+        self._serie = [0, 1]
+
+    def compute_next_value(self) -> int:
+        """Compute the next value in the Fibonacci sequence."""
+        next_value = self._serie[-1] + self._serie[-2]
+        self._serie.append(next_value)
+        return next_value
+
+    def __call__(self, retry_state: "RetryCallState") -> float:
+        """Return the next wait time from the Fibonacci sequence."""
+        try:
+            result = self.compute_next_value()
+        except OverflowError:
+            return self.max
+        return min(result, self.max)
+
+
 class wait_random_exponential(wait_exponential):
     """Random wait with exponentially widening window.
 
