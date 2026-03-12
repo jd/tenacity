@@ -666,6 +666,7 @@ class TestWaitConditions(unittest.TestCase):
     def test_wait_fibonacci_default_args(self) -> None:
         fn = tenacity.wait_fibonacci()
         fn(make_retry_state(0, 0))
+
     def test_wait_exponential_jitter_min(self) -> None:
         fn = tenacity.wait_exponential_jitter(initial=1, max=60, jitter=1, min=5)
         for _ in range(1000):
