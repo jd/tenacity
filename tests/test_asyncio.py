@@ -159,6 +159,28 @@ class TestAsyncio(unittest.TestCase):
         assert len(set(things)) == 1
         assert list(attempt_nos2) == [1, 2, 3]
 
+    @asynctest
+    async def test_retry_if_not_exception_type_does_not_swallow_cancelled_error(
+        self,
+    ) -> None:
+        attempts = 0
+
+        @retry(
+            retry=tenacity.retry_if_not_exception_type(ValueError),
+            stop=stop_after_attempt(2),
+            wait=wait_fixed(0),
+            reraise=True,
+        )
+        async def always_sleep() -> None:
+            nonlocal attempts
+            attempts += 1
+            await asyncio.sleep(1)
+
+        with pytest.raises(asyncio.TimeoutError):
+            await asyncio.wait_for(always_sleep(), 0.01)
+
+        assert attempts == 1
+
 
 class TestAsyncEnabled(unittest.TestCase):
     @asynctest
