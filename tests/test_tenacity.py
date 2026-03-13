@@ -1265,6 +1265,27 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.assertTrue(isinstance(err, IOError))
             print(err)
 
+    def test_retry_except_exception_of_type_does_not_retry_base_exception(self) -> None:
+        calls = 0
+
+        class CustomBaseError(BaseException):
+            pass
+
+        @retry(
+            stop=tenacity.stop_after_attempt(3),
+            retry=tenacity.retry_if_not_exception_type(IOError),
+            reraise=True,
+        )
+        def raises_base_exception() -> None:
+            nonlocal calls
+            calls += 1
+            raise CustomBaseError()
+
+        with pytest.raises(CustomBaseError):
+            raises_base_exception()
+
+        assert calls == 1
+
     def test_retry_until_exception_of_type_attempt_number(self) -> None:
         try:
             self.assertTrue(
