@@ -1279,7 +1279,7 @@ class TestDecoratorWrapper(unittest.TestCase):
         def raises_base_exception() -> None:
             nonlocal calls
             calls += 1
-            raise CustomBaseError()
+            raise CustomBaseError
 
         with pytest.raises(CustomBaseError):
             raises_base_exception()
