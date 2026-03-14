@@ -136,7 +136,7 @@ class AsyncRetrying(BaseRetrying):
         else:
             sleep = 0.0
 
-        retry_state.upcoming_sleep = sleep
+        retry_state.upcoming_sleep = max(0.0, _utils.to_seconds(sleep))
 
     async def _run_stop(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
         self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start

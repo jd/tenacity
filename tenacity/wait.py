@@ -28,7 +28,7 @@ class wait_base(abc.ABC):
     """Abstract base class for wait strategies."""
 
     @abc.abstractmethod
-    def __call__(self, retry_state: "RetryCallState") -> float:
+    def __call__(self, retry_state: "RetryCallState") -> _utils.time_unit_type:
         pass
 
     def __add__(self, other: "wait_base") -> "wait_combine":
@@ -42,8 +42,12 @@ class wait_base(abc.ABC):
 
 
 WaitBaseT = typing.Union[
-    wait_base, typing.Callable[["RetryCallState"], typing.Union[float, int]]
+    wait_base, typing.Callable[["RetryCallState"], _utils.time_unit_type]
 ]
+
+
+def _normalize_wait_value(value: _utils.time_unit_type) -> float:
+    return max(0.0, _utils.to_seconds(value))
 
 
 class wait_fixed(wait_base):
@@ -85,7 +89,9 @@ class wait_combine(wait_base):
         self.wait_funcs = strategies
 
     def __call__(self, retry_state: "RetryCallState") -> float:
-        return sum(x(retry_state=retry_state) for x in self.wait_funcs)
+        return sum(
+            _normalize_wait_value(x(retry_state=retry_state)) for x in self.wait_funcs
+        )
 
 
 class wait_chain(wait_base):
@@ -110,7 +116,7 @@ class wait_chain(wait_base):
     def __call__(self, retry_state: "RetryCallState") -> float:
         wait_func_no = min(max(retry_state.attempt_number, 1), len(self.strategies))
         wait_func = self.strategies[wait_func_no - 1]
-        return wait_func(retry_state=retry_state)
+        return _normalize_wait_value(wait_func(retry_state=retry_state))
 
 
 class wait_exception(wait_base):
@@ -139,7 +145,9 @@ class wait_exception(wait_base):
             response.raise_for_status()
     """
 
-    def __init__(self, predicate: typing.Callable[[BaseException], float]) -> None:
+    def __init__(
+        self, predicate: typing.Callable[[BaseException], _utils.time_unit_type]
+    ) -> None:
         self.predicate = predicate
 
     def __call__(self, retry_state: "RetryCallState") -> float:
@@ -149,7 +157,7 @@ class wait_exception(wait_base):
         exception = retry_state.outcome.exception()
         if exception is None:
             raise RuntimeError("outcome failed but the exception is None")
-        return self.predicate(exception)
+        return _normalize_wait_value(self.predicate(exception))
 
 
 class wait_incrementing(wait_base):
