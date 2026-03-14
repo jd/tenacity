@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import functools
+import inspect
 import sys
 import typing as t
 
@@ -44,6 +45,12 @@ if t.TYPE_CHECKING:
 
 WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Awaitable[t.Any]])
+
+
+async def _resolve_awaitables(value: t.Any) -> t.Any:
+    while inspect.isawaitable(value):
+        value = await value
+    return value
 
 
 def _portable_async_sleep(seconds: float) -> t.Awaitable[None]:
@@ -129,6 +136,11 @@ class AsyncRetrying(BaseRetrying):
         self.iter_state.retry_run_result = await _utils.wrap_to_async_func(self.retry)(
             retry_state
         )
+
+    async def _run_after(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
+        result = await _utils.wrap_to_async_func(self.after)(retry_state)
+        result = await _resolve_awaitables(result)
+        self.iter_state.after_sleep_override = self._coerce_sleep_override(result)
 
     async def _run_wait(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
         if self.wait:

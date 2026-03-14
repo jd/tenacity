@@ -114,6 +114,7 @@ class IterState:
     retry_run_result: bool = False
     delay_since_first_attempt: int = 0
     stop_run_result: bool = False
+    after_sleep_override: t.Optional[float] = None
     is_explicit_retry: bool = False
 
     def reset(self) -> None:
@@ -121,6 +122,7 @@ class IterState:
         self.retry_run_result = False
         self.delay_since_first_attempt = 0
         self.stop_run_result = False
+        self.after_sleep_override = None
         self.is_explicit_retry = False
 
 
@@ -364,6 +366,17 @@ class BaseRetrying(ABC):
 
         retry_state.upcoming_sleep = sleep
 
+    def _coerce_sleep_override(self, value: t.Any) -> t.Optional[float]:
+        if value is None:
+            return None
+
+        sleep = float(value)
+        return 0.0 if sleep < 0.0 else sleep
+
+    def _run_after(self, retry_state: "RetryCallState") -> None:
+        result = self.after(retry_state)
+        self.iter_state.after_sleep_override = self._coerce_sleep_override(result)
+
     def _run_stop(self, retry_state: "RetryCallState") -> None:
         self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start
         self.iter_state.stop_run_result = self.stop(retry_state)
@@ -398,7 +411,7 @@ class BaseRetrying(ABC):
             return
 
         if self.after is not None:
-            self._add_action_func(self.after)
+            self._add_action_func(self._run_after)
 
         self._add_action_func(self._run_wait)
         self._add_action_func(self._run_stop)
@@ -422,6 +435,10 @@ class BaseRetrying(ABC):
 
         def next_action(rs: "RetryCallState") -> None:
             sleep = rs.upcoming_sleep
+            if self.iter_state.after_sleep_override is not None:
+                sleep = self.iter_state.after_sleep_override
+                rs.upcoming_sleep = sleep
+
             rs.next_action = RetryAction(sleep)
             rs.idle_for += sleep
             self.statistics["idle_for"] += sleep

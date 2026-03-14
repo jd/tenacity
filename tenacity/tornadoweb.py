@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import sys
 import typing
 
@@ -37,6 +38,37 @@ class TornadoRetrying(BaseRetrying):
         super().__init__(**kwargs)
         self.sleep = sleep
 
+    @staticmethod
+    def _is_awaitable(value: typing.Any) -> bool:
+        return gen.is_future(value) or inspect.isawaitable(value)
+
+    @gen.coroutine  # type: ignore[untyped-decorator]
+    def _resolve_awaitable(
+        self, value: typing.Any
+    ) -> "typing.Generator[typing.Any, typing.Any, typing.Any]":
+        while self._is_awaitable(value):
+            value = yield value
+        raise gen.Return(value)
+
+    @gen.coroutine  # type: ignore[override, untyped-decorator]
+    def _run_after(
+        self, retry_state: "RetryCallState"
+    ) -> "typing.Generator[typing.Any, typing.Any, None]":
+        result = self.after(retry_state)
+        result = yield self._resolve_awaitable(result)
+        self.iter_state.after_sleep_override = self._coerce_sleep_override(result)
+
+    @gen.coroutine  # type: ignore[override, untyped-decorator]
+    def iter(
+        self, retry_state: "RetryCallState"
+    ) -> "typing.Generator[typing.Any, typing.Any, typing.Union[DoAttempt, DoSleep, typing.Any]]":
+        self._begin_iter(retry_state)
+        result = None
+        for action in self.iter_state.actions:
+            result = action(retry_state)
+            result = yield self._resolve_awaitable(result)
+        raise gen.Return(result)
+
     @gen.coroutine  # type: ignore[untyped-decorator]
     def __call__(
         self,
@@ -48,7 +80,7 @@ class TornadoRetrying(BaseRetrying):
 
         retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
         while True:
-            do = self.iter(retry_state=retry_state)
+            do = yield self.iter(retry_state=retry_state)
             if isinstance(do, DoAttempt):
                 try:
                     result = yield fn(*args, **kwargs)
@@ -58,6 +90,7 @@ class TornadoRetrying(BaseRetrying):
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):
                 retry_state.prepare_for_next_attempt()
-                yield self.sleep(do)
+                sleep_result = self.sleep(do)
+                yield self._resolve_awaitable(sleep_result)
             else:
                 raise gen.Return(do)
