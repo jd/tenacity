@@ -26,9 +26,15 @@ from tenacity import DoAttempt
 from tenacity import DoSleep
 from tenacity import RetryCallState
 from tenacity import RetryError
+from tenacity import WrappedFnWithRetry
 from tenacity import after_nothing
 from tenacity import before_nothing
 from tenacity import _utils
+
+if sys.version_info >= (3, 10):
+    from typing import ParamSpec
+else:
+    from typing_extensions import ParamSpec
 
 # Import all built-in retry strategies for easier usage.
 from .retry import RetryBaseT
@@ -44,6 +50,7 @@ if t.TYPE_CHECKING:
 
 WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Awaitable[t.Any]])
+WrappedFnParams = ParamSpec("WrappedFnParams")
 
 
 def _portable_async_sleep(seconds: float) -> t.Awaitable[None]:
@@ -174,26 +181,42 @@ class AsyncRetrying(BaseRetrying):
             else:
                 raise StopAsyncIteration
 
-    def wraps(self, fn: WrappedFn) -> WrappedFn:
+    def wraps(
+        self, fn: t.Callable[WrappedFnParams, t.Awaitable[WrappedFnReturnT]]
+    ) -> WrappedFnWithRetry[
+        WrappedFnParams,
+        t.Coroutine[t.Any, t.Any, WrappedFnReturnT],
+        "AsyncRetrying",
+    ]:
         wrapped = super().wraps(fn)
         # Ensure wrapper is recognized as a coroutine function.
 
         @functools.wraps(
             fn, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__")
         )
-        async def async_wrapped(*args: t.Any, **kwargs: t.Any) -> t.Any:
+        async def async_wrapped(
+            *args: WrappedFnParams.args, **kwargs: WrappedFnParams.kwargs
+        ) -> WrappedFnReturnT:
             # Always create a copy to prevent overwriting the local contexts when
             # calling the same wrapped functions multiple times in the same stack
             copy = self.copy()
-            async_wrapped.statistics = copy.statistics  # type: ignore[attr-defined]
+            wrapped_with_retry.statistics = copy.statistics
             return await copy(fn, *args, **kwargs)
 
+        wrapped_with_retry = t.cast(
+            WrappedFnWithRetry[
+                WrappedFnParams,
+                t.Coroutine[t.Any, t.Any, WrappedFnReturnT],
+                AsyncRetrying,
+            ],
+            async_wrapped,
+        )
         # Preserve attributes
-        async_wrapped.retry = self  # type: ignore[attr-defined]
-        async_wrapped.retry_with = wrapped.retry_with  # type: ignore[attr-defined]
-        async_wrapped.statistics = {}  # type: ignore[attr-defined]
+        wrapped_with_retry.retry = self
+        wrapped_with_retry.retry_with = wrapped.retry_with
+        wrapped_with_retry.statistics = {}
 
-        return async_wrapped  # type: ignore[return-value]
+        return wrapped_with_retry
 
 
 __all__ = [

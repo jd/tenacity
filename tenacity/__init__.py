@@ -27,6 +27,13 @@ from concurrent import futures
 
 from . import _utils
 
+if sys.version_info >= (3, 11):
+    from typing import ParamSpec
+elif sys.version_info >= (3, 10):
+    from typing import ParamSpec
+else:
+    from typing_extensions import ParamSpec
+
 # Import all built-in retry strategies for easier usage.
 from .retry import retry_base  # noqa
 from .retry import retry_all  # noqa
@@ -89,8 +96,6 @@ except ImportError:
 if t.TYPE_CHECKING:
     import types
 
-    from typing_extensions import Self
-
     from . import asyncio as tasyncio
     from .retry import RetryBaseT
     from .stop import StopBaseT
@@ -99,6 +104,40 @@ if t.TYPE_CHECKING:
 
 WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Any])
+WrappedFnParams = ParamSpec("WrappedFnParams")
+WrappedRetryingT = t.TypeVar("WrappedRetryingT", bound="BaseRetrying")
+BaseRetryingType = t.TypeVar("BaseRetryingType", bound="BaseRetrying")
+
+
+class WrappedFnWithRetry(
+    t.Protocol[WrappedFnParams, WrappedFnReturnT, WrappedRetryingT]
+):
+    retry: WrappedRetryingT
+    retry_with: t.Callable[
+        ..., "WrappedFnWithRetry[WrappedFnParams, WrappedFnReturnT, WrappedRetryingT]"
+    ]
+    statistics: t.Dict[str, t.Any]
+
+    def __call__(
+        self, *args: WrappedFnParams.args, **kwargs: WrappedFnParams.kwargs
+    ) -> WrappedFnReturnT: ...
+
+
+class RetryDecorator(t.Protocol):
+    @t.overload
+    def __call__(
+        self,
+        fn: t.Callable[WrappedFnParams, t.Coroutine[t.Any, t.Any, WrappedFnReturnT]],
+    ) -> WrappedFnWithRetry[
+        WrappedFnParams,
+        t.Coroutine[t.Any, t.Any, WrappedFnReturnT],
+        "tasyncio.AsyncRetrying",
+    ]: ...
+
+    @t.overload
+    def __call__(
+        self, fn: t.Callable[WrappedFnParams, WrappedFnReturnT]
+    ) -> WrappedFnWithRetry[WrappedFnParams, WrappedFnReturnT, "Retrying"]: ...
 
 
 dataclass_kwargs = {}
@@ -318,7 +357,10 @@ class BaseRetrying(ABC):
             self._local.iter_state = IterState()
         return self._local.iter_state  # type: ignore[no-any-return]
 
-    def wraps(self, f: WrappedFn) -> WrappedFn:
+    def wraps(
+        self: BaseRetryingType,
+        f: t.Callable[WrappedFnParams, WrappedFnReturnT],
+    ) -> WrappedFnWithRetry[WrappedFnParams, WrappedFnReturnT, BaseRetryingType]:
         """Wrap a function for retrying.
 
         :param f: A function to wraps for retrying.
@@ -327,22 +369,34 @@ class BaseRetrying(ABC):
         @functools.wraps(
             f, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__")
         )
-        def wrapped_f(*args: t.Any, **kw: t.Any) -> t.Any:
+        def wrapped_f(
+            *args: WrappedFnParams.args, **kw: WrappedFnParams.kwargs
+        ) -> WrappedFnReturnT:
             # Always create a copy to prevent overwriting the local contexts when
             # calling the same wrapped functions multiple times in the same stack
             copy = self.copy()
-            wrapped_f.statistics = copy.statistics  # type: ignore[attr-defined]
+            wrapped.statistics = copy.statistics
             return copy(f, *args, **kw)
 
-        def retry_with(*args: t.Any, **kwargs: t.Any) -> WrappedFn:
+        def retry_with(
+            *args: t.Any, **kwargs: t.Any
+        ) -> WrappedFnWithRetry[
+            WrappedFnParams, WrappedFnReturnT, BaseRetryingType
+        ]:
             return self.copy(*args, **kwargs).wraps(f)
 
+        wrapped = t.cast(
+            WrappedFnWithRetry[
+                WrappedFnParams, WrappedFnReturnT, BaseRetryingType
+            ],
+            wrapped_f,
+        )
         # Preserve attributes
-        wrapped_f.retry = self  # type: ignore[attr-defined]
-        wrapped_f.retry_with = retry_with  # type: ignore[attr-defined]
-        wrapped_f.statistics = {}  # type: ignore[attr-defined]
+        wrapped.retry = self
+        wrapped.retry_with = retry_with
+        wrapped.statistics = {}
 
-        return wrapped_f  # type: ignore[return-value]
+        return wrapped
 
     def begin(self) -> None:
         self.statistics.clear()
@@ -595,7 +649,21 @@ class RetryCallState:
 
 
 @t.overload
-def retry(func: WrappedFn) -> WrappedFn: ...
+def retry(
+    func: t.Callable[
+        WrappedFnParams, t.Coroutine[t.Any, t.Any, WrappedFnReturnT]
+    ],
+) -> WrappedFnWithRetry[
+    WrappedFnParams,
+    t.Coroutine[t.Any, t.Any, WrappedFnReturnT],
+    "tasyncio.AsyncRetrying",
+]: ...
+
+
+@t.overload
+def retry(
+    func: t.Callable[WrappedFnParams, WrappedFnReturnT],
+) -> WrappedFnWithRetry[WrappedFnParams, WrappedFnReturnT, Retrying]: ...
 
 
 @t.overload
@@ -618,7 +686,7 @@ def retry(
     retry_error_callback: t.Optional[
         t.Callable[["RetryCallState"], t.Union[t.Any, t.Awaitable[t.Any]]]
     ] = None,
-) -> t.Callable[[WrappedFn], WrappedFn]: ...
+) -> RetryDecorator: ...
 
 
 def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
@@ -632,7 +700,9 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
         return retry()(dargs[0])
     else:
 
-        def wrap(f: WrappedFn) -> WrappedFn:
+        def wrap(
+            f: t.Callable[WrappedFnParams, WrappedFnReturnT]
+        ) -> WrappedFnWithRetry[WrappedFnParams, WrappedFnReturnT, BaseRetrying]:
             if isinstance(f, retry_base):
                 warnings.warn(
                     f"Got retry_base instance ({f.__class__.__name__}) as callable argument, "
