@@ -229,6 +229,7 @@ class BaseRetrying(ABC):
         reraise: bool = False,
         retry_error_cls: t.Type[RetryError] = RetryError,
         retry_error_callback: t.Optional[t.Callable[["RetryCallState"], t.Any]] = None,
+        label: t.Optional[str] = None,
     ):
         self.sleep = sleep
         self.stop = stop
@@ -241,6 +242,7 @@ class BaseRetrying(ABC):
         self._local = threading.local()
         self.retry_error_cls = retry_error_cls
         self.retry_error_callback = retry_error_callback
+        self.label = label
 
     def copy(
         self,
@@ -258,6 +260,7 @@ class BaseRetrying(ABC):
         retry_error_callback: t.Union[
             t.Optional[t.Callable[["RetryCallState"], t.Any]], object
         ] = _unset,
+        label: t.Union[t.Optional[str], object] = _unset,
     ) -> "Self":
         """Copy this object with some parameters changed if needed."""
         return self.__class__(
@@ -273,6 +276,7 @@ class BaseRetrying(ABC):
             retry_error_callback=_first_set(
                 retry_error_callback, self.retry_error_callback
             ),
+            label=_first_set(label, self.label),
         )
 
     def __repr__(self) -> str:
@@ -283,7 +287,8 @@ class BaseRetrying(ABC):
             f"sleep={self.sleep}, "
             f"retry={self.retry}, "
             f"before={self.before}, "
-            f"after={self.after})>"
+            f"after={self.after}, "
+            f"label={self.label})>"
         )
 
     @property
@@ -522,7 +527,7 @@ class RetryCallState:
 
     def __init__(
         self,
-        retry_object: BaseRetrying,
+        retry_object: t.Optional[BaseRetrying],
         fn: t.Optional[WrappedFn],
         args: t.Any,
         kwargs: t.Any,
@@ -537,6 +542,12 @@ class RetryCallState:
         self.args = args
         #: Keyword arguments of the function wrapped by this retry call
         self.kwargs = kwargs
+        #: Captured retry identifier for log messages and structured records.
+        self.retry_label = _utils.resolve_retry_label(
+            retry_object,
+            fn,
+            getattr(retry_object, "label", None),
+        )
 
         #: The number of the current attempt
         self.attempt_number: int = 1
@@ -618,6 +629,7 @@ def retry(
     retry_error_callback: t.Optional[
         t.Callable[["RetryCallState"], t.Union[t.Any, t.Awaitable[t.Any]]]
     ] = None,
+    label: t.Optional[str] = None,
 ) -> t.Callable[[WrappedFn], WrappedFn]: ...
 
 

@@ -15,6 +15,7 @@
 # limitations under the License.
 import functools
 import inspect
+import logging
 import sys
 import typing
 from datetime import timedelta
@@ -80,6 +81,62 @@ def get_callback_name(cb: typing.Callable[..., typing.Any]) -> str:
         except AttributeError:
             pass
         return ".".join(segments)
+
+
+def format_log_value(value: typing.Any) -> str:
+    """Format values for single-line log messages."""
+    return str(value).replace("\r\n", "\\n").replace("\n", "\\n").replace("\r", "\\r")
+
+
+def resolve_retry_label(
+    retry_object: typing.Any,
+    fn: typing.Optional[typing.Callable[..., typing.Any]],
+    label: typing.Optional[str],
+    fallback: str = "<unknown>",
+) -> str:
+    if label is not None:
+        return label
+    if fn is not None:
+        return get_callback_name(fn)
+    if retry_object is None:
+        return fallback
+
+    retry_type = retry_object.__class__
+    return f"{retry_type.__module__}.{retry_type.__qualname__} block 0x{id(retry_object):x}"
+
+
+def get_retry_label(
+    retry_state: typing.Any, fallback: str = "<unknown>"
+) -> str:
+    retry_label = getattr(retry_state, "retry_label", None)
+    if retry_label is not None:
+        return retry_label
+
+    retry_object = getattr(retry_state, "retry_object", None)
+    label = getattr(retry_object, "label", None)
+    fn = getattr(retry_state, "fn", None)
+    return resolve_retry_label(retry_object, fn, label, fallback)
+
+
+def get_callback_target_name(
+    retry_state: typing.Any, fallback: str = "<unknown>"
+) -> str:
+    """Resolve a logging target name from label/callable context."""
+    return format_log_value(get_retry_label(retry_state, fallback=fallback))
+
+
+def log_with_retry_label(
+    logger: LoggerProtocol,
+    log_level: int,
+    message: str,
+    retry_state: typing.Any,
+    **kwargs: typing.Any,
+) -> typing.Any:
+    extra = dict(kwargs.pop("extra", {}))
+    extra["retry_label"] = get_retry_label(retry_state)
+    if isinstance(logger, (logging.Logger, logging.LoggerAdapter)):
+        return logger.log(log_level, message, extra=extra, **kwargs)
+    return logger.log(log_level, message, **kwargs)
 
 
 time_unit_type = typing.Union[int, float, timedelta]
