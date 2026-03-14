@@ -219,7 +219,7 @@ class AttemptManager:
 class BaseRetrying(ABC):
     def __init__(
         self,
-        sleep: t.Callable[[t.Union[int, float]], None] = sleep,
+        sleep: t.Union[t.Callable[[t.Union[int, float]], None], object] = _unset,
         stop: "StopBaseT" = stop_never,
         wait: "WaitBaseT" = wait_none(),
         retry: "RetryBaseT" = retry_if_exception_type(),
@@ -230,6 +230,9 @@ class BaseRetrying(ABC):
         retry_error_cls: t.Type[RetryError] = RetryError,
         retry_error_callback: t.Optional[t.Callable[["RetryCallState"], t.Any]] = None,
     ):
+        if sleep is _unset:
+            from . import nap
+            sleep = nap.sleep
         self.sleep = sleep
         self.stop = stop
         self.wait = wait
@@ -429,7 +432,7 @@ class BaseRetrying(ABC):
 
         self._add_action_func(next_action)
 
-        if self.before_sleep is not None:
+        if self.before_sleep is not None and self.sleep is not None:
             self._add_action_func(self.before_sleep)
 
         self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))
@@ -444,7 +447,8 @@ class BaseRetrying(ABC):
                 yield AttemptManager(retry_state=retry_state)
             elif isinstance(do, DoSleep):
                 retry_state.prepare_for_next_attempt()
-                self.sleep(do)
+                if self.sleep is not None:
+                    self.sleep(do)
             else:
                 break
 
@@ -481,7 +485,8 @@ class Retrying(BaseRetrying):
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):
                 retry_state.prepare_for_next_attempt()
-                self.sleep(do)
+                if self.sleep is not None:
+                    self.sleep(do)
             else:
                 return do  # type: ignore[no-any-return]
 

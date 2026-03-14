@@ -104,10 +104,14 @@ def is_coroutine_callable(call: typing.Callable[..., typing.Any]) -> bool:
 def wrap_to_async_func(
     call: typing.Callable[..., typing.Any],
 ) -> typing.Callable[..., typing.Awaitable[typing.Any]]:
-    if is_coroutine_callable(call):
-        return call
+    async def resolve_awaitable(
+        result: typing.Any,
+    ) -> typing.Any:
+        while inspect.isawaitable(result):
+            result = await result
+        return result
 
     async def inner(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
-        return call(*args, **kwargs)
+        return await resolve_awaitable(call(*args, **kwargs))
 
     return inner

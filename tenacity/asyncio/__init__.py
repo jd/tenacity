@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import functools
+import inspect
 import sys
 import typing as t
 
@@ -67,9 +68,10 @@ def _portable_async_sleep(seconds: float) -> t.Awaitable[None]:
 class AsyncRetrying(BaseRetrying):
     def __init__(
         self,
-        sleep: t.Callable[
-            [t.Union[int, float]], t.Union[None, t.Awaitable[None]]
-        ] = _portable_async_sleep,
+        sleep: t.Union[
+            t.Callable[[t.Union[int, float]], t.Union[None, t.Awaitable[None]]],
+            object,
+        ] = tenacity._unset,
         stop: "StopBaseT" = tenacity.stop.stop_never,
         wait: "WaitBaseT" = tenacity.wait.wait_none(),
         retry: "t.Union[SyncRetryBaseT, RetryBaseT]" = tenacity.retry_if_exception_type(),
@@ -88,6 +90,8 @@ class AsyncRetrying(BaseRetrying):
             t.Callable[["RetryCallState"], t.Union[t.Any, t.Awaitable[t.Any]]]
         ] = None,
     ) -> None:
+        if sleep is tenacity._unset:
+            sleep = _portable_async_sleep
         super().__init__(
             sleep=sleep,  # type: ignore[arg-type]
             stop=stop,
@@ -118,12 +122,21 @@ class AsyncRetrying(BaseRetrying):
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):
                 retry_state.prepare_for_next_attempt()
-                await self.sleep(do)  # type: ignore[misc]
+                if self.sleep is not None:
+                    await self.sleep(do)  # type: ignore[misc]
             else:
                 return do  # type: ignore[no-any-return]
 
+    async def _resolve_awaitable(self, value: t.Any) -> t.Any:
+        while inspect.isawaitable(value):
+            value = await value
+        return value
+
     def _add_action_func(self, fn: t.Callable[..., t.Any]) -> None:
-        self.iter_state.actions.append(_utils.wrap_to_async_func(fn))
+        async def wrapped_action(retry_state: "RetryCallState") -> t.Any:
+            return await self._resolve_awaitable(fn(retry_state))
+
+        self.iter_state.actions.append(wrapped_action)
 
     async def _run_retry(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
         self.iter_state.retry_run_result = await _utils.wrap_to_async_func(self.retry)(
@@ -132,7 +145,7 @@ class AsyncRetrying(BaseRetrying):
 
     async def _run_wait(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
         if self.wait:
-            sleep = await _utils.wrap_to_async_func(self.wait)(retry_state)
+            sleep = await self._resolve_awaitable(self.wait(retry_state))
         else:
             sleep = 0.0
 
@@ -170,7 +183,8 @@ class AsyncRetrying(BaseRetrying):
                 return AttemptManager(retry_state=self._retry_state)
             elif isinstance(do, DoSleep):
                 self._retry_state.prepare_for_next_attempt()
-                await self.sleep(do)  # type: ignore[misc]
+                if self.sleep is not None:
+                    await self.sleep(do)  # type: ignore[misc]
             else:
                 raise StopAsyncIteration
 
