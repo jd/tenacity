@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    When ``reraise=True`` and ``TryAgain`` is raised from within an ``except``
+    block, the underlying exception that triggered the retry is now reraised
+    once attempts are exhausted, instead of the opaque ``TryAgain`` sentinel.
+    A bare ``TryAgain`` raised without an active exception keeps reraising
+    ``TryAgain`` as before.
