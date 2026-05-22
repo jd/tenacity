@@ -192,7 +192,7 @@ class RetryError(Exception):
             if isinstance(exc, TryAgain):
                 cause = exc.__cause__ or exc.__context__
                 if cause is not None:
-                    raise cause
+                    raise cause.with_traceback(cause.__traceback__) from None
             raise self.last_attempt.result()
         raise self
 

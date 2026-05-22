@@ -259,6 +259,7 @@ class TestContextManager(unittest.TestCase):
         )
         with pytest.raises(UnderlyingError):
             await retrying(_test)
+        self.assertEqual(2, retrying.statistics["attempt_number"])
 
     @asynctest
     async def test_sleeps(self) -> None:

@@ -892,6 +892,7 @@ class TestRetryConditions(unittest.TestCase):
             reraise=True,
         )
         self.assertRaises(UnderlyingError, r, _r)
+        self.assertEqual(5, r.statistics["attempt_number"])
 
     def test_retry_try_again_forever_reraise(self) -> None:
         def _r() -> None:
