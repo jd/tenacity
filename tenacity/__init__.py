@@ -185,6 +185,14 @@ class RetryError(Exception):
 
     def reraise(self) -> t.NoReturn:
         if self.last_attempt.failed:
+            exc = self.last_attempt.exception()
+            # When the user explicitly raises TryAgain (typically from within
+            # an "except" block), surface the underlying exception that caused
+            # the retry rather than the opaque TryAgain sentinel.
+            if isinstance(exc, TryAgain):
+                cause = exc.__cause__ or exc.__context__
+                if cause is not None:
+                    raise cause.with_traceback(cause.__traceback__) from None
             raise self.last_attempt.result()
         raise self
 

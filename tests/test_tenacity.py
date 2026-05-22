@@ -857,6 +857,43 @@ class TestRetryConditions(unittest.TestCase):
         self.assertRaises(tenacity.RetryError, r, _r)
         self.assertEqual(5, r.statistics["attempt_number"])
 
+    def test_retry_try_again_with_cause_reraise(self) -> None:
+        # When TryAgain is raised from within an "except" block, reraise=True
+        # should surface the underlying exception rather than TryAgain itself.
+        class UnderlyingError(Exception):
+            pass
+
+        def _r() -> None:
+            try:
+                raise UnderlyingError("boom")
+            except UnderlyingError:
+                # Implicit chaining via __context__ is exactly what we test.
+                raise tenacity.TryAgain  # noqa: B904
+
+        r = Retrying(
+            stop=tenacity.stop_after_attempt(5),
+            retry=tenacity.retry_never,
+            reraise=True,
+        )
+        self.assertRaises(UnderlyingError, r, _r)
+        self.assertEqual(5, r.statistics["attempt_number"])
+
+    def test_retry_try_again_from_cause_reraise(self) -> None:
+        # An explicit "raise TryAgain from exc" should also be unwrapped.
+        class UnderlyingError(Exception):
+            pass
+
+        def _r() -> None:
+            raise tenacity.TryAgain from UnderlyingError("boom")
+
+        r = Retrying(
+            stop=tenacity.stop_after_attempt(5),
+            retry=tenacity.retry_never,
+            reraise=True,
+        )
+        self.assertRaises(UnderlyingError, r, _r)
+        self.assertEqual(5, r.statistics["attempt_number"])
+
     def test_retry_try_again_forever_reraise(self) -> None:
         def _r() -> None:
             raise tenacity.TryAgain

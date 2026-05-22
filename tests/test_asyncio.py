@@ -239,6 +239,29 @@ class TestContextManager(unittest.TestCase):
             raise Exception
 
     @asynctest
+    async def test_reraise_try_again_with_cause(self) -> None:
+        # When TryAgain is raised from within an "except" block, reraise=True
+        # should surface the underlying exception rather than TryAgain itself.
+        class UnderlyingError(Exception):
+            pass
+
+        async def _test() -> None:
+            try:
+                raise UnderlyingError("boom")
+            except UnderlyingError:
+                # Implicit chaining via __context__ is exactly what we test.
+                raise tenacity.TryAgain  # noqa: B904
+
+        retrying = tasyncio.AsyncRetrying(
+            stop=stop_after_attempt(2),
+            retry=tenacity.retry_never,
+            reraise=True,
+        )
+        with pytest.raises(UnderlyingError):
+            await retrying(_test)
+        self.assertEqual(2, retrying.statistics["attempt_number"])
+
+    @asynctest
     async def test_sleeps(self) -> None:
         start = current_time_ms()
         try:
