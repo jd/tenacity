@@ -286,3 +286,71 @@ class wait_exponential_jitter(wait_base):
         except OverflowError:
             result = self.max
         return max(max(0, self.min), min(result, self.max))
+
+
+# 1/phi = phi - 1: the most irrational number, giving optimal equidistribution
+# of points across an interval (Weyl equidistribution / three-distance theorem).
+_GOLDEN_CONJUGATE = 0.6180339887498949
+
+
+class wait_golden_jitter(wait_base):
+    """Wait strategy applying exponential backoff with *deterministic*
+    low-discrepancy jitter, derived from the golden ratio.
+
+    This is a deterministic alternative to :class:`wait_random_exponential`
+    (the "Full Jitter" algorithm). Instead of drawing a random delay, each
+    waiter is assigned a point from the golden-ratio low-discrepancy
+    sequence, indexed by ``seq_index``.
+
+    The golden ratio is the most irrational number, so its additive
+    recurrence ``(seq_index * (1/phi)) mod 1`` distributes points across the
+    backoff window more evenly than independent random draws, which clump by
+    chance. This yields:
+
+    * **Bounded worst-case spread**: the maximum concurrency peak across N
+      uncoordinated waiters is controlled, not luck-dependent.
+    * **Reproducibility**: identical runs produce identical schedules, which
+      simplifies testing and debugging (random jitter does not).
+    * **No RNG required**: useful where a per-waiter index (host id, shard,
+      task number) is available but a strong RNG is not (e.g. embedded/IoT).
+
+    The backoff window still expands exponentially per attempt, exactly like
+    :class:`wait_random_exponential`.
+
+    .. note::
+       When waiters cannot supply a distinct ``seq_index``, pass a stable
+       per-process integer (e.g. derived from hostname or worker id). If all
+       callers share the same index, this degenerates to a fixed schedule and
+       provides no desynchronization — supply distinct indices per waiter.
+
+    Example::
+
+        @retry(wait=wait_golden_jitter(multiplier=1, max=60, seq_index=worker_id))
+        def fetch():
+            ...
+    """
+
+    def __init__(
+        self,
+        multiplier: float = 1,
+        max: _utils.time_unit_type = _utils.MAX_WAIT,  # noqa: A002
+        exp_base: float = 2,
+        min: _utils.time_unit_type = 0,  # noqa: A002
+        seq_index: int = 0,
+    ) -> None:
+        self.multiplier = multiplier
+        self.min = _utils.to_seconds(min)
+        self.max = _utils.to_seconds(max)
+        self.exp_base = exp_base
+        self.seq_index = seq_index
+        self._phase = (seq_index * _GOLDEN_CONJUGATE) % 1.0
+
+    def __call__(self, retry_state: "RetryCallState") -> float:
+        try:
+            exp = self.exp_base ** (retry_state.attempt_number - 1)
+            high = self.multiplier * exp
+        except OverflowError:
+            high = self.max
+        high = max(0.0, min(high, self.max))
+        jittered = self._phase * high
+        return max(self.min, min(jittered, self.max))
