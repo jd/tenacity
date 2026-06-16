@@ -343,7 +343,7 @@ class wait_golden_jitter(wait_base):
         self.max = _utils.to_seconds(max)
         self.exp_base = exp_base
         self.seq_index = seq_index
-        self._phase = (seq_index * _GOLDEN_CONJUGATE) % 1.0
+        self.phase = (seq_index * _GOLDEN_CONJUGATE) % 1.0
 
     def __call__(self, retry_state: "RetryCallState") -> float:
         try:
@@ -352,5 +352,5 @@ class wait_golden_jitter(wait_base):
         except OverflowError:
             high = self.max
         high = max(0.0, min(high, self.max))
-        jittered = self._phase * high
+        jittered = self.phase * high
         return max(self.min, min(jittered, self.max))

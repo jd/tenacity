@@ -682,12 +682,12 @@ class TestWaitConditions(unittest.TestCase):
             self.assertLessEqual(w(make_retry_state(attempt, 0)), high + 1e-9)
 
     def test_wait_golden_jitter_distinct_indices_distinct_phases(self) -> None:
-        phases = {tenacity.wait_golden_jitter(seq_index=i)._phase for i in range(50)}
+        phases = {tenacity.wait_golden_jitter(seq_index=i).phase for i in range(50)}
         self.assertEqual(len(phases), 50)
 
     def test_wait_golden_jitter_low_discrepancy(self) -> None:
         phases = sorted(
-            tenacity.wait_golden_jitter(seq_index=i)._phase for i in range(20)
+            tenacity.wait_golden_jitter(seq_index=i).phase for i in range(20)
         )
         gaps = [phases[i + 1] - phases[i] for i in range(len(phases) - 1)]
         # Three-distance theorem guarantees the largest gap is at most ~2x ideal (1/20).
