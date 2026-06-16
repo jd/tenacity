@@ -333,9 +333,9 @@ class wait_golden_jitter(wait_base):
     def __init__(
         self,
         multiplier: float = 1,
-        max: _utils.time_unit_type = _utils.MAX_WAIT,  # noqa: A002
+        max: _utils.time_unit_type = _utils.MAX_WAIT,
         exp_base: float = 2,
-        min: _utils.time_unit_type = 0,  # noqa: A002
+        min: _utils.time_unit_type = 0,
         seq_index: int = 0,
     ) -> None:
         self.multiplier = multiplier
