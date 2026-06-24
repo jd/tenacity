@@ -1561,6 +1561,35 @@ class TestEnabled:
         assert fails_twice() is True
         assert call_count == 3
 
+    def test_enabled_false_iter_raises_original_exception(self) -> None:
+        """When enabled=False, the iterator protocol raises the original exception,
+        not a RetryError, and the body executes exactly once."""
+        call_count = 0
+        retrying = Retrying(
+            enabled=False,
+            stop=tenacity.stop_after_attempt(5),
+            wait=tenacity.wait_none(),
+        )
+        with pytest.raises(ValueError, match="fail"):
+            for attempt in retrying:
+                with attempt:
+                    call_count += 1
+                    raise ValueError("fail")
+        assert call_count == 1
+
+    def test_enabled_false_iter_succeeds_on_first_attempt(self) -> None:
+        """When enabled=False, the iterator protocol runs the body once and stops."""
+        call_count = 0
+        retrying = Retrying(
+            enabled=False,
+            stop=tenacity.stop_after_attempt(5),
+            wait=tenacity.wait_none(),
+        )
+        for attempt in retrying:
+            with attempt:
+                call_count += 1
+        assert call_count == 1
+
 
 class TestRetryWith:
     def test_redefine_wait(self) -> None:

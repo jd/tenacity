@@ -166,11 +166,25 @@ class AsyncRetrying(BaseRetrying):
         raise TypeError("AsyncRetrying object is not iterable")
 
     def __aiter__(self) -> "AsyncRetrying":
+        if not self.enabled:
+            self._retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
+            self._disabled_iter_done = False
+            return self
+
         self.begin()
         self._retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
         return self
 
     async def __anext__(self) -> AttemptManager:
+        if not self.enabled:
+            if self._disabled_iter_done:
+                outcome = self._retry_state.outcome
+                if outcome is not None and outcome.failed:
+                    raise outcome.exception()  # type: ignore[misc]
+                raise StopAsyncIteration
+            self._disabled_iter_done = True
+            return AttemptManager(retry_state=self._retry_state)
+
         while True:
             do = await self.iter(retry_state=self._retry_state)
             if do is None:
