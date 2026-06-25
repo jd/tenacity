@@ -475,6 +475,13 @@ class BaseRetrying(ABC):
         self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))
 
     def __iter__(self) -> t.Generator[AttemptManager, None, None]:
+        if not self.enabled:
+            retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
+            yield AttemptManager(retry_state=retry_state)
+            if retry_state.outcome is not None and retry_state.outcome.failed:
+                raise retry_state.outcome.exception()  # type: ignore[misc]
+            return
+
         self.begin()
 
         retry_state = RetryCallState(self, fn=None, args=(), kwargs={})

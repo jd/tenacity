@@ -176,6 +176,35 @@ class TestAsyncEnabled(unittest.TestCase):
             await always_fails()
         assert call_count == 1
 
+    @asynctest
+    async def test_enabled_false_aiter_raises_original_exception(self) -> None:
+        """When enabled=False, the async iterator raises the original exception,
+        not a RetryError, and the body executes exactly once."""
+        call_count = 0
+        retrying = AsyncRetrying(
+            enabled=False,
+            stop=stop_after_attempt(5),
+        )
+        with pytest.raises(ValueError, match="fail"):
+            async for attempt in retrying:
+                with attempt:
+                    call_count += 1
+                    raise ValueError("fail")
+        assert call_count == 1
+
+    @asynctest
+    async def test_enabled_false_aiter_succeeds_on_first_attempt(self) -> None:
+        """When enabled=False, the async iterator runs the body once and stops."""
+        call_count = 0
+        retrying = AsyncRetrying(
+            enabled=False,
+            stop=stop_after_attempt(5),
+        )
+        async for attempt in retrying:
+            with attempt:
+                call_count += 1
+        assert call_count == 1
+
 
 @unittest.skipIf(not have_trio, "trio not installed")
 class TestTrio(unittest.TestCase):
