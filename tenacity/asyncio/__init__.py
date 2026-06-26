@@ -114,8 +114,8 @@ class AsyncRetrying(BaseRetrying):
         is_async = _utils.is_coroutine_callable(fn)
         if not self.enabled:
             if is_async:
-                return await fn(*args, **kwargs)  # type: ignore[misc]
-            return fn(*args, **kwargs)
+                return await fn(*args, **kwargs)  # type: ignore[no-any-return]
+            return fn(*args, **kwargs)  # type: ignore[return-value]
 
         self.begin()
 
