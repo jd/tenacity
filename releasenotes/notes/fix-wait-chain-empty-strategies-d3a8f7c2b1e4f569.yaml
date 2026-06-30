@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    ``wait_chain()`` now raises ``ValueError`` at construction time when
+    called with no strategies, instead of raising a confusing
+    ``IndexError`` from ``__call__`` the first time it is used. Empty
+    wait chains have no useful behaviour, so failing early gives a
+    clearer error message.
