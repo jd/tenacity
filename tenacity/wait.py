@@ -104,6 +104,8 @@ class wait_chain(wait_base):
     """
 
     def __init__(self, *strategies: wait_base) -> None:
+        if not strategies:
+            raise ValueError("wait_chain() requires at least one strategy")
         self.strategies = strategies
 
     def __call__(self, retry_state: "RetryCallState") -> float:

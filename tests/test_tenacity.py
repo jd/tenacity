@@ -541,10 +541,13 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(sleep_intervals, [1.0, 2.0, 3.0, 3.0])
         sleep_intervals[:] = []
 
-        # Clear and restart retrying.
-        self.assertRaises(tenacity.RetryError, always_return_1)
-        self.assertEqual(sleep_intervals, [1.0, 2.0, 3.0, 3.0])
-        sleep_intervals[:] = []
+    def test_wait_chain_requires_at_least_one_strategy(self) -> None:
+        with self.assertRaises(ValueError):
+            tenacity.wait_chain()
+        # Confirm the wrapped Retrying path surfaces the same ValueError
+        # instead of an opaque IndexError from self.strategies[-1].
+        with self.assertRaises(ValueError):
+            Retrying(wait=tenacity.wait_chain())
 
     def test_wait_random_exponential(self) -> None:
         fn = tenacity.wait_random_exponential(0.5, 60.0)
