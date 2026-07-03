@@ -840,6 +840,35 @@ class TestRetryConditions(unittest.TestCase):
         self.assertIsInstance(combined, retry_all)
         self.assertEqual(len(combined.retries), 3)
 
+    def test_retry_composition_rejects_non_callable(self) -> None:
+        """Non-callable, non-retry_base operands (bool/int/None/str/...)
+        used to silently construct a retry_any/retry_all that raised
+        ``TypeError: '<type>' object is not callable`` from inside the
+        retry loop. The operator should now raise a clear TypeError at
+        the construction site that names the bad operand."""
+        retry = tenacity.retry_always
+
+        # `True | retry` exercises __ror__ on retry_base
+        with self.assertRaises(TypeError) as ctx:
+            True | retry  # noqa: B018
+        self.assertIn("callable", str(ctx.exception))
+
+        # `retry | False` exercises __or__ on retry_base
+        with self.assertRaises(TypeError):
+            retry | False  # noqa: B018
+
+        # An int is a non-callable, non-retry_base
+        with self.assertRaises(TypeError):
+            retry & 42  # noqa: B018
+
+        # A string is a non-callable, non-retry_base
+        with self.assertRaises(TypeError):
+            "nope" | retry  # noqa: B018
+
+        # The same guard must apply on the right side of & via __rand__
+        with self.assertRaises(TypeError):
+            None & retry  # noqa: B018
+
     def _raise_try_again(self) -> None:
         self._attempts += 1
         if self._attempts < 3:
