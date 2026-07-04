@@ -206,6 +206,103 @@ class TestAsyncEnabled(unittest.TestCase):
         assert call_count == 1
 
 
+class TestAsyncRetryComposition(unittest.TestCase):
+    """The async retry operator overloads (| and &) should reject non-callable,
+    non-retry_base operands at the construction site, matching the sync
+    behaviour added in test_retry_composition_rejects_non_callable. Without
+    the guard, an operand like ``True | async_retry_if_exception(...)``
+    used to silently build a retry_any whose ``__call__`` later raised
+    ``TypeError: object bool can't be used in 'await' expression`` from
+    inside the retry loop, far from the original misuse."""
+
+    def test_async_retry_composition_rejects_non_callable(self) -> None:
+        async_retry = tasyncio.retry.retry_if_exception(lambda exc: True)
+
+        # `True | async_retry` exercises async_retry_base.__ror__
+        with self.assertRaises(TypeError) as ctx:
+            True | async_retry  # noqa: B018
+        self.assertIn("callable", str(ctx.exception))
+        self.assertIn("bool", str(ctx.exception))
+
+        # `async_retry | False` exercises async_retry_base.__or__
+        with self.assertRaises(TypeError) as ctx:
+            async_retry | False  # noqa: B018
+        self.assertIn("callable", str(ctx.exception))
+        self.assertIn("bool", str(ctx.exception))
+
+        # An int is a non-callable, non-retry_base
+        with self.assertRaises(TypeError) as ctx:
+            async_retry & 42  # noqa: B018
+        self.assertIn("callable", str(ctx.exception))
+        self.assertIn("int", str(ctx.exception))
+
+        # A string is a non-callable, non-retry_base
+        with self.assertRaises(TypeError) as ctx:
+            "nope" | async_retry  # noqa: B018
+        self.assertIn("callable", str(ctx.exception))
+        self.assertIn("str", str(ctx.exception))
+
+        # The same guard must apply on the right side of & via __rand__
+        with self.assertRaises(TypeError) as ctx:
+            None & async_retry  # noqa: B018
+        self.assertIn("callable", str(ctx.exception))
+        self.assertIn("NoneType", str(ctx.exception))
+
+    def test_async_retry_composition_accepts_valid_operands(self) -> None:
+        """The guard must let through retry_base instances, sync retry_base
+        instances, and plain callables, so legitimate compositions keep
+        working unchanged."""
+        async_retry = tasyncio.retry.retry_if_exception(lambda exc: True)
+        other_async = tasyncio.retry.retry_if_result(lambda r: r is None)
+        sync_retry = tenacity.retry_always
+        plain_callable = lambda _state: True  # noqa: E731
+
+        # async | async
+        combined = async_retry | other_async
+        self.assertIsInstance(combined, tasyncio.retry.retry_any)
+        # async | sync
+        combined = async_retry | sync_retry
+        self.assertIsInstance(combined, tasyncio.retry.retry_any)
+        # async | callable
+        combined = async_retry | plain_callable
+        self.assertIsInstance(combined, tasyncio.retry.retry_any)
+        # async & async
+        combined = async_retry & other_async
+        self.assertIsInstance(combined, tasyncio.retry.retry_all)
+        # async & sync
+        combined = async_retry & sync_retry
+        self.assertIsInstance(combined, tasyncio.retry.retry_all)
+        # async & callable
+        combined = async_retry & plain_callable
+        self.assertIsInstance(combined, tasyncio.retry.retry_all)
+
+    def test_async_retry_any_ror_validates_leaf_operand(self) -> None:
+        """``retry_any.__ror__`` flattens nested retry_any groupings, but
+        the leaf branch (when ``other`` is not a retry_any) must still
+        validate that the raw value is a retry_base or callable. Without
+        that guard, ``True | some_async_retry`` would skip the
+        async_retry_base.__ror__ validator and build a retry_any
+        containing a non-callable."""
+        any_obj = tasyncio.retry.retry_any(
+            tasyncio.retry.retry_if_exception(lambda exc: True)
+        )
+        with self.assertRaises(TypeError) as ctx:
+            True | any_obj  # noqa: B018
+        self.assertIn("callable", str(ctx.exception))
+        self.assertIn("bool", str(ctx.exception))
+
+    def test_async_retry_all_rand_validates_leaf_operand(self) -> None:
+        """Mirror of test_async_retry_any_ror_validates_leaf_operand for
+        the ``&`` operator and retry_all."""
+        all_obj = tasyncio.retry.retry_all(
+            tasyncio.retry.retry_if_exception(lambda exc: True)
+        )
+        with self.assertRaises(TypeError) as ctx:
+            None & all_obj  # noqa: B018
+        self.assertIn("callable", str(ctx.exception))
+        self.assertIn("NoneType", str(ctx.exception))
+
+
 @unittest.skipIf(not have_trio, "trio not installed")
 class TestTrio(unittest.TestCase):
     def test_trio_basic(self) -> None:
