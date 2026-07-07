@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    ``retry_if_exception_message`` (and its inverse
+    ``retry_if_not_exception_message``) now accept an empty ``message=""``
+    and match exceptions whose ``str()`` is empty, such as a bare
+    ``RuntimeError()``. Previously a truthiness check treated ``message=""``
+    as "no message given" and raised a spurious ``TypeError`` at
+    construction time, making every message matchable except the empty one.

@@ -917,6 +917,32 @@ class TestRetryConditions(unittest.TestCase):
         with self.assertRaises(TypeError):
             tenacity.retry_if_exception_message(message="negative", match="negative")
 
+    def test_retry_if_exception_message_empty_message(self) -> None:
+        # An exception whose str() is empty (e.g. a bare ``RuntimeError()``) is
+        # a valid target. ``message=""`` must be accepted and match it, rather
+        # than being treated as "no message given" by a truthiness check.
+        r = tenacity.retry_if_exception_message(message="")
+        self.assertEqual(r.message, "")
+        empty = make_retry_state(
+            1, 0, last_result=tenacity.Future.construct(1, RuntimeError(), True)
+        )
+        nonempty = make_retry_state(
+            1, 0, last_result=tenacity.Future.construct(1, RuntimeError("boom"), True)
+        )
+        self.assertTrue(r(empty))
+        self.assertFalse(r(nonempty))
+
+    def test_retry_if_not_exception_message_empty_message(self) -> None:
+        r = tenacity.retry_if_not_exception_message(message="")
+        empty = make_retry_state(
+            1, 0, last_result=tenacity.Future.construct(1, RuntimeError(), True)
+        )
+        nonempty = make_retry_state(
+            1, 0, last_result=tenacity.Future.construct(1, RuntimeError("boom"), True)
+        )
+        self.assertFalse(r(empty))
+        self.assertTrue(r(nonempty))
+
 
 class NoneReturnUntilAfterCount:
     """Holds counter state for invoking a method several times in a row."""
