@@ -1517,14 +1517,14 @@ class TestStatisticsKeys:
         """
         import functools
 
-        def outer(
-            fn: typing.Callable[..., typing.Any],
-        ) -> typing.Callable[..., typing.Any]:
+        _F = typing.TypeVar("_F", bound=typing.Callable[..., typing.Any])
+
+        def outer(fn: _F) -> _F:
             @functools.wraps(fn)
             def wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
                 return fn(*args, **kwargs)
 
-            return wrapper
+            return typing.cast("_F", wrapper)
 
         @outer
         @retry(stop=tenacity.stop_after_attempt(3))

@@ -660,6 +660,11 @@ class _RetryDecorated(t.Protocol[P, R]):
 
     retry: "BaseRetrying"
     statistics: dict[str, t.Any]
+    # Set by functools.wraps on the retry wrapper. Declared so that the
+    # statistics stay accessible in a type-safe way even when the decorated
+    # function is further wrapped by another functools.wraps-based decorator
+    # (which copies these attributes onto the outer wrapper). See issue #519.
+    __wrapped__: "_RetryDecorated[P, R]"
 
     def retry_with(self, *args: t.Any, **kwargs: t.Any) -> "_RetryDecorated[P, R]": ...
 
