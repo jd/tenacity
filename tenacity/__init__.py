@@ -369,8 +369,14 @@ class BaseRetrying(ABC):
             # Always create a copy to prevent overwriting the local contexts when
             # calling the same wrapped functions multiple times in the same stack
             copy = self.copy()
-            wrapped_f.statistics = copy.statistics  # type: ignore[attr-defined]
-            self._local.statistics = copy.statistics
+            # Reuse the same statistics dict rather than rebinding the attribute
+            # so that the stats stay visible through additional decorators that
+            # copy attributes via functools.wraps (which copies the reference to
+            # this dict into the outer wrapper's __dict__). See issue #519.
+            stats = wrapped_f.statistics  # type: ignore[attr-defined]
+            stats.clear()
+            copy._local.statistics = stats  # noqa: SLF001
+            self._local.statistics = stats
             return copy(f, *args, **kw)
 
         def retry_with(*args: t.Any, **kwargs: t.Any) -> "_RetryDecorated[P, R]":

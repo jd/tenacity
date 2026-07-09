@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Keep ``func.statistics`` visible when a ``@retry``-decorated function is
+    further wrapped by another decorator (for example a timing decorator using
+    ``functools.wraps``). The statistics dict is now reused in place on each
+    call instead of being rebound, so it stays reachable through the outer
+    wrapper's copied ``__dict__`` instead of appearing empty.
