@@ -241,7 +241,12 @@ class retry_if_exception_message(retry_if_exception):
         if self.message:
             return self.message == str(exception)
         assert self.match is not None
-        return bool(self.match.match(str(exception)))
+        # Use re.search (not re.match) so the pattern is found anywhere in
+        # the exception message. re.match only matches at the start, so a
+        # user-supplied pattern like r"rate limit" would never match
+        # "HTTP 429: rate limit hit". The parameter is named ``match``,
+        # meaning "find a match in the message", not "match from offset 0".
+        return bool(self.match.search(str(exception)))
 
 
 class retry_if_not_exception_message(retry_if_exception_message):

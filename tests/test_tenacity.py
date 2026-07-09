@@ -1173,10 +1173,10 @@ def _retryable_test_with_unless_exception_type_no_input(
 
 
 @retry(
-    stop=tenacity.stop_after_attempt(5),
     retry=tenacity.retry_if_exception_message(
         message=NoCustomErrorAfterCount.derived_message
     ),
+    stop=tenacity.stop_after_attempt(5),
 )
 def _retryable_test_if_exception_message_message(thing: typing.Any) -> typing.Any:
     return thing.go()
@@ -1206,6 +1206,14 @@ def _retryable_test_if_exception_message_match(thing: typing.Any) -> typing.Any:
     )
 )
 def _retryable_test_if_not_exception_message_match(thing: typing.Any) -> typing.Any:
+    return thing.go()
+
+
+@retry(
+    retry=tenacity.retry_if_exception_message(match="limit exceeded"),
+    stop=tenacity.stop_after_attempt(5),
+)
+def _retryable_test_if_exception_message_match_search(thing: typing.Any) -> typing.Any:
     return thing.go()
 
 
@@ -1377,6 +1385,36 @@ class TestDecoratorWrapper(unittest.TestCase):
             )
         except CustomError:
             self.fail("CustomError should've been retried from errormessage")
+
+    def test_retry_if_exception_message_match_finds_pattern_anywhere(self) -> None:
+        # Regression: the `match` kwarg used to call re.Pattern.match(), which
+        # only matches at the start of the message. A user who wrote
+        # `match="limit exceeded"` to catch `"HTTP 429: rate limit exceeded"`
+        # got zero retries because the pattern was not anchored at index 0.
+        # The fix uses re.Pattern.search() so the pattern is found anywhere
+        # in the message, which is what the parameter name implies.
+        class MessageCount:
+            derived_message = "HTTP 429: rate limit exceeded"
+
+            def __init__(self, count: int) -> None:
+                self.counter = 0
+                self.count = count
+
+            def go(self) -> bool:
+                if self.counter < self.count:
+                    self.counter += 1
+                    raise CustomError(self.derived_message)
+                return True
+
+        try:
+            self.assertTrue(
+                _retryable_test_if_exception_message_match_search(MessageCount(3))
+            )
+        except CustomError:
+            self.fail(
+                "CustomError should've been retried: the 'limit exceeded' pattern "
+                "appears in the message and should trigger a retry"
+            )
 
     def test_retry_if_not_exception_message_match(self) -> None:
         try:
