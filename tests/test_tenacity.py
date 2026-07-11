@@ -1506,6 +1506,35 @@ class TestStatisticsKeys:
         succeeds_first_try()
         assert succeeds_first_try.statistics["delay_since_first_attempt"] == 0
 
+    def test_statistics_visible_through_outer_decorator(self) -> None:
+        """Statistics must resolve when @retry is wrapped by another decorator.
+
+        A well-behaved outer decorator uses functools.wraps, which copies the
+        inner wrapper's ``__dict__`` (including ``statistics``). Rebinding the
+        attribute on each call left the outer wrapper pointing at a stale empty
+        dict. The statistics must instead stay visible through the wrapper
+        chain. See issue #519.
+        """
+        import functools
+
+        _F = typing.TypeVar("_F", bound=typing.Callable[..., typing.Any])
+
+        def outer(fn: _F) -> _F:
+            @functools.wraps(fn)
+            def wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
+                return fn(*args, **kwargs)
+
+            return typing.cast("_F", wrapper)
+
+        @outer
+        @retry(stop=tenacity.stop_after_attempt(3))
+        def my_call() -> str:
+            return "ok"
+
+        assert my_call() == "ok"
+        assert my_call.statistics["attempt_number"] == 1
+        assert my_call.statistics is my_call.__wrapped__.statistics
+
 
 class TestEnabled:
     def test_enabled_false_skips_retry(self) -> None:
