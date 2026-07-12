@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Avoid computing an increasingly large power after ``wait_exponential`` has
+    reached its configured maximum wait.
