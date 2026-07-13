@@ -223,22 +223,22 @@ class retry_if_exception_message(retry_if_exception):
         message: str | None = None,
         match: None | str | re.Pattern[str] = None,
     ) -> None:
-        if message and match:
+        if message is not None and match is not None:
             raise TypeError(
                 f"{self.__class__.__name__}() takes either 'message' or 'match', not both"
             )
 
-        if not message and not match:
+        if message is None and match is None:
             raise TypeError(
                 f"{self.__class__.__name__}() missing 1 required argument 'message' or 'match'"
             )
 
         self.message = message
-        self.match = re.compile(match) if match else None
+        self.match = re.compile(match) if match is not None else None
         super().__init__(self._check)
 
     def _check(self, exception: BaseException) -> bool:
-        if self.message:
+        if self.message is not None:
             return self.message == str(exception)
         assert self.match is not None
         return bool(self.match.match(str(exception)))
