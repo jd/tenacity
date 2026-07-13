@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import abc
+import math
 import random
 import typing
 import warnings
@@ -201,8 +202,17 @@ class wait_exponential(wait_base):
         self.exp_base = exp_base
 
     def __call__(self, retry_state: "RetryCallState") -> float:
+        exponent = retry_state.attempt_number - 1
+        if (
+            self.multiplier > 0
+            and self.max > 0
+            and self.exp_base > 1
+            and math.isfinite(self.max)
+            and exponent > math.log(self.max / self.multiplier, self.exp_base)
+        ):
+            return max(max(0, self.min), self.max)
         try:
-            exp = self.exp_base ** (retry_state.attempt_number - 1)
+            exp = self.exp_base**exponent
             result = self.multiplier * exp
         except OverflowError:
             return self.max

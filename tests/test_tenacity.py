@@ -359,6 +359,14 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(make_retry_state(8, 0)), 40)
         self.assertEqual(r.wait(make_retry_state(50, 0)), 40)
 
+    def test_exponential_skips_power_after_reaching_max(self) -> None:
+        class ExplodingPower(float):
+            def __pow__(self, exponent: float, modulo: int | None = None) -> float:
+                raise AssertionError("power should not be calculated above the maximum")
+
+        r = Retrying(wait=tenacity.wait_exponential(max=40, exp_base=ExplodingPower(2)))
+        self.assertEqual(r.wait(make_retry_state(50, 0)), 40)
+
     def test_exponential_with_min_wait(self) -> None:
         r = Retrying(wait=tenacity.wait_exponential(min=20))
         self.assertEqual(r.wait(make_retry_state(1, 0)), 20)
