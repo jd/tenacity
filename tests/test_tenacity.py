@@ -367,6 +367,10 @@ class TestWaitConditions(unittest.TestCase):
         r = Retrying(wait=tenacity.wait_exponential(max=40, exp_base=ExplodingPower(2)))
         self.assertEqual(r.wait(make_retry_state(50, 0)), 40)
 
+    def test_exponential_caps_when_max_multiplier_ratio_underflows(self) -> None:
+        r = Retrying(wait=tenacity.wait_exponential(multiplier=1e300, max=1e-100))
+        self.assertEqual(r.wait(make_retry_state(1, 0)), 1e-100)
+
     def test_exponential_with_min_wait(self) -> None:
         r = Retrying(wait=tenacity.wait_exponential(min=20))
         self.assertEqual(r.wait(make_retry_state(1, 0)), 20)

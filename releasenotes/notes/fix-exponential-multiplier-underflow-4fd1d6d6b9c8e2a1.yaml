@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Prevent ``wait_exponential`` from raising ``ValueError`` when dividing the
+    configured maximum wait by a large multiplier underflows to zero.
