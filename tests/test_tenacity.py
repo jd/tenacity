@@ -673,6 +673,41 @@ class TestWaitConditions(unittest.TestCase):
         with self.assertRaises(ValueError):
             tenacity.wait_exponential_jitter(initial=5, multiplier=10)
 
+    def test_wait_golden_jitter_deterministic_reproducible(self) -> None:
+        w1 = tenacity.wait_golden_jitter(multiplier=1, max=60, seq_index=42)
+        w2 = tenacity.wait_golden_jitter(multiplier=1, max=60, seq_index=42)
+        for attempt in range(1, 8):
+            rs = make_retry_state(attempt, 0)
+            self.assertEqual(w1(rs), w2(rs))
+
+    def test_wait_golden_jitter_respects_max(self) -> None:
+        w = tenacity.wait_golden_jitter(multiplier=1, max=10, seq_index=7)
+        for attempt in range(1, 20):
+            self.assertLessEqual(w(make_retry_state(attempt, 0)), 10)
+
+    def test_wait_golden_jitter_respects_min(self) -> None:
+        w = tenacity.wait_golden_jitter(multiplier=1, max=60, min=2, seq_index=3)
+        for attempt in range(1, 10):
+            self.assertGreaterEqual(w(make_retry_state(attempt, 0)), 2)
+
+    def test_wait_golden_jitter_within_exponential_window(self) -> None:
+        w = tenacity.wait_golden_jitter(multiplier=1, max=1e18, exp_base=2, seq_index=5)
+        for attempt in range(1, 10):
+            high = 1 * (2 ** (attempt - 1))
+            self.assertLessEqual(w(make_retry_state(attempt, 0)), high + 1e-9)
+
+    def test_wait_golden_jitter_distinct_indices_distinct_phases(self) -> None:
+        phases = {tenacity.wait_golden_jitter(seq_index=i).phase for i in range(50)}
+        self.assertEqual(len(phases), 50)
+
+    def test_wait_golden_jitter_low_discrepancy(self) -> None:
+        phases = sorted(
+            tenacity.wait_golden_jitter(seq_index=i).phase for i in range(20)
+        )
+        gaps = [phases[i + 1] - phases[i] for i in range(len(phases) - 1)]
+        # Three-distance theorem guarantees the largest gap is at most ~2x ideal (1/20).
+        self.assertLess(max(gaps), 0.11)
+
     def test_wait_retry_state_attributes(self) -> None:
         class ExtractCallState(Exception):
             pass
