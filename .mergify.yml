@@ -1,12 +1,11 @@
 queue_rules:
   - name: default
     merge_method: squash
-    autoqueue: true
     queue_conditions:
       - or:
-        - author = jd
-        - "#approved-reviews-by >= 1"
-        - author = dependabot[bot]
+          - author = jd
+          - "#approved-reviews-by >= 1"
+          - author = dependabot[bot]
       - "check-success=test (3.10, check)"
       - "check-success=test (3.11, check)"
       - "check-success=test (3.12, check)"
@@ -20,3 +19,5 @@ pull_request_rules:
     conditions: []
     actions:
       dismiss_reviews: {}
+merge_protections_settings:
+  auto_merge_conditions: true
