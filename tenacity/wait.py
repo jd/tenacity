@@ -208,7 +208,9 @@ class wait_exponential(wait_base):
             and self.max > 0
             and self.exp_base > 1
             and math.isfinite(self.max)
-            and exponent > math.log(self.max / self.multiplier, self.exp_base)
+            and exponent
+            > math.log(self.max, self.exp_base)
+            - math.log(self.multiplier, self.exp_base)
         ):
             return max(max(0, self.min), self.max)
         try:
