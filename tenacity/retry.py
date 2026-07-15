@@ -115,7 +115,12 @@ class retry_if_exception_type(retry_if_exception):
 
 
 class retry_if_not_exception_type(retry_if_exception):
-    """Retries except an exception has been raised of one or more types."""
+    """Retries except an exception has been raised of one or more types.
+
+    Note: asyncio.CancelledError is never retried, regardless of exception_types,
+    as retrying cancellations defeats task cancellation semantics.
+    See: https://github.com/jd/tenacity/issues/529
+    """
 
     def __init__(
         self,
@@ -126,6 +131,10 @@ class retry_if_not_exception_type(retry_if_exception):
         super().__init__(self._check)
 
     def _check(self, e: BaseException) -> bool:
+        # Fix #529: never retry CancelledError — task cancellation must propagate
+        import asyncio as _asyncio
+        if isinstance(e, _asyncio.CancelledError):
+            return False
         return not isinstance(e, self.exception_types)
 
 
