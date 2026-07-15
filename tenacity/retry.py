@@ -29,7 +29,24 @@ class retry_base(abc.ABC):
     def __call__(self, retry_state: "RetryCallState") -> bool:
         pass
 
+    @staticmethod
+    def _validate_predicate(other: "RetryBaseT") -> None:
+        # The RetryBaseT union documents that | / & accept either a
+        # retry_base subclass or a plain callable. Without this guard a
+        # non-callable (e.g. ``True | retry_always``) builds a
+        # retry_any/retry_all whose ``__call__`` later raises
+        # ``TypeError: 'bool' object is not callable`` far from the
+        # original misuse. Rejecting the value at the operator site
+        # gives a clear error pointing at the bad operand.
+        if isinstance(other, retry_base) or callable(other):
+            return
+        raise TypeError(
+            "Retry predicates must be retry_base instances or callables, "
+            f"got {type(other).__name__}: {other!r}"
+        )
+
     def __and__(self, other: "RetryBaseT") -> "retry_all":
+        self._validate_predicate(other)
         if isinstance(other, retry_base):
             return other.__rand__(self)
         # Plain callable: flatten if self is already a retry_all
@@ -38,12 +55,14 @@ class retry_base(abc.ABC):
         return retry_all(self, other)
 
     def __rand__(self, other: "RetryBaseT") -> "retry_all":
+        self._validate_predicate(other)
         # Flatten if other is already a retry_all
         if isinstance(other, retry_all):
             return retry_all(*other.retries, self)
         return retry_all(other, self)
 
     def __or__(self, other: "RetryBaseT") -> "retry_any":
+        self._validate_predicate(other)
         if isinstance(other, retry_base):
             return other.__ror__(self)
         # Plain callable: flatten if self is already a retry_any
@@ -52,6 +71,7 @@ class retry_base(abc.ABC):
         return retry_any(self, other)
 
     def __ror__(self, other: "RetryBaseT") -> "retry_any":
+        self._validate_predicate(other)
         # Flatten if other is already a retry_any
         if isinstance(other, retry_any):
             return retry_any(*other.retries, self)

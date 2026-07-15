@@ -32,21 +32,25 @@ class async_retry_base(retry_base):
     def __and__(  # type: ignore[override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_all":
+        self._validate_predicate(other)
         return retry_all(self, other)
 
     def __rand__(  # type: ignore[misc,override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_all":
+        self._validate_predicate(other)
         return retry_all(other, self)
 
     def __or__(  # type: ignore[override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_any":
+        self._validate_predicate(other)
         return retry_any(self, other)
 
     def __ror__(  # type: ignore[misc,override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_any":
+        self._validate_predicate(other)
         return retry_any(other, self)
 
 
@@ -109,6 +113,14 @@ class retry_any(async_retry_base):
     def __ror__(  # type: ignore[misc,override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_any":
+        # async_retry_base.__ror__ already validated the operand for
+        # the common `retry | non_retry` path, but retry_any itself
+        # defines __ror__ to flatten nested retry_any groupings. The
+        # flattening branch (``isinstance(other, retry_any)``) only
+        # composes with another retry_any so the operand is already
+        # known to be a valid retry_base; the leaf branch must still
+        # validate the raw value before folding it in.
+        self._validate_predicate(other)
         if isinstance(other, retry_any):
             return retry_any(*other.retries, *self.retries)
         return retry_any(other, *self.retries)
@@ -131,6 +143,12 @@ class retry_all(async_retry_base):
     def __rand__(  # type: ignore[misc,override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_all":
+        # async_retry_base.__rand__ already validated the operand for
+        # the common `non_retry & retry` path, but retry_all itself
+        # defines __rand__ to flatten nested retry_all groupings. Same
+        # reasoning as retry_any.__ror__ above: the flatten branch is
+        # safe by construction, the leaf branch must validate.
+        self._validate_predicate(other)
         if isinstance(other, retry_all):
             return retry_all(*other.retries, *self.retries)
         return retry_all(other, *self.retries)
