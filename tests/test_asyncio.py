@@ -231,6 +231,43 @@ class TestAsyncEnabled(unittest.TestCase):
                 call_count += 1
         assert call_count == 1
 
+    @asynctest
+    async def test_enabled_false_call_raises_original_exception(self) -> None:
+        """When enabled=False, awaiting the controller directly raises the original
+        exception, not a RetryError, and the coroutine executes exactly once."""
+        call_count = 0
+
+        async def always_fails() -> None:
+            nonlocal call_count
+            call_count += 1
+            raise ValueError("fail")
+
+        retrying = AsyncRetrying(
+            enabled=False,
+            stop=stop_after_attempt(5),
+        )
+        with pytest.raises(ValueError, match="fail"):
+            await retrying(always_fails)
+        assert call_count == 1
+
+    @asynctest
+    async def test_enabled_false_call_succeeds_on_first_attempt(self) -> None:
+        """When enabled=False, awaiting the controller directly runs the coroutine
+        once and returns its result."""
+        call_count = 0
+
+        async def succeeds() -> str:
+            nonlocal call_count
+            call_count += 1
+            return "ok"
+
+        retrying = AsyncRetrying(
+            enabled=False,
+            stop=stop_after_attempt(5),
+        )
+        assert await retrying(succeeds) == "ok"
+        assert call_count == 1
+
 
 @unittest.skipIf(not have_trio, "trio not installed")
 class TestTrio(unittest.TestCase):

@@ -520,6 +520,9 @@ class Retrying(BaseRetrying):
         *args: t.Any,
         **kwargs: t.Any,
     ) -> WrappedFnReturnT:
+        if not self.enabled:
+            return fn(*args, **kwargs)
+
         self.begin()
 
         retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
