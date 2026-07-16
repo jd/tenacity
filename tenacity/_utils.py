@@ -92,8 +92,12 @@ def is_coroutine_callable(call: typing.Callable[..., typing.Any]) -> bool:
         return False
     if inspect.iscoroutinefunction(call):
         return True
-    partial_call = isinstance(call, functools.partial) and call.func
-    dunder_call = partial_call or getattr(call, "__call__", None)  # noqa: B004
+    if isinstance(call, functools.partial):
+        # Recurse into the wrapped target so a partial over a callable *object*
+        # with an async ``__call__`` (not just a plain coroutine function) is
+        # still detected as a coroutine callable.
+        return is_coroutine_callable(call.func)
+    dunder_call = getattr(call, "__call__", None)  # noqa: B004
     return inspect.iscoroutinefunction(dunder_call)
 
 
