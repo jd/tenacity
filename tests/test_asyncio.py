@@ -16,7 +16,7 @@ import asyncio
 import inspect
 import unittest
 from collections.abc import Callable, Coroutine
-from functools import wraps
+from functools import partial, wraps
 from typing import Any, TypeVar
 from unittest import mock
 
@@ -94,6 +94,25 @@ class TestAsyncio(unittest.TestCase):
         retrying = AsyncRetrying()
         await retrying(_async_function, thing)
         assert thing.counter == thing.count
+
+    @asynctest
+    async def test_retry_partial_over_async_callable_object(self) -> None:
+        # A functools.partial wrapping a callable *object* with an async
+        # __call__ must be routed through the async path; otherwise
+        # AsyncRetrying calls it synchronously and stores the un-awaited
+        # coroutine as the result without ever running the body.
+        class AsyncCallable:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            async def __call__(self) -> str:
+                self.calls += 1
+                return "awaited-result"
+
+        obj = AsyncCallable()
+        result: str = await AsyncRetrying()(partial(obj))
+        assert result == "awaited-result"
+        assert obj.calls == 1
 
     @asynctest
     async def test_stop_after_attempt(self) -> None:
