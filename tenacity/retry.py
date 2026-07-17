@@ -57,8 +57,26 @@ class retry_base(abc.ABC):
             return retry_any(*other.retries, self)
         return retry_any(other, self)
 
+    def __invert__(self) -> "retry_base":
+        """Return a retry strategy that is the logical inverse of this one."""
+        return _retry_inverted(self)
+
 
 RetryBaseT = retry_base | typing.Callable[["RetryCallState"], bool]
+
+
+class _retry_inverted(retry_base):
+    """Retry strategy that inverts the decision of another retry strategy."""
+
+    def __init__(self, retry: "retry_base") -> None:
+        self.retry = retry
+
+    def __call__(self, retry_state: "RetryCallState") -> bool:
+        return not self.retry(retry_state)
+
+    def __invert__(self) -> "retry_base":
+        # Double inversion returns the original.
+        return self.retry
 
 
 class _retry_never(retry_base):
@@ -181,6 +199,39 @@ class retry_if_exception_cause_type(retry_base):
                 if isinstance(exc.__cause__, self.exception_cause_types):
                     return True
                 exc = exc.__cause__
+
+        return False
+
+
+class retry_unless_exception_cause_type(retry_base):
+    """Retries unless any of the causes of the raised exception is of one or more types.
+
+    This is the inverse of `retry_if_exception_cause_type`: it keeps retrying
+    as long as none of the causes in the exception chain match the given
+    type(s). As soon as a matching cause is found, it stops retrying.
+
+    The check on the type of the cause of the exception is done recursively
+    (until finding an exception in the chain that has no `__cause__`).
+    """
+
+    def __init__(
+        self,
+        exception_types: type[BaseException]
+        | tuple[type[BaseException], ...] = Exception,
+    ) -> None:
+        self.exception_cause_types = exception_types
+
+    def __call__(self, retry_state: "RetryCallState") -> bool:
+        if retry_state.outcome is None:
+            raise RuntimeError("__call__ called before outcome was set")
+
+        if retry_state.outcome.failed:
+            exc = retry_state.outcome.exception()
+            while exc is not None:
+                if isinstance(exc.__cause__, self.exception_cause_types):
+                    return False  # a matching cause found — stop retrying
+                exc = exc.__cause__
+            return True  # no matching cause anywhere in the chain — keep retrying
 
         return False
 
