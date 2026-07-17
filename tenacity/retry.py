@@ -126,7 +126,7 @@ class retry_if_not_exception_type(retry_if_exception):
         super().__init__(self._check)
 
     def _check(self, e: BaseException) -> bool:
-        return not isinstance(e, self.exception_types)
+        return isinstance(e, Exception) and not isinstance(e, self.exception_types)
 
 
 class retry_unless_exception_type(retry_if_exception):
