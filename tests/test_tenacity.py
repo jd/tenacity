@@ -1441,6 +1441,31 @@ class TestDecoratorWrapper(unittest.TestCase):
         except NameError:
             pass
 
+    def test_retry_if_exception_cause_type_with_cause_cycle(self) -> None:
+        # A cyclic __cause__ chain (e.g. ``raise e from e``) must not hang the
+        # cause scan; the predicate should give up once the chain repeats.
+        def _raise_self_caused() -> None:
+            try:
+                raise ValueError("inner")
+            except ValueError as e:
+                raise e from e
+
+        def _raise_two_node_cycle() -> None:
+            first = KeyError("first")
+            second = OSError("second")
+            first.__cause__ = second
+            second.__cause__ = first
+            raise first
+
+        for raiser in (_raise_self_caused, _raise_two_node_cycle):
+            r = Retrying(
+                retry=tenacity.retry_if_exception_cause_type(NameError),
+                stop=tenacity.stop_after_attempt(2),
+                reraise=True,
+            )
+            with self.assertRaises((ValueError, KeyError)):
+                r(raiser)
+
     def test_retry_preserves_argument_defaults(self) -> None:
         def function_with_defaults(a: int = 1) -> int:
             return a
