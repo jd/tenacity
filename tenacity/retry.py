@@ -176,10 +176,12 @@ class retry_if_exception_cause_type(retry_base):
             raise RuntimeError("__call__ called before outcome was set")
 
         if retry_state.outcome.failed:
+            seen: set[int] = set()
             exc = retry_state.outcome.exception()
-            while exc is not None:
+            while exc is not None and id(exc) not in seen:
                 if isinstance(exc.__cause__, self.exception_cause_types):
                     return True
+                seen.add(id(exc))
                 exc = exc.__cause__
 
         return False
