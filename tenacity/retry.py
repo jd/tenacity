@@ -161,7 +161,7 @@ class retry_if_exception_cause_type(retry_base):
     """Retries if any of the causes of the raised exception is of one or more types.
 
     The check on the type of the cause of the exception is done recursively (until finding
-    an exception in the chain that has no `__cause__`)
+    an exception in the chain that has no ``__cause__``, or a cycle is detected).
     """
 
     def __init__(
@@ -177,7 +177,12 @@ class retry_if_exception_cause_type(retry_base):
 
         if retry_state.outcome.failed:
             exc = retry_state.outcome.exception()
-            while exc is not None:
+            # Guard against cyclic __cause__ chains (e.g. ``raise e from e``),
+            # which would otherwise spin forever inside the predicate and
+            # prevent stop conditions from ever running (see #658).
+            seen: set[int] = set()
+            while exc is not None and id(exc) not in seen:
+                seen.add(id(exc))
                 if isinstance(exc.__cause__, self.exception_cause_types):
                     return True
                 exc = exc.__cause__
