@@ -1441,6 +1441,31 @@ class TestDecoratorWrapper(unittest.TestCase):
         except NameError:
             pass
 
+    def test_retry_if_exception_cause_type_handles_cause_cycles(self) -> None:
+        """Cyclic __cause__ chains must not hang the retry predicate (#658)."""
+
+        def boom_self_cause() -> None:
+            try:
+                raise ValueError("inner")
+            except ValueError as e:
+                raise e from e
+
+        def boom_two_node_cycle() -> None:
+            a = ValueError("a")
+            b = RuntimeError("b")
+            a.__cause__ = b
+            b.__cause__ = a
+            raise a
+
+        for boom in (boom_self_cause, boom_two_node_cycle):
+            r = tenacity.Retrying(
+                retry=tenacity.retry_if_exception_cause_type(KeyError),
+                stop=tenacity.stop_after_attempt(2),
+                reraise=True,
+            )
+            with self.assertRaises((ValueError, RuntimeError)):
+                r(boom)
+
     def test_retry_preserves_argument_defaults(self) -> None:
         def function_with_defaults(a: int = 1) -> int:
             return a
