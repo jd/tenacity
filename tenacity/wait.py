@@ -50,7 +50,7 @@ class wait_fixed(wait_base):
     """Wait strategy that waits a fixed amount of time between each retry."""
 
     def __init__(self, wait: _utils.time_unit_type) -> None:
-        self.wait_fixed: float = _utils.to_seconds(wait)
+        self.wait_fixed = _utils.to_seconds(wait)
 
     def __call__(self, retry_state: "RetryCallState") -> float:
         return self.wait_fixed
@@ -69,8 +69,8 @@ class wait_random(wait_base):
     def __init__(
         self, min: _utils.time_unit_type = 0, max: _utils.time_unit_type = 1
     ) -> None:
-        self.wait_random_min: float = _utils.to_seconds(min)
-        self.wait_random_max: float = _utils.to_seconds(max)
+        self.wait_random_min = _utils.to_seconds(min)
+        self.wait_random_max = _utils.to_seconds(max)
 
     def __call__(self, retry_state: "RetryCallState") -> float:
         return self.wait_random_min + (
@@ -107,7 +107,7 @@ class wait_chain(wait_base):
     def __init__(self, *strategies: wait_base) -> None:
         if not strategies:
             raise ValueError("wait_chain() requires at least one strategy")
-        self.strategies: tuple[wait_base, ...] = strategies
+        self.strategies = strategies
 
     def __call__(self, retry_state: "RetryCallState") -> float:
         wait_func_no = min(max(retry_state.attempt_number, 1), len(self.strategies))
@@ -167,9 +167,9 @@ class wait_incrementing(wait_base):
         increment: _utils.time_unit_type = 100,
         max: _utils.time_unit_type = _utils.MAX_WAIT,
     ) -> None:
-        self.start: float = _utils.to_seconds(start)
-        self.increment: float = _utils.to_seconds(increment)
-        self.max: float = _utils.to_seconds(max)
+        self.start = _utils.to_seconds(start)
+        self.increment = _utils.to_seconds(increment)
+        self.max = _utils.to_seconds(max)
 
     def __call__(self, retry_state: "RetryCallState") -> float:
         result = self.start + (self.increment * (retry_state.attempt_number - 1))
@@ -196,10 +196,10 @@ class wait_exponential(wait_base):
         exp_base: float = 2,
         min: _utils.time_unit_type = 0,
     ) -> None:
-        self.multiplier: float = multiplier
-        self.min: float = _utils.to_seconds(min)
-        self.max: float = _utils.to_seconds(max)
-        self.exp_base: float = exp_base
+        self.multiplier = multiplier
+        self.min = _utils.to_seconds(min)
+        self.max = _utils.to_seconds(max)
+        self.exp_base = exp_base
 
     def __call__(self, retry_state: "RetryCallState") -> float:
         exponent = retry_state.attempt_number - 1
@@ -286,11 +286,11 @@ class wait_exponential_jitter(wait_base):
             )
             multiplier = initial
 
-        self.multiplier: float = multiplier
-        self.max: float = _utils.to_seconds(max)
-        self.exp_base: float = exp_base
-        self.jitter: float = _utils.to_seconds(jitter)
-        self.min: float = _utils.to_seconds(min)
+        self.multiplier = multiplier
+        self.max = _utils.to_seconds(max)
+        self.exp_base = exp_base
+        self.jitter = _utils.to_seconds(jitter)
+        self.min = _utils.to_seconds(min)
 
     def __call__(self, retry_state: "RetryCallState") -> float:
         jitter = random.uniform(0, self.jitter)

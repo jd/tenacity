@@ -162,11 +162,11 @@ class BaseAction:
 
 
 class RetryAction(BaseAction):
-    REPR_FIELDS: t.Sequence[str] = ("sleep",)
-    NAME: str | None = "retry"
+    REPR_FIELDS = ("sleep",)
+    NAME = "retry"
 
     def __init__(self, sleep: t.SupportsFloat) -> None:
-        self.sleep: float = float(sleep)
+        self.sleep = float(sleep)
 
 
 _unset = object()
@@ -180,7 +180,7 @@ class RetryError(Exception):
     """Encapsulates the last attempt instance right before giving up."""
 
     def __init__(self, last_attempt: "Future") -> None:
-        self.last_attempt: Future = last_attempt
+        self.last_attempt = last_attempt
         super().__init__(last_attempt)
 
     def reraise(self) -> t.NoReturn:
@@ -204,7 +204,7 @@ class AttemptManager:
     """Manage attempt context."""
 
     def __init__(self, retry_state: "RetryCallState") -> None:
-        self.retry_state: RetryCallState = retry_state
+        self.retry_state = retry_state
 
     def __enter__(self) -> None:
         pass
@@ -259,7 +259,7 @@ class BaseRetrying(ABC):
         self.before_sleep = before_sleep
         self.reraise = reraise
         self._local = threading.local()
-        self.retry_error_cls: type[RetryError] = retry_error_cls
+        self.retry_error_cls = retry_error_cls
         self.retry_error_callback = retry_error_callback
         self._name = name
         self.enabled = enabled
@@ -575,9 +575,9 @@ class RetryCallState:
         kwargs: t.Any,
     ) -> None:
         #: Retry call start timestamp
-        self.start_time: float = time.monotonic()
+        self.start_time = time.monotonic()
         #: Retry manager object
-        self.retry_object: BaseRetrying = retry_object
+        self.retry_object = retry_object
         #: Function wrapped by this retry call
         self.fn = fn
         #: Arguments of the function wrapped by this retry call

@@ -68,7 +68,7 @@ class _retry_never(retry_base):
         return False
 
 
-retry_never: _retry_never = _retry_never()
+retry_never = _retry_never()
 
 
 class _retry_always(retry_base):
@@ -78,7 +78,7 @@ class _retry_always(retry_base):
         return True
 
 
-retry_always: _retry_always = _retry_always()
+retry_always = _retry_always()
 
 
 class retry_if_exception(retry_base):
@@ -107,9 +107,7 @@ class retry_if_exception_type(retry_if_exception):
         exception_types: type[BaseException]
         | tuple[type[BaseException], ...] = Exception,
     ) -> None:
-        self.exception_types: type[BaseException] | tuple[type[BaseException], ...] = (
-            exception_types
-        )
+        self.exception_types = exception_types
         super().__init__(self._check)
 
     def _check(self, e: BaseException) -> bool:
@@ -124,9 +122,7 @@ class retry_if_not_exception_type(retry_if_exception):
         exception_types: type[BaseException]
         | tuple[type[BaseException], ...] = Exception,
     ) -> None:
-        self.exception_types: type[BaseException] | tuple[type[BaseException], ...] = (
-            exception_types
-        )
+        self.exception_types = exception_types
         super().__init__(self._check)
 
     def _check(self, e: BaseException) -> bool:
@@ -141,9 +137,7 @@ class retry_unless_exception_type(retry_if_exception):
         exception_types: type[BaseException]
         | tuple[type[BaseException], ...] = Exception,
     ) -> None:
-        self.exception_types: type[BaseException] | tuple[type[BaseException], ...] = (
-            exception_types
-        )
+        self.exception_types = exception_types
         super().__init__(self._check)
 
     def _check(self, e: BaseException) -> bool:
@@ -175,9 +169,7 @@ class retry_if_exception_cause_type(retry_base):
         exception_types: type[BaseException]
         | tuple[type[BaseException], ...] = Exception,
     ) -> None:
-        self.exception_cause_types: (
-            type[BaseException] | tuple[type[BaseException], ...]
-        ) = exception_types
+        self.exception_cause_types = exception_types
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.outcome is None:
