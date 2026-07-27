@@ -68,14 +68,14 @@ class _stop_never(stop_base):
         return False
 
 
-stop_never = _stop_never()
+stop_never: _stop_never = _stop_never()
 
 
 class stop_when_event_set(stop_base):
     """Stop when the given event is set."""
 
     def __init__(self, event: "threading.Event") -> None:
-        self.event = event
+        self.event: threading.Event = event
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return self.event.is_set()
@@ -85,7 +85,7 @@ class stop_after_attempt(stop_base):
     """Stop when the previous attempt >= max_attempt."""
 
     def __init__(self, max_attempt_number: int) -> None:
-        self.max_attempt_number = max_attempt_number
+        self.max_attempt_number: int = max_attempt_number
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return retry_state.attempt_number >= self.max_attempt_number
@@ -102,7 +102,7 @@ class stop_after_delay(stop_base):
     """
 
     def __init__(self, max_delay: _utils.time_unit_type) -> None:
-        self.max_delay = _utils.to_seconds(max_delay)
+        self.max_delay: float = _utils.to_seconds(max_delay)
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.seconds_since_start is None:
@@ -119,7 +119,7 @@ class stop_before_delay(stop_base):
     """
 
     def __init__(self, max_delay: _utils.time_unit_type) -> None:
-        self.max_delay = _utils.to_seconds(max_delay)
+        self.max_delay: float = _utils.to_seconds(max_delay)
 
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.seconds_since_start is None:
