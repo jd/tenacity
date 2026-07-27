@@ -157,11 +157,34 @@ class retry_unless_exception_type(retry_if_exception):
         return self.predicate(exception)
 
 
+def _cause_chain_contains(
+    exc: BaseException | None,
+    exception_types: type[BaseException] | tuple[type[BaseException], ...],
+) -> bool:
+    """True if any ``__cause__`` in the chain is an instance of *exception_types*.
+
+    Cycle-safe: a self-referential ``raise e from e`` cannot hang the retry
+    loop (issue #658).
+    """
+    seen: set[int] = set()
+    while exc is not None:
+        cause = exc.__cause__
+        if cause is None:
+            return False
+        if id(cause) in seen:
+            return False
+        if isinstance(cause, exception_types):
+            return True
+        seen.add(id(cause))
+        exc = cause
+    return False
+
+
 class retry_if_exception_cause_type(retry_base):
     """Retries if any of the causes of the raised exception is of one or more types.
 
-    The check on the type of the cause of the exception is done recursively (until finding
-    an exception in the chain that has no `__cause__`)
+    The check on the type of the cause of the exception is done recursively
+    (cycle-safe until the chain ends or loops).
     """
 
     def __init__(
@@ -176,13 +199,38 @@ class retry_if_exception_cause_type(retry_base):
             raise RuntimeError("__call__ called before outcome was set")
 
         if retry_state.outcome.failed:
-            exc = retry_state.outcome.exception()
-            while exc is not None:
-                if isinstance(exc.__cause__, self.exception_cause_types):
-                    return True
-                exc = exc.__cause__
-
+            return _cause_chain_contains(
+                retry_state.outcome.exception(), self.exception_cause_types
+            )
         return False
+
+
+class retry_unless_exception_cause_type(retry_base):
+    """Retries until a cause of the raised exception is of one or more types.
+
+    Mirror of :class:`retry_if_exception_cause_type`: keep retrying while the
+    ``__cause__`` chain does *not* contain a matching type. Successful outcomes
+    always retry (same convention as :class:`retry_unless_exception_type`).
+    """
+
+    def __init__(
+        self,
+        exception_types: type[BaseException]
+        | tuple[type[BaseException], ...] = Exception,
+    ) -> None:
+        self.exception_cause_types = exception_types
+
+    def __call__(self, retry_state: "RetryCallState") -> bool:
+        if retry_state.outcome is None:
+            raise RuntimeError("__call__ called before outcome was set")
+
+        # always retry if no exception was raised
+        if not retry_state.outcome.failed:
+            return True
+
+        return not _cause_chain_contains(
+            retry_state.outcome.exception(), self.exception_cause_types
+        )
 
 
 class retry_if_result(retry_base):
@@ -221,7 +269,7 @@ class retry_if_exception_message(retry_if_exception):
     def __init__(
         self,
         message: str | None = None,
-        match: None | str | re.Pattern[str] = None,
+        match: str | re.Pattern[str] | None = None,
     ) -> None:
         if message is not None and match is not None:
             raise TypeError(

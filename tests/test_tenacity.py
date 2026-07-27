@@ -1172,6 +1172,15 @@ def _retryable_test_with_exception_cause_type(thing: typing.Any) -> typing.Any:
     return thing.go()
 
 
+@retry(
+    stop=tenacity.stop_after_attempt(5),
+    retry=tenacity.retry_unless_exception_cause_type(NameError),
+    reraise=True,
+)
+def _retryable_test_unless_exception_cause_type(thing: typing.Any) -> typing.Any:
+    return thing.go()
+
+
 @retry(retry=tenacity.retry_if_exception_type(IOError))
 def _retryable_test_with_exception_type_io(thing: typing.Any) -> typing.Any:
     return thing.go()
@@ -1440,6 +1449,59 @@ class TestDecoratorWrapper(unittest.TestCase):
             self.fail("Expected exception without NameError as cause")
         except NameError:
             pass
+
+    def test_retry_unless_exception_cause_type(self) -> None:
+        # Cause is NameError → unless NameError-cause stops (no retry).
+        with self.assertRaises(OSError):
+            _retryable_test_unless_exception_cause_type(NoNameErrorCauseAfterCount(5))
+        self.assertEqual(
+            _retryable_test_unless_exception_cause_type.statistics["attempt_number"],
+            1,
+        )
+
+        # Cause is OSError, not NameError → predicate says retry.
+        from tenacity import Future
+        from tenacity.retry import retry_unless_exception_cause_type
+
+        pred = retry_unless_exception_cause_type(NameError)
+        # Build a fake failed state: NameError from OSError
+        try:
+            raise OSError("root")
+        except OSError as root:
+            try:
+                raise NameError("wrap") from root
+            except NameError as wrap:
+                fut = Future(1)
+                fut.set_exception(wrap)
+
+        class RS:
+            outcome = fut
+
+        self.assertTrue(pred(RS()))  # type: ignore[arg-type]
+
+        # Cause is NameError → do not retry
+        try:
+            raise NameError("root")
+        except NameError as root:
+            try:
+                raise OSError("wrap") from root
+            except OSError as wrap:
+                fut2 = Future(1)
+                fut2.set_exception(wrap)
+
+        class RS2:
+            outcome = fut2
+
+        self.assertFalse(pred(RS2()))  # type: ignore[arg-type]
+
+    def test_cause_chain_cycle_does_not_hang(self) -> None:
+        """Cyclic __cause__ must not spin forever (#658)."""
+        from tenacity.retry import _cause_chain_contains
+
+        e = RuntimeError("loop")
+        type(e).__setattr__(e, "__cause__", e)
+        self.assertFalse(_cause_chain_contains(e, ValueError))
+        self.assertTrue(_cause_chain_contains(e, RuntimeError))
 
     def test_retry_preserves_argument_defaults(self) -> None:
         def function_with_defaults(a: int = 1) -> int:
