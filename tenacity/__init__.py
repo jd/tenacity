@@ -571,8 +571,8 @@ class RetryCallState:
         self,
         retry_object: BaseRetrying,
         fn: WrappedFn | None,
-        args: tuple[object, ...],
-        kwargs: dict[str, object],
+        args: t.Any,
+        kwargs: t.Any,
     ) -> None:
         #: Retry call start timestamp
         self.start_time: float = time.monotonic()
@@ -581,9 +581,9 @@ class RetryCallState:
         #: Function wrapped by this retry call
         self.fn = fn
         #: Arguments of the function wrapped by this retry call
-        self.args: tuple[object, ...] = args
+        self.args = args
         #: Keyword arguments of the function wrapped by this retry call
-        self.kwargs: dict[str, object] = kwargs
+        self.kwargs = kwargs
 
         #: The number of the current attempt
         self.attempt_number: int = 1
@@ -621,7 +621,7 @@ class RetryCallState:
         self.attempt_number += 1
         self.next_action = None
 
-    def set_result(self, val: object) -> None:
+    def set_result(self, val: t.Any) -> None:
         ts = time.monotonic()
         fut = Future(self.attempt_number)
         fut.set_result(val)
