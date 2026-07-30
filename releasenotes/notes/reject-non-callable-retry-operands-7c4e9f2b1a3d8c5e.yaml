@@ -1,0 +1,13 @@
+---
+fixes:
+  - |
+    ``retry_base`` operators (``|``, ``&``, and their reflected forms)
+    now validate their operand at the operator site. A non-callable,
+    non-``retry_base`` value (e.g. ``True | retry_always``, ``retry & 42``,
+    ``"nope" | retry``, ``None & retry``) used to silently construct a
+    ``retry_any``/``retry_all`` whose ``__call__`` later raised
+    ``TypeError: '<type>' object is not callable`` from inside the retry
+    loop, far from the original misuse. The operators now raise a clear
+    ``TypeError`` naming the bad operand at the construction site, so
+    common typos like ``retry or True`` fail fast with an actionable
+    message.

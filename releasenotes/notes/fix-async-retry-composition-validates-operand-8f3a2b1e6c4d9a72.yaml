@@ -1,0 +1,17 @@
+---
+fixes:
+  - |
+    ``async_retry_base`` operators (``|``, ``&``, and their reflected
+    forms) now validate their operand at the operator site, matching
+    the behaviour already in place for the sync ``retry_base``. A
+    non-callable, non-``retry_base`` value used to silently construct
+    an ``async_retry_any``/``async_retry_all`` whose ``__call__``
+    later raised ``TypeError: object <type> can't be used in 'await'
+    expression`` from inside the retry loop, far from the original
+    misuse. The operators now raise a clear ``TypeError`` naming the
+    bad operand at the construction site. ``retry_any.__ror__`` and
+    ``retry_all.__rand__`` also validate the leaf operand on their
+    flattening fallthrough path, so ``True | retry_any(...)`` and
+    ``None & retry_all(...)`` fail fast with the same actionable
+    message instead of slipping a non-callable through the async
+    operator chain.

@@ -34,7 +34,7 @@ jobs:
             task: mypy
     steps:
       - name: Checkout 🛎️
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v6.0.3
         with:
           fetch-depth: 0
 
