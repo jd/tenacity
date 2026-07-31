@@ -226,7 +226,7 @@ class retry_if_exception_message(retry_if_exception):
     def __init__(
         self,
         message: str | None = None,
-        match: None | str | re.Pattern[str] = None,
+        match: str | re.Pattern[str] | None = None,
     ) -> None:
         if message is not None and match is not None:
             raise TypeError(

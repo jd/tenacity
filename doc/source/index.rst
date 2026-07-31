@@ -342,6 +342,29 @@ In the same spirit, It's possible to execute after a call that failed:
     def raise_my_exception():
         raise MyException("Fail")
 
+Note that ``after`` runs only when an attempt *failed* and may be retried (or
+is about to stop after failures). To run code when the call ultimately
+**succeeds** — for example to log a ``retry_success`` line only after recovery
+— use the ``success`` callback (or the built-in ``success_log`` helper):
+
+.. testcode::
+
+    import logging
+    import sys
+    from tenacity import retry, stop_after_attempt, success_log
+
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+
+    logger = logging.getLogger(__name__)
+
+    @retry(stop=stop_after_attempt(3),
+           success=success_log(logger, logging.INFO))
+    def might_fail():
+        return "ok"
+
+By default ``success_log`` only emits when ``attempt_number > 1`` (i.e. at least
+one retry happened). Pass ``only_if_retried=False`` to also log first-try wins.
+
 It's also possible to only log failures that are going to be retried. Normally
 retries happen after a wait interval, so the keyword argument is called
 ``before_sleep``:

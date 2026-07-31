@@ -28,7 +28,7 @@ from concurrent import futures
 from . import _utils
 
 # Import all built-in after strategies for easier usage.
-from .after import after_log, after_nothing
+from .after import after_log, after_nothing, success_log, success_nothing
 
 # Import all built-in before strategies for easier usage.
 from .before import before_log, before_nothing
@@ -244,6 +244,7 @@ class BaseRetrying(ABC):
         before: t.Callable[["RetryCallState"], None] = before_nothing,
         after: t.Callable[["RetryCallState"], None] = after_nothing,
         before_sleep: t.Callable[["RetryCallState"], None] | None = None,
+        success: t.Callable[["RetryCallState"], None] | None = None,
         reraise: bool = False,
         retry_error_cls: type[RetryError] = RetryError,
         retry_error_callback: t.Callable[["RetryCallState"], t.Any] | None = None,
@@ -257,6 +258,7 @@ class BaseRetrying(ABC):
         self.before = before
         self.after = after
         self.before_sleep = before_sleep
+        self.success = success
         self.reraise = reraise
         self._local = threading.local()
         self.retry_error_cls = retry_error_cls
@@ -272,13 +274,14 @@ class BaseRetrying(ABC):
         retry: retry_base | object = _unset,
         before: t.Callable[["RetryCallState"], None] | object = _unset,
         after: t.Callable[["RetryCallState"], None] | object = _unset,
-        before_sleep: t.Callable[["RetryCallState"], None] | None | object = _unset,
+        before_sleep: t.Callable[["RetryCallState"], None] | object | None = _unset,
+        success: t.Callable[["RetryCallState"], None] | object | None = _unset,
         reraise: bool | object = _unset,
         retry_error_cls: type[RetryError] | object = _unset,
         retry_error_callback: t.Callable[["RetryCallState"], t.Any]
-        | None
-        | object = _unset,
-        name: str | None | object = _unset,
+        | object
+        | None = _unset,
+        name: str | object | None = _unset,
         enabled: bool | object = _unset,
     ) -> "Self":
         """Copy this object with some parameters changed if needed."""
@@ -290,6 +293,7 @@ class BaseRetrying(ABC):
             before=_first_set(before, self.before),
             after=_first_set(after, self.after),
             before_sleep=_first_set(before_sleep, self.before_sleep),
+            success=_first_set(success, self.success),
             reraise=_first_set(reraise, self.reraise),
             retry_error_cls=_first_set(retry_error_cls, self.retry_error_cls),
             retry_error_callback=_first_set(
@@ -440,7 +444,16 @@ class BaseRetrying(ABC):
 
     def _post_retry_check_actions(self, retry_state: "RetryCallState") -> None:
         if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):
-            self._add_action_func(lambda rs: rs.outcome.result())
+            # Terminal attempt that will not be retried: either success, or a
+            # non-retryable failure (result() re-raises). Fire ``success`` only
+            # on a clean outcome so callers can log "recovered after N tries".
+            def _finish(rs: "RetryCallState") -> t.Any:
+                fut = rs.outcome
+                if fut is not None and not fut.failed and self.success is not None:
+                    self.success(rs)
+                return fut.result()  # type: ignore[union-attr]
+
+            self._add_action_func(_finish)
             return
 
         if self.after is not None:
@@ -701,9 +714,10 @@ def retry(
     stop: "StopBaseT" = ...,
     wait: "WaitBaseT" = ...,
     retry: "RetryBaseT | tasyncio.retry.RetryBaseT" = ...,
-    before: t.Callable[["RetryCallState"], None | t.Awaitable[None]] = ...,
-    after: t.Callable[["RetryCallState"], None | t.Awaitable[None]] = ...,
-    before_sleep: t.Callable[["RetryCallState"], None | t.Awaitable[None]] | None = ...,
+    before: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = ...,
+    after: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = ...,
+    before_sleep: t.Callable[["RetryCallState"], t.Awaitable[None] | None] | None = ...,
+    success: t.Callable[["RetryCallState"], t.Awaitable[None] | None] | None = ...,
     reraise: bool = ...,
     retry_error_cls: type["RetryError"] = ...,
     retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
@@ -718,10 +732,11 @@ def retry(
     stop: "StopBaseT" = stop_never,
     wait: "WaitBaseT" = wait_none(),
     retry: "RetryBaseT | tasyncio.retry.RetryBaseT" = retry_if_exception_type(),
-    before: t.Callable[["RetryCallState"], None | t.Awaitable[None]] = before_nothing,
-    after: t.Callable[["RetryCallState"], None | t.Awaitable[None]] = after_nothing,
-    before_sleep: t.Callable[["RetryCallState"], None | t.Awaitable[None]]
+    before: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = before_nothing,
+    after: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = after_nothing,
+    before_sleep: t.Callable[["RetryCallState"], t.Awaitable[None] | None]
     | None = None,
+    success: t.Callable[["RetryCallState"], t.Awaitable[None] | None] | None = None,
     reraise: bool = False,
     retry_error_cls: type["RetryError"] = RetryError,
     retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
@@ -818,6 +833,8 @@ __all__ = [
     "stop_before_delay",
     "stop_never",
     "stop_when_event_set",
+    "success_log",
+    "success_nothing",
     "wait_chain",
     "wait_combine",
     "wait_exception",

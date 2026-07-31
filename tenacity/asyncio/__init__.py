@@ -75,17 +75,18 @@ class AsyncRetrying(BaseRetrying):
     def __init__(
         self,
         sleep: t.Callable[
-            [int | float], None | t.Awaitable[None]
+            [int | float], t.Awaitable[None] | None
         ] = _portable_async_sleep,
         stop: "StopBaseT" = tenacity.stop.stop_never,
         wait: "WaitBaseT" = tenacity.wait.wait_none(),
         retry: "SyncRetryBaseT | RetryBaseT" = tenacity.retry_if_exception_type(),
         before: t.Callable[
-            ["RetryCallState"], None | t.Awaitable[None]
+            ["RetryCallState"], t.Awaitable[None] | None
         ] = before_nothing,
-        after: t.Callable[["RetryCallState"], None | t.Awaitable[None]] = after_nothing,
-        before_sleep: t.Callable[["RetryCallState"], None | t.Awaitable[None]]
+        after: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = after_nothing,
+        before_sleep: t.Callable[["RetryCallState"], t.Awaitable[None] | None]
         | None = None,
+        success: t.Callable[["RetryCallState"], t.Awaitable[None] | None] | None = None,
         reraise: bool = False,
         retry_error_cls: type["RetryError"] = RetryError,
         retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
@@ -101,6 +102,7 @@ class AsyncRetrying(BaseRetrying):
             before=before,  # type: ignore[arg-type]
             after=after,  # type: ignore[arg-type]
             before_sleep=before_sleep,  # type: ignore[arg-type]
+            success=success,  # type: ignore[arg-type]
             reraise=reraise,
             retry_error_cls=retry_error_cls,
             retry_error_callback=retry_error_callback,

@@ -44,3 +44,40 @@ def after_log(
         )
 
     return log_it
+
+
+def success_nothing(retry_state: "RetryCallState") -> None:
+    """Success strategy that does nothing."""
+
+
+def success_log(
+    logger: _utils.LoggerProtocol,
+    log_level: int,
+    sec_format: str = "%.3g",
+    *,
+    only_if_retried: bool = True,
+) -> typing.Callable[["RetryCallState"], None]:
+    """Log when a retried call ultimately succeeds.
+
+    Unlike :func:`after_log` (which runs only on *failed* attempts that will
+    be retried — see the retry controller), this callback runs on the
+    successful exit path. Set ``only_if_retried=False`` to also log first-try
+    successes.
+
+    Addresses the common need to emit a "retry_success" line only when
+    recovery actually happened (GitHub #531 / Stack Overflow).
+    """
+
+    def log_it(retry_state: "RetryCallState") -> None:
+        if only_if_retried and retry_state.attempt_number <= 1:
+            return
+        fn_name = retry_state.get_fn_name()
+        secs = retry_state.seconds_since_start
+        logger.log(
+            log_level,
+            f"Successful call to '{fn_name}' "
+            f"after {sec_format % secs if secs is not None else '?'}(s), "
+            f"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.",
+        )
+
+    return log_it
