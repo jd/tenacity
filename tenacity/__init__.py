@@ -153,8 +153,8 @@ class BaseAction:
     - NAME: for identification in retry object methods and callbacks
     """
 
-    REPR_FIELDS: t.Sequence[str] = ()
-    NAME: str | None = None
+    REPR_FIELDS: t.ClassVar[t.Sequence[str]] = ()
+    NAME: t.ClassVar[str | None] = None
 
     def __repr__(self) -> str:
         state_str = ", ".join(
@@ -167,8 +167,8 @@ class BaseAction:
 
 
 class RetryAction(BaseAction):
-    REPR_FIELDS = ("sleep",)
-    NAME = "retry"
+    REPR_FIELDS: t.ClassVar[t.Sequence[str]] = ("sleep",)
+    NAME: t.ClassVar[str | None] = "retry"
 
     def __init__(self, sleep: t.SupportsFloat) -> None:
         self.sleep = float(sleep)
