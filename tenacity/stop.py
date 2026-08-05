@@ -17,6 +17,7 @@ import abc
 import typing
 
 from tenacity import _utils
+from tenacity._utils import override
 
 if typing.TYPE_CHECKING:
     import threading
@@ -47,6 +48,7 @@ class stop_any(stop_base):
     def __init__(self, *stops: stop_base) -> None:
         self.stops = stops
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return any(x(retry_state) for x in self.stops)
 
@@ -57,6 +59,7 @@ class stop_all(stop_base):
     def __init__(self, *stops: stop_base) -> None:
         self.stops = stops
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return all(x(retry_state) for x in self.stops)
 
@@ -64,6 +67,7 @@ class stop_all(stop_base):
 class _stop_never(stop_base):
     """Never stop."""
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return False
 
@@ -77,6 +81,7 @@ class stop_when_event_set(stop_base):
     def __init__(self, event: "threading.Event") -> None:
         self.event = event
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return self.event.is_set()
 
@@ -87,6 +92,7 @@ class stop_after_attempt(stop_base):
     def __init__(self, max_attempt_number: int) -> None:
         self.max_attempt_number = max_attempt_number
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return retry_state.attempt_number >= self.max_attempt_number
 
@@ -104,6 +110,7 @@ class stop_after_delay(stop_base):
     def __init__(self, max_delay: _utils.time_unit_type) -> None:
         self.max_delay = _utils.to_seconds(max_delay)
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.seconds_since_start is None:
             raise RuntimeError("__call__() called but seconds_since_start is not set")
@@ -121,6 +128,7 @@ class stop_before_delay(stop_base):
     def __init__(self, max_delay: _utils.time_unit_type) -> None:
         self.max_delay = _utils.to_seconds(max_delay)
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.seconds_since_start is None:
             raise RuntimeError("__call__() called but seconds_since_start is not set")

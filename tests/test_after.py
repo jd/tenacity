@@ -6,11 +6,13 @@ from tenacity import (
     _utils,
     after_log,
 )
+from tenacity._utils import override
 
 from . import test_tenacity
 
 
 class TestAfterLogFormat(unittest.TestCase):
+    @override
     def setUp(self) -> None:
         self.log_level = random.choice(
             (

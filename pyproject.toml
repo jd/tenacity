@@ -114,6 +114,10 @@ ignore = [
 
 [tool.mypy]
 strict = true
+# Match `requires-python`, so results do not depend on which interpreter
+# happens to run mypy. Without this it defaults to the running version and
+# silently skips checking that the code is valid on the oldest one we support.
+python_version = "3.10"
 files = ["tenacity", "tests"]
 show_error_codes = true
 exclude = ["tenacity/_version\\.py"]
@@ -124,6 +128,7 @@ extra_checks = true
 enable_error_code = [
     "deprecated",
     "exhaustive-match",
+    "explicit-override",
     "ignore-without-code",
     "mutable-override",
     "possibly-undefined",
