@@ -786,7 +786,10 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
         ):
             r = AsyncRetrying(*dargs, **dkw)
         elif (
-            _HAS_TORNADO
+            # Read the live global rather than the import-time `_HAS_TORNADO`
+            # snapshot: test suites routinely force the non-tornado path by
+            # setting `tenacity.tornado = None`, and the two must not desync.
+            tornado is not None  # type: ignore[redundant-expr]
             and hasattr(tornado.gen, "is_coroutine_function")
             and tornado.gen.is_coroutine_function(f)
         ):

@@ -15,9 +15,11 @@
 import unittest
 from collections.abc import Generator
 from typing import Any
+from unittest import mock
 
 from tornado import gen, testing
 
+import tenacity
 from tenacity import RetryError, retry, stop_after_attempt, tornadoweb
 
 from .test_tenacity import NoIOErrorAfterCount
@@ -72,6 +74,17 @@ class TestTornado(testing.AsyncTestCase):
 
         finally:
             gen.is_coroutine_function = old_attr
+
+    def test_tornado_set_to_none(self) -> None:
+        # Forcing the non-tornado path by nulling the module global is how
+        # downstream suites exercise installs without tornado.
+        with mock.patch.object(tenacity, "tornado", None):
+
+            @retry(stop=stop_after_attempt(1))
+            def retryable() -> int:
+                return 1
+
+            assert retryable() == 1
 
 
 if __name__ == "__main__":

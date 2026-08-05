@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Setting ``tenacity.tornado = None`` -- the usual way a downstream test
+    suite forces the non-tornado code path -- raised ``AttributeError: 'NoneType'
+    object has no attribute 'gen'`` from the ``@retry`` decorator. Tornado
+    availability is read live again rather than from an import-time snapshot.
