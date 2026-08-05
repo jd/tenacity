@@ -18,6 +18,7 @@ import typing
 from tornado import gen
 
 from tenacity import BaseRetrying, DoAttempt, DoSleep, RetryCallState
+from tenacity._utils import override
 
 if typing.TYPE_CHECKING:
     from tornado.concurrent import Future
@@ -37,6 +38,7 @@ class TornadoRetrying(BaseRetrying):
         self.sleep = sleep
 
     @gen.coroutine
+    @override
     def __call__(  # type: ignore[override]
         self,
         fn: "typing.Callable[..., typing.Generator[typing.Any, typing.Any, _RetValT] | Future[_RetValT]]",

@@ -26,6 +26,7 @@ from abc import ABC, abstractmethod
 from concurrent import futures
 
 from . import _utils
+from ._utils import override
 
 # Import all built-in after strategies for easier usage.
 from .after import after_log, after_nothing
@@ -156,12 +157,14 @@ class BaseAction:
     REPR_FIELDS: t.ClassVar[t.Sequence[str]] = ()
     NAME: t.ClassVar[str | None] = None
 
+    @override
     def __repr__(self) -> str:
         state_str = ", ".join(
             f"{field}={getattr(self, field)!r}" for field in self.REPR_FIELDS
         )
         return f"{self.__class__.__name__}({state_str})"
 
+    @override
     def __str__(self) -> str:
         return repr(self)
 
@@ -201,6 +204,7 @@ class RetryError(Exception):
             raise self.last_attempt.result()
         raise self
 
+    @override
     def __str__(self) -> str:
         return f"{self.__class__.__name__}[{self.last_attempt}]"
 
@@ -304,6 +308,7 @@ class BaseRetrying(ABC):
             enabled=_first_set(enabled, self.enabled),
         )
 
+    # No @override: object.__getstate__ only exists from Python 3.11 on.
     def __getstate__(self) -> dict[str, t.Any]:
         # Exclude threading.local which cannot be pickled
         return {k: v for k, v in self.__dict__.items() if k != "_local"}
@@ -312,9 +317,11 @@ class BaseRetrying(ABC):
         self.__dict__.update(state)
         self._local = threading.local()
 
+    @override
     def __str__(self) -> str:
         return self._name if self._name is not None else "<unknown>"
 
+    @override
     def __repr__(self) -> str:
         return (
             f"<{self.__class__.__name__} object at 0x{id(self):x} ("
@@ -514,6 +521,7 @@ class BaseRetrying(ABC):
 class Retrying(BaseRetrying):
     """Retrying controller."""
 
+    @override
     def __call__(
         self,
         fn: t.Callable[..., WrappedFnReturnT],
@@ -638,6 +646,7 @@ class RetryCallState:
         fut.set_exception(exc_info[1])
         self.outcome, self.outcome_timestamp = fut, ts
 
+    @override
     def __repr__(self) -> str:
         if self.outcome is None:
             result = "none yet"
