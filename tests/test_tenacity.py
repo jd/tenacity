@@ -692,10 +692,9 @@ class TestWaitConditions(unittest.TestCase):
         def returnval() -> int:
             return 123
 
-        try:
+        with self.assertRaises(ExtractCallState) as caught:
             retrying(returnval)
-        except ExtractCallState as err:
-            retry_state = err.args[0]
+        retry_state = caught.exception.args[0]
         self.assertIs(retry_state.fn, returnval)
         self.assertEqual(retry_state.args, ())
         self.assertEqual(retry_state.kwargs, {})
@@ -706,10 +705,9 @@ class TestWaitConditions(unittest.TestCase):
         def dying() -> None:
             raise Exception("Broken")
 
-        try:
+        with self.assertRaises(ExtractCallState) as caught:
             retrying(dying)
-        except ExtractCallState as err:
-            retry_state = err.args[0]
+        retry_state = caught.exception.args[0]
         self.assertIs(retry_state.fn, dying)
         self.assertEqual(retry_state.args, ())
         self.assertEqual(retry_state.kwargs, {})
