@@ -17,6 +17,7 @@ import abc
 import typing
 
 from tenacity import _utils, retry_base
+from tenacity._utils import override
 
 if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
@@ -26,24 +27,29 @@ class async_retry_base(retry_base):
     """Abstract base class for async retry strategies."""
 
     @abc.abstractmethod
+    @override
     async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
         pass
 
+    @override
     def __and__(  # type: ignore[override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_all":
         return retry_all(self, other)
 
+    @override
     def __rand__(  # type: ignore[misc,override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_all":
         return retry_all(other, self)
 
+    @override
     def __or__(  # type: ignore[override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_any":
         return retry_any(self, other)
 
+    @override
     def __ror__(  # type: ignore[misc,override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_any":
@@ -63,6 +69,7 @@ class retry_if_exception(async_retry_base):
     ) -> None:
         self.predicate = predicate
 
+    @override
     async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
         if retry_state.outcome is None:
             raise RuntimeError("__call__() called before outcome was set")
@@ -83,6 +90,7 @@ class retry_if_result(async_retry_base):
     ) -> None:
         self.predicate = predicate
 
+    @override
     async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
         if retry_state.outcome is None:
             raise RuntimeError("__call__() called before outcome was set")
@@ -98,6 +106,7 @@ class retry_any(async_retry_base):
     def __init__(self, *retries: retry_base | async_retry_base) -> None:
         self.retries = retries
 
+    @override
     async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
         result = False
         for r in self.retries:
@@ -106,6 +115,7 @@ class retry_any(async_retry_base):
                 break
         return result
 
+    @override
     def __ror__(  # type: ignore[misc,override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_any":
@@ -120,6 +130,7 @@ class retry_all(async_retry_base):
     def __init__(self, *retries: retry_base | async_retry_base) -> None:
         self.retries = retries
 
+    @override
     async def __call__(self, retry_state: "RetryCallState") -> bool:  # type: ignore[override]
         result = True
         for r in self.retries:
@@ -128,6 +139,7 @@ class retry_all(async_retry_base):
                 break
         return result
 
+    @override
     def __rand__(  # type: ignore[misc,override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_all":
