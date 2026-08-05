@@ -21,6 +21,7 @@ import typing
 import warnings
 
 from tenacity import _utils
+from tenacity._utils import override
 
 if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
@@ -54,6 +55,7 @@ class wait_fixed(wait_base):
     def __init__(self, wait: _utils.time_unit_type) -> None:
         self.wait_fixed = _utils.to_seconds(wait)
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> float:
         return self.wait_fixed
 
@@ -74,6 +76,7 @@ class wait_random(wait_base):
         self.wait_random_min = _utils.to_seconds(min)
         self.wait_random_max = _utils.to_seconds(max)
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> float:
         return self.wait_random_min + (
             random.random() * (self.wait_random_max - self.wait_random_min)
@@ -86,6 +89,7 @@ class wait_combine(wait_base):
     def __init__(self, *strategies: wait_base) -> None:
         self.wait_funcs = strategies
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> float:
         return sum(x(retry_state=retry_state) for x in self.wait_funcs)
 
@@ -111,6 +115,7 @@ class wait_chain(wait_base):
             raise ValueError("wait_chain() requires at least one strategy")
         self.strategies = strategies
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> float:
         wait_func_no = min(max(retry_state.attempt_number, 1), len(self.strategies))
         wait_func = self.strategies[wait_func_no - 1]
@@ -146,6 +151,7 @@ class wait_exception(wait_base):
     def __init__(self, predicate: typing.Callable[[BaseException], float]) -> None:
         self.predicate = predicate
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> float:
         if retry_state.outcome is None:
             raise RuntimeError("__call__() called before outcome was set")
@@ -173,6 +179,7 @@ class wait_incrementing(wait_base):
         self.increment = _utils.to_seconds(increment)
         self.max = _utils.to_seconds(max)
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> float:
         result = self.start + (self.increment * (retry_state.attempt_number - 1))
         return max(0, min(result, self.max))
@@ -203,6 +210,7 @@ class wait_exponential(wait_base):
         self.max = _utils.to_seconds(max)
         self.exp_base = exp_base
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> float:
         exponent = retry_state.attempt_number - 1
         if (
@@ -249,6 +257,7 @@ class wait_random_exponential(wait_exponential):
 
     """
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> float:
         high = super().__call__(retry_state=retry_state)
         return random.uniform(self.min, high)
@@ -294,6 +303,7 @@ class wait_exponential_jitter(wait_base):
         self.jitter = _utils.to_seconds(jitter)
         self.min = _utils.to_seconds(min)
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> float:
         jitter = random.uniform(0, self.jitter)
         try:
