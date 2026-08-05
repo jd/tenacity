@@ -118,7 +118,3 @@ files = ["tenacity", "tests"]
 show_error_codes = true
 exclude = ["tenacity/_version\\.py"]
 
-[[tool.mypy.overrides]]
-module = "tornado.*"
-ignore_missing_imports = true
-
