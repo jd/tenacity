@@ -124,6 +124,7 @@ extra_checks = true
 enable_error_code = [
     "exhaustive-match",
     "ignore-without-code",
+    "mutable-override",
     "redundant-expr",
     "truthy-bool",
     "truthy-iterable",
