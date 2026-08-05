@@ -28,6 +28,7 @@ import pytest
 
 import tenacity
 from tenacity import RetryCallState, RetryError, Retrying, retry
+from tenacity._utils import override
 from tenacity.retry import retry_all, retry_any
 
 _unset = object()
@@ -86,6 +87,7 @@ def make_retry_state(
 class TestBase(unittest.TestCase):
     def test_retrying_repr(self) -> None:
         class ConcreteRetrying(tenacity.BaseRetrying):
+            @override
             def __call__(
                 self, fn: typing.Any, *args: typing.Any, **kwargs: typing.Any
             ) -> typing.Any:
@@ -360,6 +362,7 @@ class TestWaitConditions(unittest.TestCase):
 
     def test_exponential_skips_power_after_reaching_max(self) -> None:
         class ExplodingPower(float):
+            @override
             def __pow__(self, exponent: float, modulo: int | None = None) -> float:
                 raise AssertionError("power should not be calculated above the maximum")
 
@@ -1109,6 +1112,7 @@ class CustomError(Exception):
     def __init__(self, value: str) -> None:
         self.value = value
 
+    @override
     def __str__(self) -> str:
         return self.value
 
@@ -1140,6 +1144,7 @@ class CapturingHandler(logging.Handler):
         super().__init__(*args, **kwargs)
         self.records: list[logging.LogRecord] = []
 
+    @override
     def emit(self, record: logging.LogRecord) -> None:
         self.records.append(record)
 
@@ -1996,6 +2001,7 @@ class TestStatistics(unittest.TestCase):
 
 
 class TestRetryErrorCallback(unittest.TestCase):
+    @override
     def setUp(self) -> None:
         self._attempt_number = 0
         self._callback_called = False

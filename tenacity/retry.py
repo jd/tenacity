@@ -18,6 +18,8 @@ import abc
 import re
 import typing
 
+from tenacity._utils import override
+
 if typing.TYPE_CHECKING:
     from tenacity import RetryCallState
 
@@ -64,6 +66,7 @@ RetryBaseT = retry_base | typing.Callable[["RetryCallState"], bool]
 class _retry_never(retry_base):
     """Retry strategy that never rejects any result."""
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return False
 
@@ -74,6 +77,7 @@ retry_never = _retry_never()
 class _retry_always(retry_base):
     """Retry strategy that always rejects any result."""
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return True
 
@@ -87,6 +91,7 @@ class retry_if_exception(retry_base):
     def __init__(self, predicate: typing.Callable[[BaseException], bool]) -> None:
         self.predicate = predicate
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.outcome is None:
             raise RuntimeError("__call__() called before outcome was set")
@@ -143,6 +148,7 @@ class retry_unless_exception_type(retry_if_exception):
     def _check(self, e: BaseException) -> bool:
         return not isinstance(e, self.exception_types)
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.outcome is None:
             raise RuntimeError("__call__() called before outcome was set")
@@ -171,6 +177,7 @@ class retry_if_exception_cause_type(retry_base):
     ) -> None:
         self.exception_cause_types = exception_types
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.outcome is None:
             raise RuntimeError("__call__ called before outcome was set")
@@ -196,6 +203,7 @@ class retry_if_result(retry_base):
     def __init__(self, predicate: typing.Callable[[typing.Any], bool]) -> None:
         self.predicate = predicate
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.outcome is None:
             raise RuntimeError("__call__() called before outcome was set")
@@ -211,6 +219,7 @@ class retry_if_not_result(retry_base):
     def __init__(self, predicate: typing.Callable[[typing.Any], bool]) -> None:
         self.predicate = predicate
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.outcome is None:
             raise RuntimeError("__call__() called before outcome was set")
@@ -254,9 +263,11 @@ class retry_if_exception_message(retry_if_exception):
 class retry_if_not_exception_message(retry_if_exception_message):
     """Retries until an exception message equals or matches."""
 
+    @override
     def _check(self, exception: BaseException) -> bool:
         return not super()._check(exception)
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         if retry_state.outcome is None:
             raise RuntimeError("__call__() called before outcome was set")
@@ -276,9 +287,11 @@ class retry_any(retry_base):
     def __init__(self, *retries: "RetryBaseT") -> None:
         self.retries = retries
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return any(r(retry_state) for r in self.retries)
 
+    @override
     def __ror__(self, other: "RetryBaseT") -> "retry_any":
         if isinstance(other, retry_any):
             return retry_any(*other.retries, *self.retries)
@@ -291,9 +304,11 @@ class retry_all(retry_base):
     def __init__(self, *retries: "RetryBaseT") -> None:
         self.retries = retries
 
+    @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
         return all(r(retry_state) for r in self.retries)
 
+    @override
     def __rand__(self, other: "RetryBaseT") -> "retry_all":
         if isinstance(other, retry_all):
             return retry_all(*other.retries, *self.retries)
