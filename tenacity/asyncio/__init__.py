@@ -142,12 +142,9 @@ class AsyncRetrying(BaseRetrying):
         )
 
     async def _run_wait(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
-        if self.wait:
-            sleep = await _utils.wrap_to_async_func(self.wait)(retry_state)
-        else:
-            sleep = 0.0
-
-        retry_state.upcoming_sleep = sleep
+        retry_state.upcoming_sleep = await _utils.wrap_to_async_func(self.wait)(
+            retry_state
+        )
 
     async def _run_stop(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
         self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start
