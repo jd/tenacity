@@ -56,7 +56,7 @@ dev = [
     "tornado>=6.0",
     "typeguard",
     "ruff==0.16.1",
-    "mypy",
+    "mypy==2.3.0",
     "sphinx",
     "reno",
     "trio",
