@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    `wait_base.__radd__` is now annotated as taking the `int` seed that
+    `sum()` supplies, so `sum()` over a list of wait strategies type checks
+    without `type: ignore` on the list items. A non-zero left operand now
+    returns `NotImplemented`, raising `TypeError` at the point of the
+    addition instead of building a wait strategy that fails when called.

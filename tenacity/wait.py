@@ -36,11 +36,13 @@ class wait_base(abc.ABC):
     def __add__(self, other: "wait_base") -> "wait_combine":
         return wait_combine(self, other)
 
-    def __radd__(self, other: "wait_base") -> "wait_combine | wait_base":
-        # make it possible to use multiple waits with the built-in sum function
-        if other == 0:  # type: ignore[comparison-overlap]
-            return self
-        return self.__add__(other)
+    def __radd__(self, other: int) -> "wait_base":
+        # `sum()` seeds its accumulator with the int 0, so tolerate that to
+        # make summing waits work. Any other left operand is a `wait_base`,
+        # whose `__add__` never defers to us.
+        if other != 0:
+            return NotImplemented
+        return self
 
 
 WaitBaseT = wait_base | typing.Callable[["RetryCallState"], float | int]
