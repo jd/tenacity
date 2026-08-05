@@ -36,6 +36,7 @@ from tenacity import (
     RetryError,
     retry,
     retry_if_exception,
+    retry_if_not_exception_type,
     retry_if_result,
     stop_after_attempt,
 )
@@ -82,6 +83,62 @@ class TestAsyncio(unittest.TestCase):
         thing = NoIOErrorAfterCount(5)
         await _retryable_coroutine(thing)
         assert thing.counter == thing.count
+
+    @asynctest
+    async def test_wait_for_not_retried_with_retry_if_not_exception_type(self) -> None:
+        """CancelledError must propagate under retry_if_not_exception_type (#529).
+
+        Default retry only retries ``Exception`` subclasses, so cancellation
+        already works. The bug is specific to ``retry_if_not_exception_type``,
+        which treated *any* non-listed exception — including CancelledError —
+        as retryable, breaking ``asyncio.wait_for``.
+        """
+        attempts = 0
+
+        @retry(
+            wait=wait_fixed(0.01),
+            stop=stop_after_attempt(5),
+            reraise=True,
+            retry=retry_if_not_exception_type(ValueError),
+        )
+        async def sleepy() -> None:
+            nonlocal attempts
+            attempts += 1
+            await asyncio.sleep(10)
+
+        # On 3.11+ wait_for raises TimeoutError after cancelling the task.
+        # The critical assertion is attempts==1 (no retry of cancellation).
+        with self.assertRaises((asyncio.TimeoutError, asyncio.CancelledError)):
+            await asyncio.wait_for(sleepy(), timeout=0.05)
+
+        # One attempt only — cancellation must not be retried.
+        self.assertEqual(attempts, 1)
+
+    @asynctest
+    async def test_cancelled_error_not_retried_even_if_listed_as_exception(
+        self,
+    ) -> None:
+        """Even if someone passes BaseException broadly, cancel still wins.
+
+        ``retry_if_not_exception_type`` excludes control-flow exceptions
+        before applying the user type filter.
+        """
+        attempts = 0
+
+        @retry(
+            wait=wait_fixed(0.01),
+            stop=stop_after_attempt(5),
+            reraise=True,
+            retry=retry_if_not_exception_type(RuntimeError),
+        )
+        async def sleepy() -> None:
+            nonlocal attempts
+            attempts += 1
+            raise asyncio.CancelledError
+
+        with self.assertRaises(asyncio.CancelledError):
+            await sleepy()
+        self.assertEqual(attempts, 1)
 
     @asynctest
     async def test_iscoroutinefunction(self) -> None:

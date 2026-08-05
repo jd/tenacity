@@ -1392,6 +1392,24 @@ class TestDecoratorWrapper(unittest.TestCase):
             print(_retryable_test_if_exception_message_message.statistics)
             self.fail("CustomError should've been retried from errormessage")
 
+    def test_retry_if_not_exception_type_skips_control_flow(self) -> None:
+        """BaseException control-flow must not be retried (#529)."""
+        calls = {"n": 0}
+
+        def boom() -> None:
+            calls["n"] += 1
+            raise KeyboardInterrupt
+
+        r = tenacity.Retrying(
+            wait=tenacity.wait_fixed(0),
+            stop=tenacity.stop_after_attempt(3),
+            reraise=True,
+            retry=tenacity.retry_if_not_exception_type(ValueError),
+        )
+        with self.assertRaises(KeyboardInterrupt):
+            r(boom)
+        self.assertEqual(calls["n"], 1)
+
     def test_retry_if_not_exception_message(self) -> None:
         try:
             self.assertTrue(

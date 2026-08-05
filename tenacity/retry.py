@@ -119,8 +119,31 @@ class retry_if_exception_type(retry_if_exception):
         return isinstance(e, self.exception_types)
 
 
+def _is_control_flow_exception(e: BaseException) -> bool:
+    """Return True for exceptions that must never trigger a retry.
+
+    Task cancellation (``asyncio.CancelledError``), keyboard interrupt, and
+    interpreter exit are control-flow signals — not transient failures.
+    ``CancelledError`` is a bare ``BaseException`` on Python 3.9+; treating it
+    like a normal error breaks ``asyncio.wait_for`` / ``asyncio.timeout``
+    (see #529).
+    """
+    if isinstance(e, (KeyboardInterrupt, SystemExit, GeneratorExit)):
+        return True
+    try:
+        import asyncio
+    except ImportError:  # pragma: no cover
+        return False
+    return isinstance(e, asyncio.CancelledError)
+
+
 class retry_if_not_exception_type(retry_if_exception):
-    """Retries except an exception has been raised of one or more types."""
+    """Retries except an exception has been raised of one or more types.
+
+    Control-flow exceptions (``CancelledError``, ``KeyboardInterrupt``,
+    ``SystemExit``, ``GeneratorExit``) are never retried, even when they are
+    not listed in ``exception_types``.
+    """
 
     def __init__(
         self,
@@ -131,6 +154,8 @@ class retry_if_not_exception_type(retry_if_exception):
         super().__init__(self._check)
 
     def _check(self, e: BaseException) -> bool:
+        if _is_control_flow_exception(e):
+            return False
         return not isinstance(e, self.exception_types)
 
 
@@ -146,6 +171,8 @@ class retry_unless_exception_type(retry_if_exception):
         super().__init__(self._check)
 
     def _check(self, e: BaseException) -> bool:
+        if _is_control_flow_exception(e):
+            return False
         return not isinstance(e, self.exception_types)
 
     @override
