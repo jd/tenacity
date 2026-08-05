@@ -55,7 +55,7 @@ dev = [
     "pytest",
     "tornado>=6.0",
     "typeguard",
-    "ruff",
+    "ruff==0.16.1",
     "mypy",
     "sphinx",
     "reno",

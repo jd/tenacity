@@ -272,13 +272,13 @@ class BaseRetrying(ABC):
         retry: retry_base | object = _unset,
         before: t.Callable[["RetryCallState"], None] | object = _unset,
         after: t.Callable[["RetryCallState"], None] | object = _unset,
-        before_sleep: t.Callable[["RetryCallState"], None] | None | object = _unset,
+        before_sleep: t.Callable[["RetryCallState"], None] | object | None = _unset,
         reraise: bool | object = _unset,
         retry_error_cls: type[RetryError] | object = _unset,
         retry_error_callback: t.Callable[["RetryCallState"], t.Any]
-        | None
-        | object = _unset,
-        name: str | None | object = _unset,
+        | object
+        | None = _unset,
+        name: str | object | None = _unset,
         enabled: bool | object = _unset,
     ) -> "Self":
         """Copy this object with some parameters changed if needed."""
@@ -701,9 +701,9 @@ def retry(
     stop: "StopBaseT" = ...,
     wait: "WaitBaseT" = ...,
     retry: "RetryBaseT | tasyncio.retry.RetryBaseT" = ...,
-    before: t.Callable[["RetryCallState"], None | t.Awaitable[None]] = ...,
-    after: t.Callable[["RetryCallState"], None | t.Awaitable[None]] = ...,
-    before_sleep: t.Callable[["RetryCallState"], None | t.Awaitable[None]] | None = ...,
+    before: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = ...,
+    after: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = ...,
+    before_sleep: t.Callable[["RetryCallState"], t.Awaitable[None] | None] | None = ...,
     reraise: bool = ...,
     retry_error_cls: type["RetryError"] = ...,
     retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
@@ -718,9 +718,9 @@ def retry(
     stop: "StopBaseT" = stop_never,
     wait: "WaitBaseT" = wait_none(),
     retry: "RetryBaseT | tasyncio.retry.RetryBaseT" = retry_if_exception_type(),
-    before: t.Callable[["RetryCallState"], None | t.Awaitable[None]] = before_nothing,
-    after: t.Callable[["RetryCallState"], None | t.Awaitable[None]] = after_nothing,
-    before_sleep: t.Callable[["RetryCallState"], None | t.Awaitable[None]]
+    before: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = before_nothing,
+    after: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = after_nothing,
+    before_sleep: t.Callable[["RetryCallState"], t.Awaitable[None] | None]
     | None = None,
     reraise: bool = False,
     retry_error_cls: type["RetryError"] = RetryError,
