@@ -8,3 +8,14 @@ updates:
       github-actions:
         patterns:
           - '*'
+  - package-ecosystem: 'uv'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    # The linters are pinned with ==; 'increase' bumps the pin instead of
+    # widening it to a range, which would defeat the point of pinning.
+    versioning-strategy: 'increase'
+    groups:
+      python:
+        patterns:
+          - '*'
