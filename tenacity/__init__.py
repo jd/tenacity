@@ -88,6 +88,11 @@ try:
 except ImportError:
     tornado = None  # type: ignore[assignment]
 
+# mypy resolves `tornado` to the module (it only ever sees the `try` branch),
+# so testing the module object for truthiness reads as an always-true check.
+# Keep the availability answer in a plain bool instead.
+_HAS_TORNADO = tornado is not None
+
 if t.TYPE_CHECKING:
     if sys.version_info >= (3, 11):
         from typing import Self
@@ -403,12 +408,7 @@ class BaseRetrying(ABC):
         self.iter_state.retry_run_result = self.retry(retry_state)
 
     def _run_wait(self, retry_state: "RetryCallState") -> None:
-        if self.wait:
-            sleep = self.wait(retry_state)
-        else:
-            sleep = 0.0
-
-        retry_state.upcoming_sleep = sleep
+        retry_state.upcoming_sleep = self.wait(retry_state)
 
     def _run_stop(self, retry_state: "RetryCallState") -> None:
         self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start
@@ -770,7 +770,7 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
         ):
             r = AsyncRetrying(*dargs, **dkw)
         elif (
-            tornado
+            _HAS_TORNADO
             and hasattr(tornado.gen, "is_coroutine_function")
             and tornado.gen.is_coroutine_function(f)
         ):
@@ -785,7 +785,7 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
 
 from tenacity.asyncio import AsyncRetrying  # noqa: E402
 
-if tornado:
+if _HAS_TORNADO:
     from tenacity.tornadoweb import TornadoRetrying
 
 
