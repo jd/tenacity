@@ -37,13 +37,22 @@ class wait_base(abc.ABC):
     def __add__(self, other: "wait_base") -> "wait_combine":
         return wait_combine(self, other)
 
-    def __radd__(self, other: int) -> "wait_base":
-        # `sum()` seeds its accumulator with the int 0, so tolerate that to
-        # make summing waits work. Any other left operand is a `wait_base`,
-        # whose `__add__` never defers to us.
-        if other != 0:
+    # `other` is `int` rather than `Literal[0]` because typeshed's `sum()`
+    # protocol demands `__radd__(x: int)`; narrowing it would make every
+    # `sum()` over wait strategies need a `type: ignore`. A non-zero number is
+    # rejected at runtime instead, below.
+    def __radd__(self, other: "WaitBaseT | int") -> "wait_combine | wait_base":
+        if isinstance(other, int):
+            # `sum()` seeds its accumulator with the int 0; treat that as
+            # identity so summing a list of strategies works. Any other number
+            # is not a wait strategy, and saying so here raises TypeError at
+            # the `+` rather than building a combination that fails when called.
+            if other == 0:
+                return self
             return NotImplemented
-        return self
+        # A plain callable -- `WaitBaseT` admits those, and a function has no
+        # `__add__` of its own to handle `callable + strategy`.
+        return wait_combine(self, other)
 
 
 WaitBaseT = wait_base | typing.Callable[["RetryCallState"], float | int]
@@ -86,12 +95,16 @@ class wait_random(wait_base):
 class wait_combine(wait_base):
     """Combine several waiting strategies."""
 
-    def __init__(self, *strategies: wait_base) -> None:
+    def __init__(self, *strategies: "WaitBaseT") -> None:
         self.wait_funcs = strategies
 
     @override
     def __call__(self, retry_state: "RetryCallState") -> float:
-        return sum(x(retry_state=retry_state) for x in self.wait_funcs)
+        # Positional, like `BaseRetrying._run_wait`: a `WaitBaseT` callable is
+        # only guaranteed to take the state positionally, so passing it by
+        # keyword crashed on any callable whose parameter is not named
+        # `retry_state`.
+        return float(sum(x(retry_state) for x in self.wait_funcs))
 
 
 class wait_chain(wait_base):

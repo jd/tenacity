@@ -506,6 +506,55 @@ class TestWaitConditions(unittest.TestCase):
             self.assertLess(w, 9)
             self.assertGreaterEqual(w, 6)
 
+    def test_wait_falsy_values_mean_no_wait(self) -> None:
+        # Untyped callers pass None or 0 to mean "no wait", and `sum([])`
+        # over an empty list of strategies yields the int 0. All must reach
+        # the retry path without blowing up inside iter().
+        def make_flaky() -> typing.Callable[[], str]:
+            attempts = []
+
+            def flaky() -> str:
+                attempts.append(1)
+                if len(attempts) < 2:
+                    raise ValueError("boom")
+                return "ok"
+
+            return flaky
+
+        for wait in (None, 0, sum([])):
+            with self.subTest(wait=wait):
+                flaky = make_flaky()
+                r = Retrying(
+                    wait=wait,  # type: ignore[arg-type]
+                    stop=tenacity.stop_after_attempt(3),
+                )
+                self.assertEqual(r(flaky), "ok")
+
+    def test_wait_radd_plain_callable(self) -> None:
+        # A plain callable is a valid WaitBaseT, and functions have no
+        # __add__, so `callable + strategy` goes through wait_base.__radd__.
+        def cb(retry_state: RetryCallState) -> float:
+            return 2.0
+
+        combined = cb + tenacity.wait_fixed(1)
+        self.assertIsInstance(combined, tenacity.wait_combine)
+        self.assertEqual(combined(make_retry_state(1, 5)), 3.0)
+
+    def test_wait_combine_passes_state_positionally(self) -> None:
+        # A WaitBaseT callable only promises to take the state positionally;
+        # its parameter name is its own business.
+        combined = tenacity.wait_combine(
+            tenacity.wait_fixed(1),
+            lambda rs: 2.0,
+        )
+        self.assertEqual(combined(make_retry_state(1, 5)), 3.0)
+
+    def test_wait_radd_rejects_non_zero_number(self) -> None:
+        with self.assertRaises(TypeError):
+            # Statically accepted -- see the comment on wait_base.__radd__ --
+            # so the runtime rejection is what has to be tested.
+            5 + tenacity.wait_fixed(1)
+
     def _assert_range(self, wait: float, min_: float, max_: float) -> None:
         self.assertLess(wait, max_)
         self.assertGreaterEqual(wait, min_)

@@ -84,6 +84,19 @@ class TestAsyncio(unittest.TestCase):
         assert thing.counter == thing.count
 
     @asynctest
+    async def test_wait_falsy_values_mean_no_wait(self) -> None:
+        # Mirrors the sync test: falsy `wait` values reach AsyncRetrying from
+        # untyped callers and must not raise from inside iter().
+        for wait in (None, 0):
+            thing = NoIOErrorAfterCount(2)
+            retrying = AsyncRetrying(
+                wait=wait,  # type: ignore[arg-type]
+                stop=stop_after_attempt(5),
+            )
+            await retrying(_async_function, thing)
+            assert thing.counter == thing.count
+
+    @asynctest
     async def test_iscoroutinefunction(self) -> None:
         assert inspect.iscoroutinefunction(_retryable_coroutine)
 

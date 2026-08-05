@@ -147,9 +147,14 @@ class AsyncRetrying(BaseRetrying):
 
     @override
     async def _run_wait(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
-        retry_state.upcoming_sleep = await _utils.wrap_to_async_func(self.wait)(
-            retry_state
-        )
+        # See BaseRetrying._run_wait: falsy `wait` values mean "no wait" and
+        # reach us from untyped callers.
+        if not self.wait:  # type: ignore[truthy-bool]
+            retry_state.upcoming_sleep = 0.0
+        else:
+            retry_state.upcoming_sleep = await _utils.wrap_to_async_func(self.wait)(
+                retry_state
+            )
 
     @override
     async def _run_stop(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]

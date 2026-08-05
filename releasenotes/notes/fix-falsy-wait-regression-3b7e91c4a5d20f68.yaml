@@ -1,0 +1,17 @@
+---
+fixes:
+  - |
+    Restored support for falsy ``wait`` values. ``Retrying(wait=None)``,
+    ``Retrying(wait=0)`` and ``wait=sum([])`` raised ``TypeError`` from inside
+    the retry loop instead of not waiting. The same applied to
+    ``AsyncRetrying``. The error surfaced only once a retry actually happened,
+    so it escaped happy-path tests.
+  - |
+    Restored ``callable + wait_strategy``. A plain callable is a valid
+    ``WaitBaseT``, but adding one on the left raised ``TypeError`` instead of
+    building a ``wait_combine``.
+  - |
+    ``wait_combine`` now passes the retry state positionally, matching how
+    ``BaseRetrying`` invokes ``wait``. It previously passed it as the keyword
+    ``retry_state=``, which crashed on any callable whose parameter had a
+    different name.
