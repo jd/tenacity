@@ -46,7 +46,6 @@ doc = [
 test = [
     "pytest",
     "tornado>=6.0",
-    "typeguard",
 ]
 
 [dependency-groups]
@@ -54,7 +53,6 @@ dev = [
     "poethepoet",
     "pytest",
     "tornado>=6.0",
-    "typeguard",
     "ruff==0.16.1",
     "mypy==2.3.0",
     "sphinx",

@@ -25,7 +25,6 @@ from fractions import Fraction
 from unittest import mock
 
 import pytest
-from typeguard import check_type
 
 import tenacity
 from tenacity import RetryCallState, RetryError, Retrying, retry
@@ -2168,10 +2167,15 @@ class TestRetryException(unittest.TestCase):
 
 class TestRetryTyping(unittest.TestCase):
     def test_retry_type_annotations(self) -> None:
-        """The decorator should maintain types of decorated functions."""
+        """The decorator should maintain types of decorated functions.
 
-        def num_to_str(number):
-            # type: (int) -> str
+        The annotations below are the assertions; mypy checks them when it runs
+        over this file. The negative case leans on warn_unused_ignores: should
+        @retry ever decay to returning Any, that assignment would stop being an
+        error and the now-dead ignore would fail the type check.
+        """
+
+        def num_to_str(number: int) -> str:
             return str(number)
 
         # equivalent to a raw @retry decoration
@@ -2180,13 +2184,17 @@ class TestRetryTyping(unittest.TestCase):
 
         # equivalent to a @retry(...) decoration
         with_constructor = retry()(num_to_str)
-        with_constructor_result = with_raw(1)
+        with_constructor_result = with_constructor(1)
 
-        # These raise TypeError exceptions if they fail
-        check_type(with_raw, typing.Callable[[int], str])
-        check_type(with_raw_result, str)
-        check_type(with_constructor, typing.Callable[[int], str])
-        check_type(with_constructor_result, str)
+        # The wrapper stays usable wherever the undecorated function was.
+        _raw_signature: typing.Callable[[int], str] = with_raw
+        _constructor_signature: typing.Callable[[int], str] = with_constructor
+
+        # ...and an incompatible signature is still rejected.
+        _mismatch: typing.Callable[[str], int] = with_raw  # type: ignore[assignment]
+
+        self.assertEqual(with_raw_result, "1")
+        self.assertEqual(with_constructor_result, "1")
 
 
 class TestMockingSleep:
