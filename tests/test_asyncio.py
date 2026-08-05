@@ -85,7 +85,6 @@ class TestAsyncio(unittest.TestCase):
 
     @asynctest
     async def test_iscoroutinefunction(self) -> None:
-        assert asyncio.iscoroutinefunction(_retryable_coroutine)
         assert inspect.iscoroutinefunction(_retryable_coroutine)
 
     @asynctest
