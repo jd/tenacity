@@ -490,10 +490,10 @@ class TestWaitConditions(unittest.TestCase):
         r = Retrying(
             wait=sum(  # type: ignore[arg-type]
                 [
-                    tenacity.wait_fixed(1),  # type: ignore[list-item]
-                    tenacity.wait_random(0, 3),  # type: ignore[list-item]
-                    tenacity.wait_fixed(5),  # type: ignore[list-item]
-                    tenacity.wait_none(),  # type: ignore[list-item]
+                    tenacity.wait_fixed(1),
+                    tenacity.wait_random(0, 3),
+                    tenacity.wait_fixed(5),
+                    tenacity.wait_none(),
                 ]
             )
         )
