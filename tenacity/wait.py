@@ -300,3 +300,129 @@ class wait_exponential_jitter(wait_base):
         except OverflowError:
             result = self.max
         return max(max(0, self.min), min(result, self.max))
+
+
+# ── LaForge additions — rate-limit aware strategies ────────────────────────────
+import time as _time
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tenacity import RetryCallState
+
+
+class wait_retry_after(wait_base):
+    """Lit le header HTTP Retry-After de la reponse 429, fallback exponentiel."""
+
+    def __init__(self, fallback_wait: float = 1.0) -> None:
+        self.fallback_wait = fallback_wait
+
+    def __call__(self, retry_state: "RetryCallState") -> float:
+        """Lit le header HTTP Retry-After de la reponse 429, fallback exponentiel.
+
+        Args:
+            retry_state: L'état de la tentative de réessai.
+
+        Returns:
+            Le temps d'attente avant la prochaine tentative.
+        """
+        if retry_state.outcome is not None:
+            exc = retry_state.outcome.exception()
+            # Header Retry-After dans la reponse HTTP
+            resp = getattr(exc, "response", None)
+            if resp is not None:
+                after = getattr(getattr(resp, "headers", {}), "get", lambda k: None)("Retry-After")
+                if after is not None:
+                    try:
+                        return float(after)
+                    except (TypeError, ValueError):
+                        pass
+        # Fallback exponentiel
+        return wait_exponential()(retry_state)
+
+    def __repr__(self) -> str:
+        """Représentation de l'objet."""
+        return f"wait_retry_after(fallback_wait={self.fallback_wait})"
+
+
+class wait_rpm_budget(wait_base):
+    """Attend si le budget RPM par provider est depasse (>85%).
+
+    Partage un compteur de classe entre toutes les instances du meme provider_key.
+    Utile pour plusieurs coroutines qui partagent le meme quota cloud.
+    """
+
+    _calls: "dict[str, list[float]]" = {}
+
+    def __init__(self, provider_key: str = "default", rpm_limit: int = 30) -> None:
+        self.provider_key = provider_key
+        self.rpm_limit    = rpm_limit
+
+    def __call__(self, retry_state: "RetryCallState") -> float:
+        """Attend si le budget RPM par provider est depasse (>85%).
+
+        Args:
+            retry_state: L'état de la tentative de réessai.
+
+        Returns:
+            Le temps d'attente avant la prochaine tentative.
+        """
+        now = _time.time()
+        bucket = self._calls.setdefault(self.provider_key, [])
+        # Purger les appels > 1 min
+        self._calls[self.provider_key] = [t for t in bucket if now - t < 60]
+        self._calls[self.provider_key].append(now)
+
+        if len(self._calls[self.provider_key]) >= self.rpm_limit * 0.85:
+            # Attendre jusqu'a la prochaine fenetre d'1 minute
+            oldest = self._calls[self.provider_key][0]
+            sleep_until = oldest + 60.0
+            return min(60.0, max(1.0, sleep_until - now))
+        return 0.0
+
+    def __repr__(self) -> str:
+        """Représentation de l'objet."""
+        return f"wait_rpm_budget(provider_key={self.provider_key}, rpm_limit={self.rpm_limit})"
+
+    @classmethod
+    def reset(cls, provider_key: str = "default") -> None:
+        """Reinitialise le compteur RPM d'un provider.
+
+        Args:
+            provider_key: La clé du fournisseur.
+        """
+        cls._calls.pop(provider_key, None)
+
+
+def retry_if_rate_limited() -> callable:
+    """Predicate tenacity : detecte les erreurs de rate limit cloud (Groq/Gemini/OpenRouter).
+
+    Usage:
+        @retry(retry=retry_if_rate_limited(), wait=wait_rpm_budget("groq", rpm_limit=30))
+        async def call_api(): ...
+
+    Returns:
+        Une fonction qui prend une exception en argument et retourne True si l'exception est liée à une erreur de rate limit.
+    """
+    def _is_rate_limited(exc: Exception) -> bool:
+        # litellm.RateLimitError (import lazy pour eviter dep obligatoire)
+        try:
+            import litellm as _ll
+            if isinstance(exc, _ll.RateLimitError):
+                return True
+        except ImportError:
+            pass
+        # httpx.HTTPStatusError 429
+        try:
+            import httpx as _hx
+            if isinstance(exc, _hx.HTTPStatusError):
+                return exc.response.status_code == 429
+        except ImportError:
+            pass
+        # asyncio.TimeoutError
+        if isinstance(exc, TimeoutError):
+            return True
+        # Fallback textuel
+        return any(kw in str(exc).lower() for kw in ("rate_limit", "429", "quota", "too many"))
+
+    from tenacity import retry_if_exception
+    return retry_if_exception(_is_rate_limited)
