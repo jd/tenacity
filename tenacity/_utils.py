@@ -20,6 +20,29 @@ import sys
 import typing
 from datetime import timedelta
 
+if typing.TYPE_CHECKING:
+    # Type checkers recognise this by name and use it to enforce
+    # `explicit-override`; taking it from typing_extensions means they do so
+    # whatever `python_version` they are run under. It is never imported at
+    # runtime, so it stays a type-check-only dependency.
+    from typing_extensions import override as override
+elif sys.version_info >= (3, 12):
+    from typing import override
+else:
+    _F = typing.TypeVar("_F", bound=typing.Callable[..., typing.Any])
+
+    def override(method: _F) -> _F:
+        """Backport of `typing.override` for Python < 3.12.
+
+        Only the runtime half is needed: setting the PEP 698 `__override__`
+        marker that introspection tools look for.
+        """
+        with contextlib.suppress(AttributeError, TypeError):
+            # Not every callable allows attribute assignment.
+            method.__override__ = True
+        return method
+
+
 # sys.maxsize:
 # An integer giving the maximum value a variable of type Py_ssize_t can take.
 MAX_WAIT = sys.maxsize / 2

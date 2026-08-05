@@ -32,6 +32,7 @@ from tenacity import (
     after_nothing,
     before_nothing,
 )
+from tenacity._utils import override
 
 # Import all built-in retry strategies for easier usage.
 from .retry import (
@@ -108,6 +109,7 @@ class AsyncRetrying(BaseRetrying):
             enabled=enabled,
         )
 
+    @override
     async def __call__(  # type: ignore[override]
         self, fn: WrappedFn, *args: t.Any, **kwargs: t.Any
     ) -> WrappedFnReturnT:
@@ -133,25 +135,30 @@ class AsyncRetrying(BaseRetrying):
             else:
                 return do  # type: ignore[no-any-return]
 
+    @override
     def _add_action_func(self, fn: t.Callable[..., t.Any]) -> None:
         self.iter_state.actions.append(_utils.wrap_to_async_func(fn))
 
+    @override
     async def _run_retry(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
         self.iter_state.retry_run_result = await _utils.wrap_to_async_func(self.retry)(
             retry_state
         )
 
+    @override
     async def _run_wait(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
         retry_state.upcoming_sleep = await _utils.wrap_to_async_func(self.wait)(
             retry_state
         )
 
+    @override
     async def _run_stop(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
         self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start
         self.iter_state.stop_run_result = await _utils.wrap_to_async_func(self.stop)(
             retry_state
         )
 
+    @override
     async def iter(self, retry_state: "RetryCallState") -> DoAttempt | DoSleep | t.Any:
         self._begin_iter(retry_state)
         result = None
@@ -159,6 +166,7 @@ class AsyncRetrying(BaseRetrying):
             result = await action(retry_state)
         return result
 
+    @override
     def __iter__(self) -> t.Generator[AttemptManager, None, None]:
         raise TypeError("AsyncRetrying object is not iterable")
 
@@ -194,6 +202,7 @@ class AsyncRetrying(BaseRetrying):
             else:
                 raise StopAsyncIteration
 
+    @override
     def wraps(self, fn: t.Callable[P, R]) -> _RetryDecorated[P, R]:
         wrapped = super().wraps(fn)
         # Ensure wrapper is recognized as a coroutine function.
