@@ -117,4 +117,15 @@ strict = true
 files = ["tenacity", "tests"]
 show_error_codes = true
 exclude = ["tenacity/_version\\.py"]
+# `strict` is not "everything" -- these are checks it leaves off.
+warn_unreachable = true
+disallow_any_unimported = true
+extra_checks = true
+enable_error_code = [
+    "exhaustive-match",
+    "ignore-without-code",
+    "redundant-expr",
+    "truthy-iterable",
+    "unused-awaitable",
+]
 
