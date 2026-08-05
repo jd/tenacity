@@ -1,0 +1,8 @@
+Revision history for #682:
+
+rev 4 (rebase) 2026-08-05 15:59 UTC
+rev 3 (rebase) 2026-08-05 15:47 UTC
+rev 2 (rebase) 2026-08-05 15:39 UTC
+rev 1 (initial) 2026-08-05 15:39 UTC
+
+<!-- mergify-revision-data: {"schema_version":1,"pull_number":682,"entries":[{"number":1,"change_type":"initial","old_sha":null,"new_sha":"0ef3a1439f2624a24b002245c036dc76c3a666f9","timestamp_iso":"2026-08-05T15:39:00Z","reason":"","replay_sha":null,"compare_url":null},{"number":2,"change_type":"rebase","old_sha":"0ef3a1439f2624a24b002245c036dc76c3a666f9","new_sha":"73f02ad7ce5a13d9b7346d3034494376248f4995","timestamp_iso":"2026-08-05T15:39:00Z","reason":"","replay_sha":null,"compare_url":"https://github.com/jd/tenacity/compare/0ef3a1439f2624a24b002245c036dc76c3a666f9...73f02ad7ce5a13d9b7346d3034494376248f4995"},{"number":3,"change_type":"rebase","old_sha":"73f02ad7ce5a13d9b7346d3034494376248f4995","new_sha":"8c5a92833ff28140c3b9e91e99e7eceb8bfd4a0b","timestamp_iso":"2026-08-05T15:47:09Z","reason":"","replay_sha":null,"compare_url":"https://github.com/jd/tenacity/compare/73f02ad7ce5a13d9b7346d3034494376248f4995...8c5a92833ff28140c3b9e91e99e7eceb8bfd4a0b"},{"number":4,"change_type":"rebase","old_sha":"8c5a92833ff28140c3b9e91e99e7eceb8bfd4a0b","new_sha":"c5fa90820be36684cc5901344cb5c99e6b29506b","timestamp_iso":"2026-08-05T15:59:33Z","reason":"","replay_sha":null,"compare_url":"https://github.com/jd/tenacity/compare/8c5a92833ff28140c3b9e91e99e7eceb8bfd4a0b...c5fa90820be36684cc5901344cb5c99e6b29506b"}]} -->
