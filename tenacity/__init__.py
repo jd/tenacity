@@ -670,6 +670,22 @@ class _RetryDecorated(t.Protocol[P, R]):
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
 
+    # Without an explicit `__get__`, type checkers treat `_RetryDecorated` as a
+    # plain callable attribute rather than a descriptor, so accessing a
+    # decorated method through an instance keeps demanding the original
+    # unbound signature (including `self`). Declaring `__get__` here fixes
+    # attribute access on both the class and an instance; the runtime object
+    # is a real function (see `wraps` above), which already binds correctly,
+    # so this only affects static analysis. See issue #532.
+    @t.overload
+    def __get__(
+        self, instance: None, owner: type | None = None
+    ) -> "_RetryDecorated[P, R]": ...
+    @t.overload
+    def __get__(
+        self, instance: object, owner: type | None = None
+    ) -> "_RetryDecorated[..., R]": ...
+
 
 class _AsyncRetryDecorator(t.Protocol):
     @t.overload

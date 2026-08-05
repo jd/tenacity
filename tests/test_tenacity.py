@@ -2196,6 +2196,28 @@ class TestRetryTyping(unittest.TestCase):
         self.assertEqual(with_raw_result, "1")
         self.assertEqual(with_constructor_result, "1")
 
+    def test_retry_decorated_method_keeps_bound_signature(self) -> None:
+        """A decorated instance method must type-check like a bound method.
+
+        Without a descriptor (``__get__``) on ``_RetryDecorated``, static type
+        checkers treat ``instance.method`` the same as the unbound
+        ``Class.method``, so a normal call with only the non-``self`` keyword
+        arguments looks like a type error and the return type resolves to
+        ``Any``/``Unknown``. This does not fail at runtime (functools.wraps
+        returns a real function, which Python always binds correctly), but it
+        does fail under `mypy --strict`, which also type-checks this file.
+        See issue #532.
+        """
+
+        class Doubler:
+            @retry(stop=tenacity.stop_after_attempt(3))
+            def double(self, value: int) -> int:
+                return value * 2
+
+        doubler = Doubler()
+        result: int = doubler.double(value=21)
+        self.assertEqual(result, 42)
+
 
 class TestMockingSleep:
     RETRY_ARGS = {

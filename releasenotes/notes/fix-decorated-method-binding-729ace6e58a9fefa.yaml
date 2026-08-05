@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Fix static typing of ``@retry``-decorated instance methods. The
+    ``_RetryDecorated`` protocol did not implement ``__get__``, so type
+    checkers such as mypy and pyright/pylance treated ``instance.method`` the
+    same as the unbound ``Class.method``, requiring an explicit ``self``
+    argument and reporting an incorrect (``Unknown``/``Any``) return type for
+    ordinary calls like ``instance.method(value=1)``. This was purely a
+    static-analysis issue; the wrapper is a real function at runtime and
+    always bound correctly.
