@@ -89,10 +89,13 @@ try:
 except ImportError:
     tornado = None  # type: ignore[assignment]
 
-# mypy resolves `tornado` to the module (it only ever sees the `try` branch),
-# so testing the module object for truthiness reads as an always-true check.
-# Keep the availability answer in a plain bool instead.
-_HAS_TORNADO = tornado is not None
+
+def _has_tornado() -> bool:
+    # A function, not a module-level constant: test suites force the
+    # non-tornado path by setting `tenacity.tornado = None`, so the answer has
+    # to be computed from the live global every time it is asked for.
+    return tornado is not None
+
 
 if t.TYPE_CHECKING:
     if sys.version_info >= (3, 11):
@@ -786,7 +789,7 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
         ):
             r = AsyncRetrying(*dargs, **dkw)
         elif (
-            _HAS_TORNADO
+            _has_tornado()
             and hasattr(tornado.gen, "is_coroutine_function")
             and tornado.gen.is_coroutine_function(f)
         ):
@@ -801,7 +804,7 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
 
 from tenacity.asyncio import AsyncRetrying  # noqa: E402
 
-if _HAS_TORNADO:
+if _has_tornado():
     from tenacity.tornadoweb import TornadoRetrying
 
 
