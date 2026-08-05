@@ -2,9 +2,10 @@ name: Continuous Integration
 permissions: read-all
 
 on:
+  # No `branches:` filter: that matches the *base* branch, so restricting it to
+  # `main` silently skipped CI on every stacked pull request, whose base is the
+  # branch below it in the stack rather than `main`.
   pull_request:
-    branches:
-      - main
 
 concurrency:
   # yamllint disable-line rule:line-length
