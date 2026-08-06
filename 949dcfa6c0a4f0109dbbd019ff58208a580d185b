@@ -1,0 +1,1 @@
+Review: turned _HAS_TORNADO into a _has_tornado() function and dropped the global, per jd's comment. Also dropped the now-unneeded redundant-expr ignore.
