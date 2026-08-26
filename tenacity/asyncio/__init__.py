@@ -226,15 +226,19 @@ class AsyncRetrying(BaseRetrying):
             # Always create a copy to prevent overwriting the local contexts when
             # calling the same wrapped functions multiple times in the same stack
             copy = self.copy()
-            # Reuse the same statistics dict rather than rebinding the attribute
-            # so that the stats stay visible through additional decorators that
-            # copy attributes via functools.wraps (which copies the reference to
-            # this dict into the outer wrapper's __dict__). See issue #519.
-            stats = async_wrapped.statistics  # type: ignore[attr-defined]
-            stats.clear()
-            copy._local.statistics = stats  # noqa: SLF001
-            self._local.statistics = stats
-            return await copy(fn, *args, **kwargs)  # type: ignore[type-var]
+            # Per-call stats so concurrent/reentrant invocations cannot clear
+            # each other's dict (#701). Publish into the wrapper dict after the
+            # call so functools.wraps still sees the latest values (#519).
+            live: dict[str, t.Any] = {}
+            copy._local.statistics = live  # noqa: SLF001
+            self._local.statistics = live
+            try:
+                return await copy(fn, *args, **kwargs)  # type: ignore[type-var]
+            finally:
+                stats = async_wrapped.statistics  # type: ignore[attr-defined]
+                stats.clear()
+                stats.update(live)
+                self._local.statistics = stats
 
         # Preserve attributes
         async_wrapped.retry = self  # type: ignore[attr-defined]

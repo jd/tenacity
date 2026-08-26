@@ -18,6 +18,7 @@ import datetime
 import logging
 import pickle
 import re
+import threading
 import time
 import typing
 import unittest
@@ -1613,8 +1614,8 @@ class TestStatisticsKeys:
             retry=tenacity.retry_if_result(lambda x: x is None),
         )
         def succeeds_first_try() -> bool:
-            assert "delay_since_first_attempt" in succeeds_first_try.statistics
-            assert succeeds_first_try.statistics["delay_since_first_attempt"] == 0
+            assert "delay_since_first_attempt" in succeeds_first_try.retry.statistics
+            assert succeeds_first_try.retry.statistics["delay_since_first_attempt"] == 0
             return True
 
         succeeds_first_try()
@@ -1648,6 +1649,35 @@ class TestStatisticsKeys:
         assert my_call() == "ok"
         assert my_call.statistics["attempt_number"] == 1
         assert my_call.statistics is my_call.__wrapped__.statistics
+
+    def test_concurrent_calls_do_not_share_live_statistics(self) -> None:
+        barrier = threading.Barrier(2)
+        seen: dict[str, list[int]] = {}
+
+        @retry(
+            stop=tenacity.stop_after_attempt(3),
+            wait=tenacity.wait_none(),
+            retry=tenacity.retry_if_exception_type(ValueError),
+            reraise=True,
+        )
+        def flaky(key: str) -> str:
+            barrier.wait()
+            seen.setdefault(key, []).append(flaky.retry.statistics["attempt_number"])
+            if len(seen[key]) < 3:
+                raise ValueError("retry")
+            return key
+
+        threads = [
+            threading.Thread(target=flaky, args=("a",)),
+            threading.Thread(target=flaky, args=("b",)),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        assert seen["a"] == [1, 2, 3]
+        assert seen["b"] == [1, 2, 3]
 
 
 class TestEnabled:
