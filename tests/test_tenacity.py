@@ -671,14 +671,19 @@ class TestWaitConditions(unittest.TestCase):
             self._assert_inclusive_range(fn(make_retry_state(4, 0)), 8, 9)
             self._assert_inclusive_range(fn(make_retry_state(5, 0)), 16, 17)
             self._assert_inclusive_range(fn(make_retry_state(6, 0)), 32, 33)
-            self.assertEqual(fn(make_retry_state(7, 0)), 60)
-            self.assertEqual(fn(make_retry_state(8, 0)), 60)
-            self.assertEqual(fn(make_retry_state(9, 0)), 60)
+            # Keep jitter active at the cap to prevent synchronized retries
+            self._assert_inclusive_range(fn(make_retry_state(7, 0)),59, 60)
+            self._assert_inclusive_range(fn(make_retry_state(8, 0)),59, 60)
+            self._assert_inclusive_range(fn(make_retry_state(9, 0)),59, 60)
 
         with self.assertWarns(DeprecationWarning):
             fn = tenacity.wait_exponential_jitter(10, 5)
-        for _ in range(1000):
-            self.assertEqual(fn(make_retry_state(1, 0)), 5)
+        results = {fn(make_retry_state(1, 0)) for _ in range(1000)}
+        # before this every call collapsed at max =5 but now it will spread across [4,5]
+        # which is [max-jitter, max]
+        self.assertGreater(len(results), 1)
+        for r in results:
+            self._assert_inclusive_range(r, 4, 5)
 
         # Default arguments exist
         fn = tenacity.wait_exponential_jitter()
@@ -705,7 +710,7 @@ class TestWaitConditions(unittest.TestCase):
         for _ in range(1000):
             self._assert_inclusive_range(fn(make_retry_state(1, 0)), 5, 5)
             self._assert_inclusive_range(fn(make_retry_state(5, 0)), 16, 17)
-            self.assertEqual(fn(make_retry_state(7, 0)), 60)
+            self._assert_inclusive_range(fn(make_retry_state(7, 0)), 59, 60)
 
     def test_wait_exponential_jitter_multiplier(self) -> None:
         fn = tenacity.wait_exponential_jitter(multiplier=10, max=60, jitter=0)
