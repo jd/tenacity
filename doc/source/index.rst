@@ -200,6 +200,23 @@ increasing jitter helps minimise collisions.
         print("Randomly wait up to 2^x * 1 seconds between each retry until the range reaches 60 seconds, then randomly up to 60 seconds afterwards")
         raise Exception
 
+When reproducibility, a bounded worst-case concurrency peak, or the absence
+of a strong RNG are required, ``wait_golden_jitter`` provides a deterministic
+alternative. Assign a distinct ``seq_index`` to each waiter (host id, shard,
+worker number) so that their delays are spread evenly across the backoff
+window:
+
+.. testcode::
+
+    @retry(wait=wait_golden_jitter(multiplier=1, max=60, seq_index=0))
+    def wait_golden():
+        print("Deterministic, reproducible jitter spread across waiters "
+              "by golden-ratio low discrepancy. Pass a distinct seq_index "
+              "per waiter (host id, shard, worker number).")
+        raise Exception
+
+When waiters cannot supply distinct indices, prefer the random strategies.
+
 
 Sometimes it's necessary to build a chain of backoffs.
 
