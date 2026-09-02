@@ -457,6 +457,8 @@ class BaseRetrying(ABC):
 
     def _post_retry_check_actions(self, retry_state: "RetryCallState") -> None:
         if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):
+            if self.after is not None:
+                self._add_action_func(self.after)
             self._add_action_func(lambda rs: rs.outcome.result())
             return
 
