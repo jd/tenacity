@@ -35,6 +35,10 @@ class async_retry_base(retry_base):
     def __and__(  # type: ignore[override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_all":
+        if isinstance(other, retry_all):
+            return other.__rand__(self)
+        if isinstance(self, retry_all):
+            return retry_all(*self.retries, other)
         return retry_all(self, other)
 
     @override
@@ -47,6 +51,10 @@ class async_retry_base(retry_base):
     def __or__(  # type: ignore[override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_any":
+        if isinstance(other, retry_any):
+            return other.__ror__(self)
+        if isinstance(self, retry_any):
+            return retry_any(*self.retries, other)
         return retry_any(self, other)
 
     @override
