@@ -373,6 +373,33 @@ class TestWaitConditions(unittest.TestCase):
         r = Retrying(wait=tenacity.wait_exponential(multiplier=1e300, max=1e-100))
         self.assertEqual(r.wait(make_retry_state(1, 0)), 1e-100)
 
+    def test_exponential_zero_multiplier(self) -> None:
+        for multiplier in (0, 0.0):
+            for exp_base in (2, 2.0):
+                for minimum in (0, 5):
+                    for attempt in (1, 1025):
+                        with self.subTest(
+                            multiplier=multiplier,
+                            exp_base=exp_base,
+                            minimum=minimum,
+                            attempt=attempt,
+                        ):
+                            wait = tenacity.wait_exponential(
+                                multiplier=multiplier,
+                                exp_base=exp_base,
+                                min=minimum,
+                                max=60,
+                            )
+                            self.assertEqual(
+                                wait(make_retry_state(attempt, 0)), minimum
+                            )
+
+    def test_random_exponential_zero_multiplier(self) -> None:
+        wait = tenacity.wait_random_exponential(multiplier=0.0, min=5, max=60)
+        with mock.patch("random.uniform", return_value=5) as uniform:
+            self.assertEqual(wait(make_retry_state(1025, 0)), 5)
+        uniform.assert_called_once_with(5, 5)
+
     def test_exponential_with_min_wait(self) -> None:
         r = Retrying(wait=tenacity.wait_exponential(min=20))
         self.assertEqual(r.wait(make_retry_state(1, 0)), 20)
@@ -713,6 +740,30 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(fn(make_retry_state(2, 0)), 20)
         self.assertEqual(fn(make_retry_state(3, 0)), 40)
         self.assertEqual(fn(make_retry_state(4, 0)), 60)
+
+    def test_wait_exponential_jitter_zero_multiplier(self) -> None:
+        for multiplier in (0, 0.0):
+            for exp_base in (2, 2.0):
+                for minimum in (0, 5):
+                    for attempt in (1, 1025):
+                        with self.subTest(
+                            multiplier=multiplier,
+                            exp_base=exp_base,
+                            minimum=minimum,
+                            attempt=attempt,
+                        ):
+                            wait = tenacity.wait_exponential_jitter(
+                                multiplier=multiplier,
+                                exp_base=exp_base,
+                                jitter=4,
+                                min=minimum,
+                                max=60,
+                            )
+                            with mock.patch("random.uniform", return_value=3.5):
+                                self.assertEqual(
+                                    wait(make_retry_state(attempt, 0)),
+                                    max(minimum, 3.5),
+                                )
 
     def test_wait_exponential_jitter_initial_deprecated(self) -> None:
         with self.assertWarns(DeprecationWarning):
