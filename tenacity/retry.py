@@ -168,6 +168,12 @@ class retry_if_exception_cause_type(retry_base):
 
     The check on the type of the cause of the exception is done recursively (until finding
     an exception in the chain that has no ``__cause__``, or a cycle is detected).
+
+    Both explicit chains (``raise ... from ...``, which sets ``__cause__``) and implicit
+    chains (raising inside an ``except`` block without ``from``, which sets
+    ``__context__``) are followed. An implicitly chained exception is only considered
+    when no explicit cause is set and the context was not suppressed with
+    ``raise ... from None``.
     """
 
     def __init__(
@@ -184,15 +190,20 @@ class retry_if_exception_cause_type(retry_base):
 
         if retry_state.outcome.failed:
             exc = retry_state.outcome.exception()
-            # Guard against cyclic __cause__ chains (e.g. ``raise e from e``),
-            # which would otherwise spin forever inside the predicate and
-            # prevent stop conditions from ever running (see #658).
+            # Guard against cyclic __cause__/__context__ chains (e.g. ``raise e
+            # from e``), which would otherwise spin forever inside the predicate
+            # and prevent stop conditions from ever running (see #658).
             seen: set[int] = set()
             while exc is not None and id(exc) not in seen:
                 seen.add(id(exc))
-                if isinstance(exc.__cause__, self.exception_cause_types):
+                cause = exc.__cause__
+                if cause is None and not exc.__suppress_context__:
+                    # No explicit ``raise ... from ...``: fall back to the
+                    # implicitly chained exception, if any.
+                    cause = exc.__context__
+                if isinstance(cause, self.exception_cause_types):
                     return True
-                exc = exc.__cause__
+                exc = cause
 
         return False
 
