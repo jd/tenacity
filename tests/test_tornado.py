@@ -59,7 +59,11 @@ class TestTornado(testing.AsyncTestCase):
             assert thing.counter == 2
 
     def test_repr(self) -> None:
-        repr(tornadoweb.TornadoRetrying())
+        retrying = tornadoweb.TornadoRetrying()
+        result = repr(retrying)
+        assert result.startswith("<TornadoRetrying object at 0x")
+        assert f"sleep={retrying.sleep}, " in result
+        assert result.endswith("name=None)>")
 
     def test_old_tornado(self) -> None:
         old_attr = gen.is_coroutine_function
