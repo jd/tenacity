@@ -62,7 +62,10 @@ class wait_fixed(wait_base):
     """Wait strategy that waits a fixed amount of time between each retry."""
 
     def __init__(self, wait: _utils.time_unit_type) -> None:
-        self.wait_fixed = _utils.to_seconds(wait)
+        seconds = _utils.to_seconds(wait)
+        if seconds < 0:
+            raise ValueError(f"wait_fixed wait must be >= 0, got {wait!r}")
+        self.wait_fixed = seconds
 
     @override
     def __call__(self, retry_state: "RetryCallState") -> float:
