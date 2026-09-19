@@ -18,6 +18,7 @@ import datetime
 import logging
 import pickle
 import re
+import threading
 import time
 import typing
 import unittest
@@ -2084,6 +2085,81 @@ class TestStatistics(unittest.TestCase):
 
         _foobar()
         self.assertEqual(attempts, [1, 2, 3])
+
+    def test_concurrent_calls_have_isolated_statistics(self) -> None:
+        entered_second_attempt = threading.Event()
+        release_second_attempt = threading.Event()
+        attempts: dict[str, int] = {}
+        observed: list[tuple[str, int]] = []
+        errors: list[BaseException] = []
+
+        @retry(
+            stop=tenacity.stop_after_attempt(2),
+            retry=tenacity.retry_if_exception_type(ValueError),
+            reraise=True,
+        )
+        def _foobar(name: str) -> str:
+            attempts[name] = attempts.get(name, 0) + 1
+            if name == "A" and attempts[name] == 1:
+                raise ValueError("retry A")
+
+            if name == "A":
+                observed.append(("before", _foobar.retry.statistics["attempt_number"]))
+                entered_second_attempt.set()
+                assert release_second_attempt.wait(5)
+                observed.append(("after", _foobar.retry.statistics["attempt_number"]))
+
+            return name
+
+        def run_a() -> None:
+            try:
+                assert _foobar("A") == "A"
+            except BaseException as exc:
+                errors.append(exc)
+
+        thread = threading.Thread(target=run_a)
+        thread.start()
+        assert entered_second_attempt.wait(5)
+        assert _foobar("B") == "B"
+        release_second_attempt.set()
+        thread.join(5)
+
+        assert not thread.is_alive()
+        assert errors == []
+        assert observed == [("before", 2), ("after", 2)]
+        assert _foobar.retry.statistics["attempt_number"] == 1
+        assert _foobar.statistics["attempt_number"] == 2
+
+    def test_reentrant_calls_restore_outer_statistics(self) -> None:
+        outer_attempts = 0
+        observed: list[tuple[str, int]] = []
+
+        @retry(
+            stop=tenacity.stop_after_attempt(2),
+            retry=tenacity.retry_if_exception_type(ValueError),
+            reraise=True,
+        )
+        def _foobar(*, inner: bool = False) -> None:
+            nonlocal outer_attempts
+            if inner:
+                observed.append(("inner", _foobar.retry.statistics["attempt_number"]))
+                return
+
+            outer_attempts += 1
+            if outer_attempts == 1:
+                raise ValueError("retry outer")
+
+            observed.append(
+                ("before-inner", _foobar.retry.statistics["attempt_number"])
+            )
+            _foobar(inner=True)
+            observed.append(("after-inner", _foobar.retry.statistics["attempt_number"]))
+
+        _foobar()
+
+        assert observed == [("before-inner", 2), ("inner", 1), ("after-inner", 2)]
+        assert _foobar.retry.statistics["attempt_number"] == 2
+        assert _foobar.statistics["attempt_number"] == 2
 
 
 class TestRetryErrorCallback(unittest.TestCase):
