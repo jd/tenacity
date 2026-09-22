@@ -1,0 +1,4 @@
+fixes:
+  - |
+    Allow synchronous sleep callbacks returning None in AsyncRetrying, as
+    supported by its type signature, without raising TypeError on a retry.

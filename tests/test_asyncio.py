@@ -15,7 +15,7 @@
 import asyncio
 import inspect
 import unittest
-from collections.abc import Callable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine
 from functools import wraps
 from typing import Any, TypeVar
 from unittest import mock
@@ -74,6 +74,43 @@ async def _retryable_coroutine(thing: NoIOErrorAfterCount) -> Any:
 async def _retryable_coroutine_with_2_attempts(thing: NoIOErrorAfterCount) -> Any:
     await asyncio.sleep(0.00001)
     return thing.go()
+
+
+@pytest.mark.parametrize("as_iterator", [False, True])
+@pytest.mark.parametrize("sleep_kind", ["sync", "async", "awaitable"])
+@asynctest
+async def test_sleep_callback(sleep_kind: str, as_iterator: bool) -> None:
+    sleeps: list[float] = []
+
+    async def async_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    def awaitable_sleep(seconds: float) -> Awaitable[None]:
+        return async_sleep(seconds)
+
+    callbacks: dict[str, Callable[[float], Awaitable[None] | None]] = {
+        "sync": sleeps.append,
+        "async": async_sleep,
+        "awaitable": awaitable_sleep,
+    }
+    retrying = AsyncRetrying(
+        sleep=callbacks[sleep_kind],
+        wait=wait_fixed(0.5),
+        stop=stop_after_attempt(3),
+    )
+    thing = NoIOErrorAfterCount(2)
+    result = None
+    if as_iterator:
+        async for attempt in retrying:
+            with attempt:
+                result = thing.go()
+    else:
+        result = await retrying(_async_function, thing)
+
+    assert result is True
+    assert sleeps == [0.5, 0.5]
+    assert retrying.statistics["attempt_number"] == 3
+    assert retrying.statistics["idle_for"] == 1.0
 
 
 class TestAsyncio(unittest.TestCase):

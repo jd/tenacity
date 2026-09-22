@@ -707,6 +707,10 @@ Async and retry
 Finally, ``retry`` works also on asyncio, Trio, and Tornado coroutines.
 Sleeps are done asynchronously too.
 
+``AsyncRetrying`` also accepts a synchronous ``sleep`` callback, such as
+``sleep=lambda seconds: None`` to skip sleeping in tests. If the callback returns
+an awaitable, it is awaited before the next attempt.
+
 .. code-block:: python
 
     @retry
