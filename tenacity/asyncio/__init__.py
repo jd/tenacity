@@ -222,7 +222,7 @@ class AsyncRetrying(BaseRetrying):
         )
         async def async_wrapped(*args: t.Any, **kwargs: t.Any) -> t.Any:
             if not self.enabled:
-                return await fn(*args, **kwargs)  # type: ignore[misc]
+                return await _utils.wrap_to_async_func(fn)(*args, **kwargs)
             # Always create a copy to prevent overwriting the local contexts when
             # calling the same wrapped functions multiple times in the same stack
             copy = self.copy()
