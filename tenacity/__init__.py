@@ -183,6 +183,22 @@ class RetryAction(BaseAction):
 _unset = object()
 
 
+class _CallStatistics(dict[str, t.Any]):
+    def __init__(self, publish: t.Callable[[dict[str, t.Any]], None]) -> None:
+        super().__init__()
+        self._publish = publish
+
+    @override
+    def __setitem__(self, key: str, value: t.Any) -> None:
+        super().__setitem__(key, value)
+        self._publish(self)
+
+    @override
+    def clear(self) -> None:
+        super().clear()
+        self._publish(self)
+
+
 def _first_set(first: t.Any | object, second: t.Any) -> t.Any:
     return second if first is _unset else first
 
@@ -375,24 +391,47 @@ class BaseRetrying(ABC):
         :param f: A function to wrap for retrying.
         """
 
+        statistics_lock = threading.Lock()
+
         @functools.wraps(
             f, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__")
         )
         def wrapped_f(*args: t.Any, **kw: t.Any) -> t.Any:
             if not self.enabled:
                 return f(*args, **kw)
+
+            def publish_statistics(statistics: dict[str, t.Any]) -> None:
+                # Keep this dict object stable so functools.wraps() copies keep
+                # seeing updated statistics. See issue #519.
+                with statistics_lock:
+                    published = wrapped_f.statistics  # type: ignore[attr-defined]
+                    published.clear()
+                    published.update(statistics)
+
             # Always create a copy to prevent overwriting the local contexts when
-            # calling the same wrapped functions multiple times in the same stack
+            # calling the same wrapped functions multiple times in the same stack.
             copy = self.copy()
-            # Reuse the same statistics dict rather than rebinding the attribute
-            # so that the stats stay visible through additional decorators that
-            # copy attributes via functools.wraps (which copies the reference to
-            # this dict into the outer wrapper's __dict__). See issue #519.
-            stats = wrapped_f.statistics  # type: ignore[attr-defined]
-            stats.clear()
-            copy._local.statistics = stats  # noqa: SLF001
-            self._local.statistics = stats
-            return copy(f, *args, **kw)
+            call_statistics = _CallStatistics(publish_statistics)
+            statistics_stack = t.cast(
+                "list[dict[str, t.Any]] | None",
+                getattr(self._local, "statistics_stack", None),
+            )
+            if statistics_stack is None:
+                statistics_stack = self._local.statistics_stack = []
+
+            statistics_stack.append(call_statistics)
+            copy._local.statistics = call_statistics  # noqa: SLF001
+            self._local.statistics = call_statistics
+            try:
+                return copy(f, *args, **kw)
+            finally:
+                statistics_stack.pop()
+                if statistics_stack:
+                    self._local.statistics = statistics_stack[-1]
+                    publish_statistics(statistics_stack[-1])
+                else:
+                    self._local.statistics = call_statistics
+                    publish_statistics(call_statistics)
 
         def retry_with(*args: t.Any, **kwargs: t.Any) -> "_RetryDecorated[P, R]":
             return self.copy(*args, **kwargs).wraps(f)

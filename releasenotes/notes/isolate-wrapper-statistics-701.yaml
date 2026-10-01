@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Isolate retry statistics for concurrent and re-entrant calls to the same
+    synchronous wrapped function. One call can no longer clear or overwrite
+    another call's thread-local statistics while it is still running.
