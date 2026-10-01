@@ -12,7 +12,6 @@ version-file = "tenacity/_version.py"
 name = "tenacity"
 dynamic = ["version"]
 description = "Retry code until it succeeds"
-readme = "README.rst"
 license = "Apache-2.0"
 requires-python = ">=3.10"
 authors = [
@@ -37,6 +36,17 @@ Documentation = "https://tenacity.readthedocs.io"
 Source = "https://github.com/jd/tenacity"
 Issues = "https://github.com/jd/tenacity/issues"
 Changelog = "https://tenacity.readthedocs.io/en/latest/changelog.html"
+
+# README.rst contains Sphinx-only directives that PyPI cannot render.
+[project.readme]
+text = """
+Tenacity is a general-purpose retrying library to simplify the task of adding
+retry behavior to just about anything.
+
+See the `documentation <https://tenacity.readthedocs.io/>`_ for examples and the
+API reference.
+"""
+content-type = "text/x-rst"
 
 [project.optional-dependencies]
 doc = [
