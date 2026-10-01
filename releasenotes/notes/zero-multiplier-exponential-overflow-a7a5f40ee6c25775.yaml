@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Fixed ``wait_exponential`` and ``wait_exponential_jitter`` returning the
+    configured maximum wait after enough attempts when ``multiplier`` is
+    ``0``. The exponential power could overflow while converting to float
+    for the multiplication, and the overflow handler unconditionally
+    returned ``max`` without accounting for a zero multiplier.
