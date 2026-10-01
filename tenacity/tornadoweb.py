@@ -45,6 +45,10 @@ class TornadoRetrying(BaseRetrying):
         *args: typing.Any,
         **kwargs: typing.Any,
     ) -> "typing.Generator[typing.Any, typing.Any, _RetValT]":
+        if not self.enabled:
+            result = yield fn(*args, **kwargs)
+            raise gen.Return(result)
+
         self.begin()
 
         retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)
