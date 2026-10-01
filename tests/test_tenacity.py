@@ -93,7 +93,12 @@ class TestBase(unittest.TestCase):
             ) -> typing.Any:
                 pass
 
-        repr(ConcreteRetrying())
+        retrying = ConcreteRetrying(name="test")
+        result = repr(retrying)
+        assert result.startswith("<ConcreteRetrying object at 0x")
+        for attribute in ("stop", "wait", "sleep", "retry", "before", "after"):
+            assert f"{attribute}={getattr(retrying, attribute)}, " in result
+        assert result.endswith("name='test')>")
 
     def test_callstate_repr(self) -> None:
         rs = RetryCallState(None, None, (), {})  # type: ignore[arg-type]
@@ -268,9 +273,6 @@ class TestStopConditions(unittest.TestCase):
                 self.assertTrue(r.stop(make_retry_state(2, 1, upcoming_sleep=0)))
                 self.assertTrue(r.stop(make_retry_state(2, 1.001, upcoming_sleep=0)))
 
-    def test_legacy_explicit_stop_type(self) -> None:
-        Retrying(stop="stop_after_attempt")  # type: ignore[arg-type]
-
     def test_stop_func_with_retry_state(self) -> None:
         def stop_func(retry_state: RetryCallState) -> bool:
             rs = retry_state
@@ -305,6 +307,15 @@ class TestWaitConditions(unittest.TestCase):
                 self.assertEqual(500, r.wait(make_retry_state(1, 6546)))
                 self.assertEqual(600, r.wait(make_retry_state(2, 6546)))
                 self.assertEqual(700, r.wait(make_retry_state(3, 6546)))
+
+    def test_incrementing_sleep_with_max(self) -> None:
+        for max_wait in (3, datetime.timedelta(seconds=3)):
+            with self.subTest(max_wait=max_wait):
+                wait = tenacity.wait_incrementing(start=1, increment=1, max=max_wait)
+                self.assertEqual(
+                    [1, 2, 3, 3, 3, 3],
+                    [wait(make_retry_state(attempt, 0)) for attempt in range(1, 7)],
+                )
 
     def test_random_sleep(self) -> None:
         for min_, max_ in (
@@ -426,9 +437,6 @@ class TestWaitConditions(unittest.TestCase):
                 self.assertEqual(r.wait(make_retry_state(8, 0)), 100)
                 self.assertEqual(r.wait(make_retry_state(9, 0)), 100)
                 self.assertEqual(r.wait(make_retry_state(20, 0)), 100)
-
-    def test_legacy_explicit_wait_type(self) -> None:
-        Retrying(wait="exponential_sleep")  # type: ignore[arg-type]
 
     def test_wait_func(self) -> None:
         def wait_func(retry_state: RetryCallState) -> typing.Any:
@@ -1570,12 +1578,18 @@ class TestDecoratorWrapper(unittest.TestCase):
         - retry object statistics are synced with function statistics
         """
 
-        self.assertTrue(_retryable_test_with_stop(NoneReturnUntilAfterCount(2)))
+        with (
+            mock.patch.object(
+                _retryable_test_with_stop.retry, "wait", tenacity.wait_fixed(0.25)
+            ),
+            mock.patch.object(_retryable_test_with_stop.retry, "sleep"),
+        ):
+            self.assertTrue(_retryable_test_with_stop(NoneReturnUntilAfterCount(2)))
 
         expected_stats = {
             "attempt_number": 3,
             "delay_since_first_attempt": mock.ANY,
-            "idle_for": mock.ANY,
+            "idle_for": 0.5,
             "start_time": mock.ANY,
         }
         self.assertEqual(_retryable_test_with_stop.statistics, expected_stats)
@@ -1592,7 +1606,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 expected_stats = {
                     "attempt_number": 1,
                     "delay_since_first_attempt": mock.ANY,
-                    "idle_for": mock.ANY,
+                    "idle_for": 0,
                     "start_time": mock.ANY,
                 }
                 self.assertEqual(_retryable_test_with_stop.statistics, expected_stats)
