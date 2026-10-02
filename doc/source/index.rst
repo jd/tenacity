@@ -260,6 +260,27 @@ See also these methods:
     retry_any
     retry_all
 
+The ``message`` and ``match`` variants select on the exception's message text:
+
+.. code-block:: python
+
+    # exact match against str(exception)
+    @retry(retry=retry_if_exception_message(message="Connection refused"))
+    def try_connect():
+        ...
+
+    # regex match -- re.match semantics: anchored at the start of str(exception).
+    # match="timeout" does NOT match "Connection timeout";
+    # use r".*timeout.*" for substring semantics.
+    @retry(retry=retry_if_exception_message(match=r".*timeout.*"))
+    def try_fetch():
+        ...
+
+Exactly one of ``message`` or ``match`` must be passed (passing neither raises
+``TypeError``). ``retry_if_not_exception_message`` is the logical negation of
+``retry_if_exception_message``.
+
+
 We can also combine several conditions:
 
 .. testcode::
