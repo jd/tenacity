@@ -469,7 +469,7 @@ class BaseRetrying(ABC):
 
     def _post_stop_check_actions(self, retry_state: "RetryCallState") -> None:
         if self.iter_state.stop_run_result:
-            if self.retry_error_callback:
+            if self.retry_error_callback or callable(self.retry_error_callback):
                 self._add_action_func(self.retry_error_callback)
                 return
 
