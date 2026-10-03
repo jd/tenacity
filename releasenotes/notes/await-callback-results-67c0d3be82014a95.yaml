@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    AsyncRetrying's before, after, and before_sleep callbacks now await their
+    returned awaitables. Callbacks returning a coroutine, Task, or Future
+    finish before the next retry action, and their exceptions propagate
+    instead of being silently ignored. The retried operation's return value
+    remains unchanged, including when it is itself an awaitable.
