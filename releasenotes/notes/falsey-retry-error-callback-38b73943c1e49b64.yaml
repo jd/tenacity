@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Callable retry error callbacks that evaluate to false are now called when retries
+    are exhausted. Previously, valid callable objects with a false truth value
+    were ignored and ``RetryError`` was raised instead. This applies to both
+    ``Retrying`` and ``AsyncRetrying``.
