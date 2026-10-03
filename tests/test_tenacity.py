@@ -25,7 +25,6 @@ from fractions import Fraction
 from unittest import mock
 
 import pytest
-
 import tenacity
 from tenacity import RetryCallState, RetryError, Retrying, retry
 from tenacity._utils import override
@@ -382,7 +381,9 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(r.wait(make_retry_state(10, 0)), 0)
         self.assertEqual(r.wait(make_retry_state(1025, 0)), 0)
 
-        r2 = Retrying(wait=tenacity.wait_exponential(multiplier=0, exp_base=2.0, max=60))
+        r2 = Retrying(
+            wait=tenacity.wait_exponential(multiplier=0, exp_base=2.0, max=60)
+        )
         self.assertEqual(r2.wait(make_retry_state(1025, 0)), 0)
 
     def test_exponential_zero_multiplier_with_min_wait(self) -> None:
