@@ -508,6 +508,14 @@ class BaseRetrying(ABC):
         self.begin()
 
         retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
+        # When used as a context manager without an explicit name=, infer the
+        # caller's qualified name from the frame that called next() on this
+        # generator (i.e. the for-loop body in user code).
+        if self._name is None:
+            _frame = sys._getframe(1)  # noqa: SLF001
+            retry_state._inferred_name = (  # noqa: SLF001
+                getattr(_frame.f_code, "co_qualname", None) or _frame.f_code.co_name
+            )
         while True:
             do = self.iter(retry_state=retry_state)
             if isinstance(do, DoAttempt):
@@ -618,6 +626,8 @@ class RetryCallState:
         self.next_action: RetryAction | None = None
         #: Next sleep time as decided by the retry manager.
         self.upcoming_sleep: float = 0.0
+        #: Inferred caller name for context-manager usage without explicit name=
+        self._inferred_name: str | None = None
 
     def get_fn_name(self) -> str:
         """Get the name of the function being retried.
@@ -628,6 +638,10 @@ class RetryCallState:
         """
         if self.fn is not None:
             return _utils.get_callback_name(self.fn)
+        # Inferred from the caller's frame in __iter__ (context-manager usage)
+        inferred: str | None = getattr(self, "_inferred_name", None)
+        if inferred is not None:
+            return inferred
         return str(self.retry_object)
 
     @property
