@@ -949,7 +949,7 @@ class TestRetryConditions(unittest.TestCase):
                 raise UnderlyingError("boom")
             except UnderlyingError:
                 # Implicit chaining via __context__ is exactly what we test.
-                raise tenacity.TryAgain
+                raise tenacity.TryAgain  # noqa: B904  (implicit __context__ chaining is exactly what this test exercises)
 
         r = Retrying(
             stop=tenacity.stop_after_attempt(5),
