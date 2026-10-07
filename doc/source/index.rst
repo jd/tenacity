@@ -568,17 +568,21 @@ using the `retry_with` function attached to the wrapped function:
     def raise_my_exception():
         raise MyException("Fail")
 
+    modified_retry = raise_my_exception.retry_with(stop=stop_after_attempt(4))
     try:
-        raise_my_exception.retry_with(stop=stop_after_attempt(4))()
+        modified_retry()
     except Exception:
         pass
 
-    print(raise_my_exception.statistics)
+    print(modified_retry.statistics)
 
 .. testoutput::
    :hide:
 
    ...
+
+``retry_with`` returns a new wrapper. Read the statistics from the wrapper you
+called; the original function's statistics do not describe that call.
 
 If you want to use variables to set up the retry parameters, you don't have
 to use the `retry` decorator - you can instead use `Retrying` directly:
