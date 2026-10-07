@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Callable wait strategies are now invoked even when their truth value is
+    false, in both synchronous and asynchronous retries. Falsy non-callable
+    wait settings continue to disable waiting.

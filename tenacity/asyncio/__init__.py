@@ -152,9 +152,9 @@ class AsyncRetrying(BaseRetrying):
 
     @override
     async def _run_wait(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
-        # See BaseRetrying._run_wait: falsy `wait` values mean "no wait" and
-        # reach us from untyped callers.
-        if not self.wait:  # type: ignore[truthy-bool]
+        # See BaseRetrying._run_wait: only falsy non-callables mean "no wait".
+        wait = t.cast("object", self.wait)
+        if not callable(wait) and not wait:
             retry_state.upcoming_sleep = 0.0
         else:
             retry_state.upcoming_sleep = await _utils.wrap_to_async_func(self.wait)(
