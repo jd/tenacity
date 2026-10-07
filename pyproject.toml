@@ -53,7 +53,7 @@ dev = [
     "poethepoet",
     "pytest",
     "tornado>=6.0",
-    "ruff==0.16.5",
+    "ruff==0.16.9",
     "mypy==2.3.1",
     "sphinx",
     "reno",

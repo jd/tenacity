@@ -1,7 +1,6 @@
 queue_rules:
   - name: default
     merge_method: squash
-    autoqueue: true
     queue_conditions:
       - or:
         - author = jd
@@ -14,6 +13,20 @@ queue_rules:
       - "check-success=test (3.14, check)"
       - "check-success=test (3.14, lint)"
       - "check-success=test (3.14, mypy)"
+
+merge_protections_settings:
+  auto_merge_conditions:
+    - or:
+      - author = jd
+      - "#approved-reviews-by >= 1"
+      - author = dependabot[bot]
+    - "check-success=test (3.10, check)"
+    - "check-success=test (3.11, check)"
+    - "check-success=test (3.12, check)"
+    - "check-success=test (3.13, check)"
+    - "check-success=test (3.14, check)"
+    - "check-success=test (3.14, lint)"
+    - "check-success=test (3.14, mypy)"
 
 pull_request_rules:
   - name: dismiss reviews
