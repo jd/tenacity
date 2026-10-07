@@ -1,0 +1,3 @@
+fixes:
+  - Read statistics from the wrapper returned by retry_with in the
+    changing-arguments documentation example.
