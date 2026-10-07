@@ -660,3 +660,79 @@ class TestSyncFunctionWithAsyncSleep(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@pytest.mark.parametrize("sleep_kind", ["none", "async", "awaitable", "value"])
+@asynctest
+async def test_async_sleep_callback(sleep_kind: str) -> None:
+    events: list[str] = []
+
+    async def complete() -> None:
+        await asyncio.sleep(0)
+        events.append("sleep:done")
+
+    def sync_sleep(seconds: float) -> object:
+        assert seconds == 0.25
+        events.append("sleep:start")
+        if sleep_kind == "awaitable":
+            return complete()
+        events.append("sleep:done")
+        return seconds if sleep_kind == "value" else None
+
+    async def async_sleep(seconds: float) -> None:
+        assert seconds == 0.25
+        events.append("sleep:start")
+        await complete()
+
+    for use_iterator in (False, True):
+        events.clear()
+        attempts = 0
+
+        async def operation() -> str:
+            nonlocal attempts
+            attempts += 1
+            events.append("attempt")
+            if attempts == 1:
+                raise OSError("retry once")
+            return "ok"
+
+        retrying = AsyncRetrying(
+            sleep=async_sleep if sleep_kind == "async" else sync_sleep,
+            wait=wait_fixed(0.25),
+            stop=stop_after_attempt(2),
+        )
+        if use_iterator:
+            result = ""
+            async for attempt in retrying:
+                with attempt:
+                    result = await operation()
+        else:
+            result = await retrying(operation)
+
+        assert result == "ok"
+        assert events == ["attempt", "sleep:start", "sleep:done", "attempt"]
+
+
+@asynctest
+async def test_sync_actions_returning_awaitables() -> None:
+    events: list[str] = []
+
+    async def action(name: str) -> None:
+        await asyncio.sleep(0)
+        events.append(name)
+
+    async def operation() -> str:
+        events.append("attempt")
+        if events.count("attempt") == 1:
+            raise OSError("retry once")
+        return "ok"
+
+    retrying = AsyncRetrying(
+        sleep=lambda seconds: None,
+        stop=stop_after_attempt(2),
+        before=lambda state: action("before"),
+        after=lambda state: action("after"),
+        before_sleep=lambda state: action("before_sleep"),
+    )
+    assert await retrying(operation) == "ok"
+    assert events == ["before", "attempt", "after", "before_sleep", "before", "attempt"]

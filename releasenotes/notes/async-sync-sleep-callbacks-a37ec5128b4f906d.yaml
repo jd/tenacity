@@ -1,6 +1,7 @@
 ---
 fixes:
   - |
-    Async retry controllers now support sleep callbacks returning None,
-    including synchronous callbacks, without raising TypeError. Callbacks
-    returning awaitables are still awaited before the next attempt.
+    Asynchronous retries accept synchronous no-op or recording ``sleep`` callbacks
+    and await callback results only when they are awaitable. Synchronous actions
+    returning awaitables are also awaited. Blocking sleep functions such as
+    ``time.sleep`` still block the event loop and should not be used here.

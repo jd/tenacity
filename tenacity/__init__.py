@@ -249,7 +249,7 @@ class AttemptManager:
 class BaseRetrying(ABC):
     def __init__(
         self,
-        sleep: t.Callable[[int | float], None] = sleep,
+        sleep: t.Callable[[int | float], object] = sleep,
         stop: "StopBaseT" = stop_never,
         wait: "WaitBaseT" = wait_none(),
         retry: "RetryBaseT" = retry_if_exception_type(),
@@ -278,7 +278,7 @@ class BaseRetrying(ABC):
 
     def copy(
         self,
-        sleep: t.Callable[[int | float], None] | object = _unset,
+        sleep: t.Callable[[int | float], object] | object = _unset,
         stop: "StopBaseT | object" = _unset,
         wait: "WaitBaseT | object" = _unset,
         retry: retry_base | object = _unset,
