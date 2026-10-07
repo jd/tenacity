@@ -24,6 +24,8 @@ def test_is_coroutine_callable() -> None:
     partial_sync_func = functools.partial(sync_func)
     partial_async_class = functools.partial(AsyncClass().__call__)
     partial_sync_class = functools.partial(SyncClass().__call__)
+    partial_async_instance = functools.partial(AsyncClass())
+    partial_sync_instance = functools.partial(SyncClass())
     partial_lambda_fn = functools.partial(lambda_fn)
 
     assert _utils.is_coroutine_callable(async_func) is True
@@ -38,6 +40,8 @@ def test_is_coroutine_callable() -> None:
     assert _utils.is_coroutine_callable(partial_sync_func) is False
     assert _utils.is_coroutine_callable(partial_async_class) is True
     assert _utils.is_coroutine_callable(partial_sync_class) is False
+    assert _utils.is_coroutine_callable(partial_async_instance) is True
+    assert _utils.is_coroutine_callable(partial_sync_instance) is False
     assert _utils.is_coroutine_callable(partial_lambda_fn) is False
 
 
