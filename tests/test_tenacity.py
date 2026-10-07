@@ -555,6 +555,17 @@ class TestWaitConditions(unittest.TestCase):
             # so the runtime rejection is what has to be tested.
             5 + tenacity.wait_fixed(1)
 
+    def test_wait_add_rejects_number(self) -> None:
+        # The mirror of the case above: the rejection has to happen at the `+`,
+        # not by building a combination that raises when it is called.
+        with self.assertRaises(TypeError):
+            tenacity.wait_fixed(1) + 5  # type: ignore[operator]
+
+    def test_wait_add_plain_callable(self) -> None:
+        combined = tenacity.wait_fixed(1) + (lambda retry_state: 2.0)
+        self.assertIsInstance(combined, tenacity.wait_combine)
+        self.assertEqual(combined(make_retry_state(1, 5)), 3.0)
+
     def _assert_range(self, wait: float, min_: float, max_: float) -> None:
         self.assertLess(wait, max_)
         self.assertGreaterEqual(wait, min_)
