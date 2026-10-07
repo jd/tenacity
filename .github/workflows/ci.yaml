@@ -45,10 +45,31 @@ jobs:
       - name: Build 🔧 & Test 🔍
         run: uv run --python ${{ matrix.python }} poe ${{ matrix.task }}
 
+  package:
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup uv 🔧
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build 🔧
+        run: uv build
+
+      # Same metadata check PyPI applies on upload, so a broken long
+      # description fails here rather than in the release workflow.
+      - name: Check distributions 🔍
+        run: uvx twine check --strict dist/*
+
   ci-gate:
     if: ${{ !cancelled() }}
     needs:
       - test
+      - package
     runs-on: ubuntu-24.04
     steps:
       - name: Verify all jobs succeeded 🪃
