@@ -1,0 +1,5 @@
+fixes:
+  - |
+    Preserve an explicit exception cause even when it evaluates to false when
+    reraising ``TryAgain`` with ``reraise=True``. Such causes now retain
+    precedence over an incidental exception context.

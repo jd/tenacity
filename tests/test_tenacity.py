@@ -958,6 +958,39 @@ class TestRetryConditions(unittest.TestCase):
         self.assertRaises(UnderlyingError, r, _r)
         self.assertEqual(5, r.statistics["attempt_number"])
 
+    def test_retry_try_again_from_falsey_cause_reraise(self) -> None:
+        class UnderlyingError(Exception):
+            def __bool__(self) -> bool:
+                return False
+
+        cause = UnderlyingError("explicit cause")
+
+        def _r() -> None:
+            raise tenacity.TryAgain from cause
+
+        r = Retrying(stop=tenacity.stop_after_attempt(1), reraise=True)
+        with self.assertRaises(UnderlyingError) as raised:
+            r(_r)
+        self.assertIs(raised.exception, cause)
+
+    def test_retry_try_again_falsey_cause_takes_precedence_over_context(self) -> None:
+        class UnderlyingError(Exception):
+            def __bool__(self) -> bool:
+                return False
+
+        cause = UnderlyingError("explicit cause")
+
+        def _r() -> None:
+            try:
+                raise ValueError("incidental context")
+            except ValueError:
+                raise tenacity.TryAgain from cause
+
+        r = Retrying(stop=tenacity.stop_after_attempt(1), reraise=True)
+        with self.assertRaises(UnderlyingError) as raised:
+            r(_r)
+        self.assertIs(raised.exception, cause)
+
     def test_retry_try_again_forever_reraise(self) -> None:
         def _r() -> None:
             raise tenacity.TryAgain

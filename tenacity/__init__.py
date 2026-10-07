@@ -201,7 +201,9 @@ class RetryError(Exception):
             # an "except" block), surface the underlying exception that caused
             # the retry rather than the opaque TryAgain sentinel.
             if isinstance(exc, TryAgain):
-                cause = exc.__cause__ or exc.__context__
+                cause = exc.__cause__
+                if cause is None:
+                    cause = exc.__context__
                 if cause is not None:
                     raise cause.with_traceback(cause.__traceback__) from None
             raise self.last_attempt.result()
