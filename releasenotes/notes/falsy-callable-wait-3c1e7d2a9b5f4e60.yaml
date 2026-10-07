@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    A callable ``wait`` strategy is now called even when it is falsy (for
+    example an empty container or an object with a custom ``__bool__``).
+    Only ``None`` and ``0`` still mean "no wait".
