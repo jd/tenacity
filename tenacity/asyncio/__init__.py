@@ -136,9 +136,16 @@ class AsyncRetrying(BaseRetrying):
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):
                 retry_state.prepare_for_next_attempt()
-                await self.sleep(do)  # type: ignore[misc]
+                await self._sleep(do)
             else:
                 return do  # type: ignore[no-any-return]
+
+    async def _sleep(self, seconds: float) -> None:
+        # BaseRetrying types sleep as synchronous; AsyncRetrying also accepts
+        # callbacks returning an awaitable, as declared by its constructor.
+        result = t.cast("t.Awaitable[None] | None", self.sleep(seconds))
+        if result is not None:
+            await result
 
     @override
     def _add_action_func(self, fn: t.Callable[..., t.Any]) -> None:
@@ -208,7 +215,7 @@ class AsyncRetrying(BaseRetrying):
                 return AttemptManager(retry_state=self._retry_state)
             if isinstance(do, DoSleep):
                 self._retry_state.prepare_for_next_attempt()
-                await self.sleep(do)  # type: ignore[misc]
+                await self._sleep(do)
             else:
                 raise StopAsyncIteration
 

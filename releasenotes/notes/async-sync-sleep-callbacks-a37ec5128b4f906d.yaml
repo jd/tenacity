@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Async retry controllers now support sleep callbacks returning None,
+    including synchronous callbacks, without raising TypeError. Callbacks
+    returning awaitables are still awaited before the next attempt.
