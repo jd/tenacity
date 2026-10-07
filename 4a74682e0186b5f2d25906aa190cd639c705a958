@@ -1,0 +1,6 @@
+Revision history for #739:
+
+rev 2 (content) 2026-10-07 09:21 UTC
+rev 1 (initial) 2026-10-07 09:21 UTC
+
+<!-- mergify-revision-data: {"schema_version":1,"pull_number":739,"entries":[{"number":1,"change_type":"initial","old_sha":null,"new_sha":"c5b1974b3429a707b410489691009926ddde170f","timestamp_iso":"2026-10-07T09:21:06Z","reason":"","replay_sha":null,"compare_url":null},{"number":2,"change_type":"content","old_sha":"c5b1974b3429a707b410489691009926ddde170f","new_sha":"75d64baac272560f536913e84cb4a939b29dd590","timestamp_iso":"2026-10-07T09:21:06Z","reason":"","replay_sha":null,"compare_url":"https://github.com/jd/tenacity/compare/c5b1974b3429a707b410489691009926ddde170f...75d64baac272560f536913e84cb4a939b29dd590"}]} -->
