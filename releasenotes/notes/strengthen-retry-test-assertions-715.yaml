@@ -1,0 +1,5 @@
+---
+other:
+  - Strengthen tests for retry controller representations, the incremental wait
+    cap, and cumulative idle time. Remove obsolete string-strategy constructor
+    smoke tests that did not exercise retry behavior.
