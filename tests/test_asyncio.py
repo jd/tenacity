@@ -17,7 +17,7 @@ import inspect
 import unittest
 from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 from unittest import mock
 
 try:
@@ -47,6 +47,9 @@ from .test_tenacity import (
     NoneReturnUntilAfterCount,
     current_time_ms,
 )
+
+if TYPE_CHECKING:
+    from tenacity.asyncio.retry import async_retry_base
 
 _F = TypeVar("_F", bound=Callable[..., Coroutine[Any, Any, Any]])
 
@@ -656,6 +659,64 @@ class TestSyncFunctionWithAsyncSleep(unittest.TestCase):
         result = await sync_function()
         assert result is True
         assert mock_sleep.await_count == 2
+
+
+@pytest.mark.parametrize("kind", ["or", "and"])
+@pytest.mark.parametrize("association", ["left", "right"])
+@asynctest
+async def test_long_async_retry_chain(kind: str, association: str) -> None:
+    calls = 0
+    neutral = kind == "and"
+
+    async def predicate(value: Any) -> bool:
+        nonlocal calls
+        calls += 1
+        return neutral
+
+    leaf = tasyncio.retry_if_result(predicate)
+    combined: async_retry_base = leaf
+    for _ in range(1500):
+        if kind == "or":
+            combined = combined | leaf if association == "left" else leaf | combined
+        else:
+            combined = combined & leaf if association == "left" else leaf & combined
+
+    state = RetryCallState(AsyncRetrying(), None, (), {})
+    state.set_result(None)
+    assert await combined(state) is neutral
+    assert calls == 1501
+
+
+@pytest.mark.parametrize("kind", ["or", "and"])
+@asynctest
+async def test_async_retry_chain_short_circuit(kind: str) -> None:
+    calls: list[str] = []
+    neutral = kind == "and"
+
+    async def first(value: Any) -> bool:
+        calls.append("first")
+        return neutral
+
+    def second(value: Any) -> bool:
+        calls.append("second")
+        return neutral
+
+    async def terminal(value: Any) -> bool:
+        calls.append("terminal")
+        return not neutral
+
+    async def unreachable(value: Any) -> bool:
+        pytest.fail("A short-circuited predicate must not run")
+
+    a = tasyncio.retry_if_result(first)
+    b = retry_if_result(second)
+    c = tasyncio.retry_if_result(terminal)
+    d = tasyncio.retry_if_result(unreachable)
+    combined = (a | b) | (c | d) if kind == "or" else (a & b) & (c & d)
+    state = RetryCallState(AsyncRetrying(), None, (), {})
+    state.set_result(None)
+    assert await combined(state) is not neutral
+    assert calls == ["first", "second", "terminal"]
 
 
 if __name__ == "__main__":

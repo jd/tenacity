@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Flatten chained asynchronous retry predicates joined with ``|`` or ``&``,
+    avoiding ``RecursionError`` when evaluating long chains while preserving
+    evaluation order and short-circuit behavior.
