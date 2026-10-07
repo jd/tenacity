@@ -25,6 +25,7 @@ from fractions import Fraction
 from unittest import mock
 
 import pytest
+
 import tenacity
 from tenacity import RetryCallState, RetryError, Retrying, retry
 from tenacity._utils import override
