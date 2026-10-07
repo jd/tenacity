@@ -177,6 +177,42 @@ class TestRetryingName(unittest.TestCase):
         args = log.call_args[0]
         assert "my_block" in args[1]
 
+    def test_logging_infers_caller_name(self) -> None:
+        """before_log infers the enclosing function name when no name= is given (#511).
+
+        When Retrying is used as a context manager without an explicit name=
+        parameter, retry_state.fn is None. Before the fix, get_fn_name() would
+        fall back to str(retry_object) == "<unknown>". Now __iter__ captures
+        sys._getframe(1) -- the for-loop frame -- and stores co_qualname / co_name
+        as retry_state._inferred_name so that before_log() can log something
+        meaningful instead of '<unknown>'.
+        """
+        import unittest.mock
+
+        log = unittest.mock.MagicMock()
+        logger = unittest.mock.MagicMock(log=log)
+
+        def my_retry_function() -> None:
+            with contextlib.suppress(Exception):
+                for attempt in Retrying(
+                    before=tenacity.before_log(logger, logging.INFO),
+                    stop=tenacity.stop_after_attempt(1),
+                ):
+                    with attempt:
+                        raise ValueError("boom")
+
+        my_retry_function()
+
+        # before_log must have been called at least once
+        assert log.call_args is not None, "before_log was never called"
+        msg = log.call_args[0][1]
+        assert "<unknown>" not in msg, (
+            f"Expected an inferred caller name in the log message, got: {msg!r}"
+        )
+        assert "my_retry_function" in msg, (
+            f"Expected 'my_retry_function' in the log message, got: {msg!r}"
+        )
+
 
 class TestStopConditions(unittest.TestCase):
     def test_never_stop(self) -> None:
