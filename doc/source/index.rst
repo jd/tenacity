@@ -715,7 +715,7 @@ Sleeps are done asynchronously too.
 
     @retry
     async def my_asyncio_function():
-        await asyncio.getaddrinfo('8.8.8.8', 53)
+        await asyncio.get_running_loop().getaddrinfo('8.8.8.8', 53)
 
 .. code-block:: python
 
