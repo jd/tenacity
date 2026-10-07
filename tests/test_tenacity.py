@@ -373,6 +373,16 @@ class TestWaitConditions(unittest.TestCase):
         r = Retrying(wait=tenacity.wait_exponential(multiplier=1e300, max=1e-100))
         self.assertEqual(r.wait(make_retry_state(1, 0)), 1e-100)
 
+    def test_exponential_zero_multiplier_does_not_overflow_to_max(self) -> None:
+        # A float 0.0 multiplier hits the OverflowError path when the power
+        # itself overflows converting to float, unlike an int 0 multiplier.
+        r = Retrying(wait=tenacity.wait_exponential(multiplier=0.0, max=60))
+        self.assertEqual(r.wait(make_retry_state(1025, 0)), 0)
+
+    def test_exponential_zero_multiplier_leaves_min_in_effect(self) -> None:
+        r = Retrying(wait=tenacity.wait_exponential(multiplier=0.0, max=60, min=5))
+        self.assertEqual(r.wait(make_retry_state(1025, 0)), 5)
+
     def test_exponential_with_min_wait(self) -> None:
         r = Retrying(wait=tenacity.wait_exponential(min=20))
         self.assertEqual(r.wait(make_retry_state(1, 0)), 20)
@@ -683,6 +693,12 @@ class TestWaitConditions(unittest.TestCase):
         # Default arguments exist
         fn = tenacity.wait_exponential_jitter()
         fn(make_retry_state(0, 0))
+
+    def test_wait_exponential_jitter_zero_multiplier_does_not_overflow_to_max(
+        self,
+    ) -> None:
+        fn = tenacity.wait_exponential_jitter(multiplier=0.0, jitter=0, max=60)
+        self.assertEqual(fn(make_retry_state(1025, 0)), 0)
 
     def test_wait_exponential_jitter_min(self) -> None:
         fn = tenacity.wait_exponential_jitter(initial=1, max=60, jitter=1, min=5)
