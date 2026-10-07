@@ -714,6 +714,18 @@ async def test_async_sleep_callback(sleep_kind: str) -> None:
 
 
 @asynctest
+async def test_async_operation_result_is_not_awaited() -> None:
+    future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+    future.set_result("data")
+
+    async def operation() -> asyncio.Future[str]:
+        return future
+
+    result: asyncio.Future[str] = await AsyncRetrying()(operation)
+    assert result is future
+
+
+@asynctest
 async def test_sync_actions_returning_awaitables() -> None:
     events: list[str] = []
 

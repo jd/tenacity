@@ -2,6 +2,7 @@
 fixes:
   - |
     Asynchronous retries accept synchronous no-op or recording ``sleep`` callbacks
-    and await callback results only when they are awaitable. Synchronous actions
-    returning awaitables are also awaited. Blocking sleep functions such as
+    and await callback results only when they are awaitable. Synchronous callbacks
+    returning awaitables are also awaited; an operation's awaitable-valued result
+    is returned unchanged. Blocking sleep functions such as
     ``time.sleep`` still block the event loop and should not be used here.
