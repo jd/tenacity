@@ -60,7 +60,7 @@ class retry_base(abc.ABC):
         return retry_any(other, self)
 
 
-RetryBaseT = retry_base | typing.Callable[["RetryCallState"], bool]
+RetryBaseT: typing.TypeAlias = retry_base | typing.Callable[["RetryCallState"], bool]
 
 
 class _retry_never(retry_base):
