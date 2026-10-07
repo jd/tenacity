@@ -44,3 +44,15 @@ jobs:
 
       - name: Build 🔧 & Test 🔍
         run: uv run --python ${{ matrix.python }} poe ${{ matrix.task }}
+
+  ci-gate:
+    if: ${{ !cancelled() }}
+    needs:
+      - test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify all jobs succeeded 🪃
+        uses: Mergifyio/gha-mergify-ci@v26
+        with:
+          action: wait-jobs
+          jobs: ${{ toJSON(needs) }}

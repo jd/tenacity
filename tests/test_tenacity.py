@@ -530,6 +530,23 @@ class TestWaitConditions(unittest.TestCase):
                 )
                 self.assertEqual(r(flaky), "ok")
 
+    def test_wait_falsy_callable_is_called(self) -> None:
+        # Only None and 0 mean "no wait": a strategy that happens to be falsy
+        # (empty container, custom __bool__) is still a strategy.
+        class EmptyWait(list[int]):
+            def __call__(self, retry_state: RetryCallState) -> float:
+                return 1
+
+        sleeps: list[float] = []
+        r = Retrying(
+            wait=EmptyWait(),
+            sleep=sleeps.append,
+            stop=tenacity.stop_after_attempt(2),
+            retry_error_callback=lambda rs: None,
+        )
+        r(lambda: 1 / 0)
+        self.assertEqual(sleeps, [1])
+
     def test_wait_radd_plain_callable(self) -> None:
         # A plain callable is a valid WaitBaseT, and functions have no
         # __add__, so `callable + strategy` goes through wait_base.__radd__.
