@@ -7,13 +7,7 @@ queue_rules:
         - author = jd
         - "#approved-reviews-by >= 1"
         - author = dependabot[bot]
-      - "check-success=test (3.10, check)"
-      - "check-success=test (3.11, check)"
-      - "check-success=test (3.12, check)"
-      - "check-success=test (3.13, check)"
-      - "check-success=test (3.14, check)"
-      - "check-success=test (3.14, lint)"
-      - "check-success=test (3.14, mypy)"
+      - check-success=ci-gate
 
 pull_request_rules:
   - name: dismiss reviews
