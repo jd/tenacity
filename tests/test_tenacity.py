@@ -2406,5 +2406,15 @@ class TestPickle(unittest.TestCase):
         assert calls == 3
 
 
+def test_wait_fixed_rejects_negative() -> None:
+    """Negative waits would crash later in time.sleep; reject at construction."""
+    with pytest.raises(ValueError, match="wait_fixed wait must be >= 0"):
+        tenacity.wait_fixed(-1)
+    with pytest.raises(ValueError, match="wait_fixed wait must be >= 0"):
+        tenacity.wait_fixed(-0.5)
+    # zero remains valid (same as wait_none)
+    assert tenacity.wait_fixed(0)(mock.Mock()) == 0
+
+
 if __name__ == "__main__":
     unittest.main()
