@@ -13,9 +13,3 @@ merge_protections_settings:
       - author = jd
       - "#approved-reviews-by >= 1"
       - author = dependabot[bot]
-
-pull_request_rules:
-  - name: dismiss reviews
-    conditions: []
-    actions:
-      dismiss_reviews: {}
