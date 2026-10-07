@@ -18,6 +18,7 @@ import datetime
 import logging
 import pickle
 import re
+import threading
 import time
 import typing
 import unittest
@@ -1619,6 +1620,44 @@ class TestStatisticsKeys:
 
         succeeds_first_try()
         assert succeeds_first_try.statistics["delay_since_first_attempt"] == 0
+
+    def test_iter_on_fresh_thread_after_begin_elsewhere(self) -> None:
+        """iter()/next_action() must not KeyError when begin() ran elsewhere.
+
+        Reproduces the Temporal scenario from issue #507: begin() runs on one
+        thread, but the retry loop is re-executed on another (replay worker).
+        That thread's lazily created statistics dict starts empty, so
+        `self.statistics["idle_for"] += sleep` used to raise KeyError.
+        """
+        r = tenacity.Retrying(
+            stop=tenacity.stop_after_attempt(5), wait=tenacity.wait_fixed(0)
+        )
+        r.begin()  # simulate begin() having run on a different thread
+
+        observed: dict[str, typing.Any] = {}
+
+        def worker() -> None:
+            retry_state = tenacity.RetryCallState(
+                r, fn=lambda: None, args=(), kwargs={}
+            )
+            retry_state.set_exception((ValueError, ValueError("boom"), None))
+            try:
+                do = r.iter(retry_state=retry_state)
+                observed["do"] = type(do).__name__
+                stats = r.statistics
+                observed["idle_for"] = stats["idle_for"]
+                observed["attempt_number"] = stats["attempt_number"]
+            except Exception as exc:
+                observed["error"] = exc
+
+        thread = threading.Thread(target=worker)
+        thread.start()
+        thread.join()
+
+        assert "error" not in observed, observed["error"]
+        assert observed["do"] == "DoSleep"
+        assert observed["idle_for"] == 0
+        assert observed["attempt_number"] == 2
 
     def test_statistics_visible_through_outer_decorator(self) -> None:
         """Statistics must resolve when @retry is wrapped by another decorator.

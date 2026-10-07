@@ -487,8 +487,13 @@ class BaseRetrying(ABC):
             sleep = rs.upcoming_sleep
             rs.next_action = RetryAction(sleep)
             rs.idle_for += sleep
-            self.statistics["idle_for"] += sleep
-            self.statistics["attempt_number"] += 1
+            # `begin()` may have run on a different thread than this action
+            # (e.g. Temporal's replay worker re-executing the workflow), in
+            # which case this thread's lazily created statistics dict starts
+            # empty. Read with defaults instead of raising KeyError (#507).
+            stats = self.statistics
+            stats["idle_for"] = stats.get("idle_for", 0) + sleep
+            stats["attempt_number"] = stats.get("attempt_number", 1) + 1
 
         self._add_action_func(next_action)
 
