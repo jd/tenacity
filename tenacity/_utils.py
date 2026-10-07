@@ -127,6 +127,9 @@ def wrap_to_async_func(
         return call
 
     async def inner(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
-        return call(*args, **kwargs)
+        result = call(*args, **kwargs)
+        if inspect.isawaitable(result):
+            return await result
+        return result
 
     return inner
