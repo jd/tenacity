@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Restore a PyPI-compatible package description instead of using the Sphinx
+    documentation source, whose directives prevent distribution uploads.
