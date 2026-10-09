@@ -658,5 +658,101 @@ class TestSyncFunctionWithAsyncSleep(unittest.TestCase):
         assert mock_sleep.await_count == 2
 
 
+# 2026-10-09: Resolve terminal fallbacks before exposing the retry result.
+@pytest.mark.parametrize("callback_result", ["coroutine", "task", "future", "value"])
+@pytest.mark.parametrize("decorate", [False, True])
+@asynctest
+async def test_sync_error_callback_awaits_returned_awaitable(
+    callback_result: str, decorate: bool
+) -> None:
+    states: list[RetryCallState] = []
+
+    async def fallback() -> str:
+        await asyncio.sleep(0)
+        return "recovered"
+
+    def error_callback(state: RetryCallState) -> Any:
+        states.append(state)
+        if callback_result == "value":
+            return "recovered"
+        if callback_result == "task":
+            return asyncio.create_task(fallback())
+        if callback_result == "future":
+            future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+            future.set_result("recovered")
+            return future
+        return fallback()
+
+    async def operation() -> str:
+        raise ValueError("operation failed")
+
+    retrying = AsyncRetrying(
+        stop=stop_after_attempt(2), retry_error_callback=error_callback
+    )
+    result: Any
+    if decorate:
+        result = await retrying.wraps(operation)()
+    else:
+        result = await retrying(operation)
+    if inspect.iscoroutine(result):
+        result.close()
+    assert result == "recovered"
+    assert len(states) == 1
+    assert states[0].attempt_number == 2
+
+
+@asynctest
+async def test_sync_error_callback_is_awaited_during_iteration() -> None:
+    recovered: list[int] = []
+
+    async def fallback(state: RetryCallState) -> None:
+        await asyncio.sleep(0)
+        recovered.append(state.attempt_number)
+
+    retrying = AsyncRetrying(
+        stop=stop_after_attempt(2), retry_error_callback=lambda state: fallback(state)
+    )
+    async for attempt in retrying:
+        with attempt:
+            raise ValueError("operation failed")
+    assert recovered == [2]
+
+
+@asynctest
+async def test_sync_error_callback_future_exception_is_propagated() -> None:
+    future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+    future.set_exception(LookupError("fallback failed"))
+
+    async def operation() -> str:
+        raise ValueError("operation failed")
+
+    retrying = AsyncRetrying(
+        stop=stop_after_attempt(1), retry_error_callback=lambda state: future
+    )
+    try:
+        with pytest.raises(LookupError, match="fallback failed"):
+            await retrying(operation)
+    finally:
+        future.exception()
+
+
+@asynctest
+async def test_async_error_callback_does_not_await_its_result_twice() -> None:
+    future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+
+    async def error_callback(state: RetryCallState) -> asyncio.Future[str]:
+        return future
+
+    async def operation() -> str:
+        raise ValueError("operation failed")
+
+    retrying = AsyncRetrying(
+        stop=stop_after_attempt(1), retry_error_callback=error_callback
+    )
+    result: asyncio.Future[str] = await asyncio.wait_for(retrying(operation), timeout=1)
+    assert result is future
+    assert not future.done()
+
+
 if __name__ == "__main__":
     unittest.main()

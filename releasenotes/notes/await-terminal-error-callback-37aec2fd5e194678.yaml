@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Await coroutine, task, or future results returned by synchronous
+    ``AsyncRetrying`` error callbacks after retries are exhausted.
+    Asynchronous error callbacks continue to be awaited only once.
