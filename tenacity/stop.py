@@ -46,7 +46,11 @@ class stop_any(stop_base):
     """Stop if any of the stop condition is valid."""
 
     def __init__(self, *stops: stop_base) -> None:
-        self.stops = stops
+        self.stops: tuple[stop_base, ...] = tuple(
+            child
+            for stop in stops
+            for child in (stop.stops if type(stop) is stop_any else (stop,))
+        )
 
     @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
@@ -57,7 +61,11 @@ class stop_all(stop_base):
     """Stop if all the stop conditions are valid."""
 
     def __init__(self, *stops: stop_base) -> None:
-        self.stops = stops
+        self.stops: tuple[stop_base, ...] = tuple(
+            child
+            for stop in stops
+            for child in (stop.stops if type(stop) is stop_all else (stop,))
+        )
 
     @override
     def __call__(self, retry_state: "RetryCallState") -> bool:
