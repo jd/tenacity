@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Avoid ``RecursionError`` when evaluating long left-associated wait
+    combinations created with ``+`` or ``sum``. Preserve native summation,
+    changes to nested strategies, and custom strategy calls. Deeply
+    right-associated combinations and overridden composite strategies retain
+    their existing recursion boundary.
