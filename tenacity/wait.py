@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import abc
+import itertools
 import math
 import random
 import typing
@@ -100,11 +101,52 @@ class wait_combine(wait_base):
 
     @override
     def __call__(self, retry_state: "RetryCallState") -> float:
-        # Positional, like `BaseRetrying._run_wait`: a `WaitBaseT` callable is
-        # only guaranteed to take the state positionally, so passing it by
-        # keyword crashed on any callable whose parameter is not named
-        # `retry_state`.
-        return float(sum(x(retry_state) for x in self.wait_funcs))
+        # + and sum() build left-nested combinations. Descend that leading
+        # chain without recursion, retaining native sums and lazy callbacks
+        # so grouping, rounding, and arithmetic error ordering stay unchanged.
+        stack: list[typing.Iterator[WaitBaseT]] = []
+        combination = self
+        seen = {id(self)}
+        result = 0.0
+        try:
+            while True:
+                wait_funcs = iter(combination.wait_funcs)
+                try:
+                    first = next(wait_funcs)
+                except StopIteration:
+                    break
+                # Subclasses may override __call__.
+                if type(first) is wait_combine:
+                    if id(first) in seen:
+                        raise RecursionError("cyclic wait combination")
+                    seen.add(id(first))
+                    stack.append(wait_funcs)
+                    combination = first
+                else:
+                    result = float(
+                        sum(
+                            wait_func(retry_state)
+                            for wait_func in itertools.chain((first,), wait_funcs)
+                        )
+                    )
+                    break
+
+            while stack:
+                wait_funcs = stack.pop()
+                result = float(
+                    sum(
+                        itertools.chain(
+                            (result,),
+                            (wait_func(retry_state) for wait_func in wait_funcs),
+                        )
+                    )
+                )
+        except StopIteration as exc:
+            if stack:
+                # A nested call originally ran inside its parent's generator.
+                raise RuntimeError("generator raised StopIteration") from exc
+            raise
+        return result
 
 
 class wait_chain(wait_base):

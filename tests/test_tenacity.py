@@ -506,6 +506,116 @@ class TestWaitConditions(unittest.TestCase):
             self.assertLess(w, 9)
             self.assertGreaterEqual(w, 6)
 
+    def test_wait_large_sum(self) -> None:
+        strategies: list[tenacity.wait.wait_base] = [
+            tenacity.wait_fixed(1) for _ in range(1000)
+        ]
+        wait = sum(strategies)
+        assert isinstance(wait, tenacity.wait_combine)
+        self.assertEqual(wait(make_retry_state(1, 0)), 1000)
+
+    def test_wait_combine_preserves_grouping(self) -> None:
+        a, b, c = (tenacity.wait_fixed(value) for value in (1.0, 1e-16, 1e-16))
+        retry_state = make_retry_state(1, 0)
+        self.assertEqual(((a + b) + c)(retry_state), 1.0)
+        self.assertEqual((a + (b + c))(retry_state), 1.0000000000000002)
+
+    def test_wait_combine_observes_nested_changes(self) -> None:
+        nested = tenacity.wait_combine(tenacity.wait_fixed(1))
+        wait = nested + nested
+        retry_state = make_retry_state(1, 0)
+        self.assertEqual(wait(retry_state), 2)
+        nested.wait_funcs = (tenacity.wait_fixed(5),)
+        self.assertEqual(wait(retry_state), 10)
+
+    def test_wait_combine_rejects_cycles(self) -> None:
+        wait = tenacity.wait_combine()
+        nested = tenacity.wait_combine(wait)
+        for strategy in (wait, nested):
+            with self.subTest(strategy=strategy):
+                wait.wait_funcs = (strategy,)
+                with self.assertRaises(RecursionError):
+                    wait(make_retry_state(1, 0))
+
+    def test_wait_combine_preserves_callbacks_and_subclasses(self) -> None:
+        class OffsetWait(tenacity.wait_combine):
+            @override
+            def __call__(self, retry_state: RetryCallState) -> float:
+                return super().__call__(retry_state) + 10
+
+        callbacks = mock.Mock()
+        callbacks.first.return_value = 1
+        callbacks.second.return_value = 2
+        callbacks.third.return_value = 3
+        wait = tenacity.wait_combine(
+            tenacity.wait_combine(callbacks.first, callbacks.second),
+            OffsetWait(callbacks.third),
+        )
+        retry_state = make_retry_state(1, 0)
+        self.assertEqual(wait(retry_state), 16)
+        self.assertEqual(
+            callbacks.mock_calls,
+            [
+                mock.call.first(retry_state),
+                mock.call.second(retry_state),
+                mock.call.third(retry_state),
+            ],
+        )
+
+    def test_wait_combine_stops_on_callback_error(self) -> None:
+        for error in (ValueError("wait failed"), StopIteration("wait exhausted")):
+            with self.subTest(error=error):
+                callbacks = mock.Mock()
+                callbacks.first.side_effect = error
+                wait = tenacity.wait_combine(
+                    tenacity.wait_combine(callbacks.first), callbacks.second
+                )
+                retry_state = make_retry_state(1, 0)
+                expected = (
+                    RuntimeError if isinstance(error, StopIteration) else ValueError
+                )
+                with self.assertRaises(expected) as caught:
+                    wait(retry_state)
+                if isinstance(error, StopIteration):
+                    self.assertIs(caught.exception.__cause__, error)
+                else:
+                    self.assertIs(caught.exception, error)
+                self.assertEqual(callbacks.mock_calls, [mock.call.first(retry_state)])
+
+    def test_wait_combine_stops_on_arithmetic_error(self) -> None:
+        class FailingFloat(float):
+            error: Exception
+
+            @override
+            def __radd__(self, other: float) -> float:
+                raise self.error
+
+        for error in (ValueError("addition failed"), StopIteration("addition stopped")):
+            for nested in (False, True):
+                with self.subTest(error=error, nested=nested):
+                    value = FailingFloat(1)
+                    value.error = error
+                    callbacks = mock.Mock()
+                    callbacks.first.return_value = value
+                    wait = tenacity.wait_combine(callbacks.first, callbacks.second)
+                    if nested:
+                        wait = tenacity.wait_combine(wait, callbacks.third)
+                    retry_state = make_retry_state(1, 0)
+                    expected = (
+                        RuntimeError
+                        if nested and isinstance(error, StopIteration)
+                        else type(error)
+                    )
+                    with self.assertRaises(expected) as caught:
+                        wait(retry_state)
+                    if expected is RuntimeError:
+                        self.assertIs(caught.exception.__cause__, error)
+                    else:
+                        self.assertIs(caught.exception, error)
+                    self.assertEqual(
+                        callbacks.mock_calls, [mock.call.first(retry_state)]
+                    )
+
     def test_wait_falsy_values_mean_no_wait(self) -> None:
         # Untyped callers pass None or 0 to mean "no wait", and `sum([])`
         # over an empty list of strategies yields the int 0. All must reach
