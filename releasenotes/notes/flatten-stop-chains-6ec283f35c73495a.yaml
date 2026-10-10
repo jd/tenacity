@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Avoid ``RecursionError`` when evaluating long chains of stop conditions
+    combined with ``|`` or ``&``. Conditions keep their evaluation order
+    and short-circuit behavior.
