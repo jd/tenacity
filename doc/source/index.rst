@@ -168,6 +168,9 @@ Some things perform best with a bit of randomness injected.
         print("Randomly wait 1 to 2 seconds between retries")
         raise Exception
 
+Combined wait strategies are evaluated from left to right. This also applies
+when a plain wait function is added to a strategy.
+
 Then again, it's hard to beat exponential backoff when retrying distributed
 services and other remote endpoints.
 

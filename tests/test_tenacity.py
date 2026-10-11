@@ -557,6 +557,87 @@ class TestWaitConditions(unittest.TestCase):
         self.assertIsInstance(combined, tenacity.wait_combine)
         self.assertEqual(combined(make_retry_state(1, 5)), 3.0)
 
+    def test_wait_radd_preserves_callback_order(self) -> None:
+        calls: list[str] = []
+
+        def left(state: RetryCallState) -> float:
+            calls.append("left")
+            return 1.0
+
+        class RightWait(tenacity.wait_fixed):
+            @override
+            def __call__(self, retry_state: RetryCallState) -> float:
+                calls.append("right")
+                return super().__call__(retry_state)
+
+        right = RightWait(2)
+        for strategy in (right, tenacity.wait_combine(right, tenacity.wait_fixed(3))):
+            with self.subTest(strategy=strategy):
+                calls.clear()
+                combined = left + strategy
+                self.assertEqual(
+                    combined(make_retry_state(1, 5)), 3 if strategy is right else 6
+                )
+                self.assertEqual(calls, ["left", "right"])
+
+    def test_wait_radd_preserves_first_exception(self) -> None:
+        calls: list[str] = []
+
+        def left(state: RetryCallState) -> float:
+            calls.append("left")
+            raise ValueError("left failed")
+
+        class RightWait(tenacity.wait_fixed):
+            @override
+            def __call__(self, retry_state: RetryCallState) -> float:
+                calls.append("right")
+                raise RuntimeError("right failed")
+
+        combined = left + RightWait(2)
+        with self.assertRaisesRegex(ValueError, "left failed"):
+            combined(make_retry_state(1, 5))
+        self.assertEqual(calls, ["left"])
+
+    def test_wait_radd_preserves_sum_identity(self) -> None:
+        strategy = tenacity.wait_fixed(2)
+        self.assertIs(0 + strategy, strategy)
+        self.assertIs(sum([strategy]), strategy)
+        combined = typing.cast(
+            "tenacity.wait_combine", sum([strategy, tenacity.wait_fixed(3)])
+        )
+        self.assertIsInstance(combined, tenacity.wait_combine)
+        self.assertEqual(combined(make_retry_state(1, 5)), 5)
+
+    def test_wait_radd_order_in_retry_loop(self) -> None:
+        draws = iter([0.1, 0.2])
+
+        def left(state: RetryCallState) -> float:
+            return next(draws) * 10
+
+        class RightWait(tenacity.wait_fixed):
+            @override
+            def __call__(self, retry_state: RetryCallState) -> float:
+                return next(draws)
+
+        attempts = 0
+
+        def target() -> str:
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise ValueError("retry")
+            return "ok"
+
+        sleeps: list[float] = []
+        retrying = Retrying(
+            wait=left + RightWait(0),
+            sleep=sleeps.append,
+            stop=tenacity.stop_after_attempt(2),
+        )
+        self.assertEqual(retrying(target), "ok")
+        self.assertEqual(attempts, 2)
+        self.assertEqual(sleeps, [1.2])
+
     def test_wait_combine_passes_state_positionally(self) -> None:
         # A WaitBaseT callable only promises to take the state positionally;
         # its parameter name is its own business.

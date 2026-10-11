@@ -97,6 +97,39 @@ class TestAsyncio(unittest.TestCase):
             assert thing.counter == thing.count
 
     @asynctest
+    async def test_wait_radd_order_in_retry_loop(self) -> None:
+        draws = iter([0.1, 0.2])
+
+        def left(state: RetryCallState) -> float:
+            return next(draws) * 10
+
+        def right(state: RetryCallState) -> float:
+            return next(draws)
+
+        attempts = 0
+
+        async def target() -> str:
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise ValueError("retry")
+            return "ok"
+
+        sleeps: list[float] = []
+
+        async def sleep(delay: float) -> None:
+            sleeps.append(delay)
+
+        retrying = AsyncRetrying(
+            wait=left + tenacity.wait_combine(right),
+            sleep=sleep,
+            stop=stop_after_attempt(2),
+        )
+        self.assertEqual(await retrying(target), "ok")
+        self.assertEqual(attempts, 2)
+        self.assertEqual(sleeps, [1.2])
+
+    @asynctest
     async def test_iscoroutinefunction(self) -> None:
         assert inspect.iscoroutinefunction(_retryable_coroutine)
 
