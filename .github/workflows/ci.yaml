@@ -29,6 +29,8 @@ jobs:
             task: check
           - python: "3.14"
             task: check
+          - python: "3.15"
+            task: check
           - python: "3.14"
             task: lint
           - python: "3.14"
