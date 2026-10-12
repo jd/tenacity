@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Evaluate ``callable + wait_strategy`` in left-to-right order, matching
+    ordinary strategy addition and ``wait_combine(callable, wait_strategy)``.
+    The reflected addition previously evaluated the right-hand strategy first,
+    potentially changing stateful wait values or which callback exception was
+    raised.
