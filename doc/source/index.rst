@@ -201,6 +201,17 @@ increasing jitter helps minimise collisions.
         raise Exception
 
 
+For a gentler backoff curve than pure exponential, Fibonacci backoff increases
+wait times following the Fibonacci sequence (1, 2, 3, 5, 8, 13, …).
+
+.. testcode::
+
+    @retry(wait=wait_fibonacci(max=60))
+    def wait_fibonacci_up_to_60s():
+        print("Wait 1s, 2s, 3s, 5s, 8s, 13s, ... up to 60s between retries")
+        raise Exception
+
+
 Sometimes it's necessary to build a chain of backoffs.
 
 .. testcode::
