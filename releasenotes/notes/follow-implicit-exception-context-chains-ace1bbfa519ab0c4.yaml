@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Follow implicit exception chains in
+    ``retry_if_exception_cause_type``: when an exception is raised inside an
+    ``except`` block without an explicit ``raise ... from ...``, Python stores
+    the in-flight exception in ``__context__`` (with ``__cause__`` left as
+    ``None``). The predicate previously inspected only ``__cause__``, so such
+    implicitly chained causes were never retried even when their type matched.
+    ``__context__`` is now used as a fallback when no explicit cause is set and
+    the context was not suppressed (``raise ... from None``).
