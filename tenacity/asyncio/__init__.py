@@ -73,11 +73,11 @@ def _portable_async_sleep(seconds: float) -> t.Awaitable[None]:
 
 
 class AsyncRetrying(BaseRetrying):
+    sleep: t.Callable[[int | float], object]
+
     def __init__(
         self,
-        sleep: t.Callable[
-            [int | float], t.Awaitable[None] | None
-        ] = _portable_async_sleep,
+        sleep: t.Callable[[int | float], object] = _portable_async_sleep,
         stop: "StopBaseT" = tenacity.stop.stop_never,
         wait: "WaitBaseT" = tenacity.wait.wait_none(),
         retry: "SyncRetryBaseT | RetryBaseT" = tenacity.retry_if_exception_type(),
@@ -95,7 +95,7 @@ class AsyncRetrying(BaseRetrying):
         enabled: bool = True,
     ) -> None:
         super().__init__(
-            sleep=sleep,  # type: ignore[arg-type]
+            sleep=sleep,
             stop=stop,
             wait=wait,
             retry=retry,  # type: ignore[arg-type]
@@ -136,13 +136,17 @@ class AsyncRetrying(BaseRetrying):
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):
                 retry_state.prepare_for_next_attempt()
-                await self.sleep(do)  # type: ignore[misc]
+                await _utils.wrap_to_async_func(self.sleep)(do)
             else:
                 return do  # type: ignore[no-any-return]
 
     @override
     def _add_action_func(self, fn: t.Callable[..., t.Any]) -> None:
         self.iter_state.actions.append(_utils.wrap_to_async_func(fn))
+
+    @override
+    async def _return_result(self, retry_state: "RetryCallState") -> t.Any:
+        return super()._return_result(retry_state)
 
     @override
     async def _run_retry(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
@@ -203,7 +207,7 @@ class AsyncRetrying(BaseRetrying):
                 return AttemptManager(retry_state=self._retry_state)
             if isinstance(do, DoSleep):
                 self._retry_state.prepare_for_next_attempt()
-                await self.sleep(do)  # type: ignore[misc]
+                await _utils.wrap_to_async_func(self.sleep)(do)
             else:
                 raise StopAsyncIteration
 
