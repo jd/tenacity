@@ -492,7 +492,7 @@ Here's an example with a custom ``before_sleep`` function:
     logger = logging.getLogger(__name__)
 
     def my_before_sleep(retry_state):
-        if retry_state.attempt_number < 1:
+        if retry_state.attempt_number == 1:
             loglevel = logging.INFO
         else:
             loglevel = logging.WARNING
