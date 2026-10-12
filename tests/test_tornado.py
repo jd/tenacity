@@ -58,6 +58,46 @@ class TestTornado(testing.AsyncTestCase):
         except RetryError:
             assert thing.counter == 2
 
+    @testing.gen_test
+    def test_disabled_call_returns_result_without_callbacks(
+        self,
+    ) -> Generator[Any, Any, None]:
+        before = mock.Mock()
+        result = object()
+
+        @gen.coroutine
+        def work() -> Generator[Any, Any, Any]:
+            yield gen.moment
+            return result
+
+        retrying = tornadoweb.TornadoRetrying(enabled=False, before=before)
+        actual = yield retrying(work)
+
+        assert actual is result
+        before.assert_not_called()
+        assert retrying.statistics == {}
+
+    @testing.gen_test
+    def test_disabled_call_propagates_original_exception(
+        self,
+    ) -> Generator[Any, Any, None]:
+        calls = 0
+        error = ValueError("unavailable")
+
+        @gen.coroutine
+        def work() -> Generator[Any, Any, None]:
+            nonlocal calls
+            calls += 1
+            yield gen.moment
+            raise error
+
+        retrying = tornadoweb.TornadoRetrying(enabled=False, stop=stop_after_attempt(2))
+        with self.assertRaises(ValueError) as caught:
+            yield retrying(work)
+
+        assert caught.exception is error
+        assert calls == 1
+
     def test_repr(self) -> None:
         repr(tornadoweb.TornadoRetrying())
 

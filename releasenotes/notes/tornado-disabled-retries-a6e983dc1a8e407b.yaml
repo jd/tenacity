@@ -1,0 +1,4 @@
+fixes:
+  - Respect ``enabled=False`` when calling ``TornadoRetrying`` directly,
+    executing the coroutine once and preserving its result or exception
+    without invoking retry callbacks.
