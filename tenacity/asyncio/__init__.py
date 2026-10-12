@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import functools
+import inspect  # 2026-10-09: Inspect awaitable fallback results.
 import sys
 import typing as t
 
@@ -142,6 +143,17 @@ class AsyncRetrying(BaseRetrying):
 
     @override
     def _add_action_func(self, fn: t.Callable[..., t.Any]) -> None:
+        # 2026-10-09: Await sync terminal callbacks without unwrapping async results.
+        if fn is self.retry_error_callback and not _utils.is_coroutine_callable(fn):
+
+            async def await_callback_result(retry_state: RetryCallState) -> t.Any:
+                result = fn(retry_state)
+                if inspect.isawaitable(result):
+                    return await result
+                return result
+
+            self.iter_state.actions.append(await_callback_result)
+            return
         self.iter_state.actions.append(_utils.wrap_to_async_func(fn))
 
     @override
