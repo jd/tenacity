@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    ``wait_chain`` now passes the retry state positionally, matching how
+    ``wait_combine`` and ``BaseRetrying`` invoke ``wait``. It previously
+    passed it as the keyword ``retry_state=``, which crashed on any callable
+    whose parameter had a different name.
