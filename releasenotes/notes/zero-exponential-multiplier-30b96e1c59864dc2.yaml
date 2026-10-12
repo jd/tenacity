@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Keep a zero exponential multiplier effective at large retry counts, even
+    when the exponential term would overflow. Preserve the configured minimum
+    wait and jitter for ``wait_exponential``, ``wait_random_exponential``, and
+    ``wait_exponential_jitter``.

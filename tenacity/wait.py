@@ -237,7 +237,7 @@ class wait_exponential(wait_base):
         ):
             return max(max(0, self.min), self.max)
         try:
-            exp = self.exp_base**exponent
+            exp = self.exp_base**exponent if self.multiplier != 0 else 0
             result = self.multiplier * exp
         except OverflowError:
             return self.max
@@ -320,7 +320,11 @@ class wait_exponential_jitter(wait_base):
     def __call__(self, retry_state: "RetryCallState") -> float:
         jitter = random.uniform(0, self.jitter)
         try:
-            exp = self.exp_base ** (retry_state.attempt_number - 1)
+            exp = (
+                self.exp_base ** (retry_state.attempt_number - 1)
+                if self.multiplier != 0
+                else 0
+            )
             result = self.multiplier * exp + jitter
         except OverflowError:
             result = self.max
