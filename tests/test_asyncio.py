@@ -15,7 +15,7 @@
 import asyncio
 import inspect
 import unittest
-from collections.abc import Callable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine
 from functools import wraps
 from typing import Any, TypeVar
 from unittest import mock
@@ -196,6 +196,76 @@ class TestAsyncio(unittest.TestCase):
         things, attempt_nos2 = zip(*odd_thing_attempts)
         assert len(set(things)) == 1
         assert list(attempt_nos2) == [1, 2, 3]
+
+
+@pytest.mark.parametrize("wrapped", [False, True])
+@pytest.mark.parametrize("kind", ["coroutine", "task", "future"])
+@asynctest
+async def test_retry_awaitable_returning_function(wrapped: bool, kind: str) -> None:
+    attempts = 0
+    awaitables: list[Awaitable[int]] = []
+
+    async def operation() -> int:
+        nonlocal attempts
+        await asyncio.sleep(0)
+        attempts += 1
+        if attempts < 2:
+            raise ValueError("try again")
+        return 42
+
+    def callback() -> Awaitable[int]:
+        nonlocal attempts
+        if kind == "coroutine":
+            result: Awaitable[int] = operation()
+        elif kind == "task":
+            result = asyncio.create_task(operation())
+        else:
+            future: asyncio.Future[int] = asyncio.get_running_loop().create_future()
+            attempts += 1
+            if attempts < 2:
+                future.set_exception(ValueError("try again"))
+            else:
+                future.set_result(42)
+            result = future
+        awaitables.append(result)
+        return result
+
+    retrying = AsyncRetrying(stop=stop_after_attempt(2))
+    try:
+        if wrapped:
+            result = await retrying.wraps(callback)()
+        else:
+            result = await retrying(callback)
+        assert result == 42
+        assert attempts == 2
+    finally:
+        # Avoid leaking the rejected awaitable when checking the old behavior.
+        for item in awaitables:
+            if inspect.iscoroutine(item):
+                item.close()
+            elif isinstance(item, asyncio.Future):
+                item.cancel()
+                await asyncio.gather(item, return_exceptions=True)
+
+
+@pytest.mark.parametrize("fails", [False, True])
+@asynctest
+async def test_disabled_retry_awaits_function_result(fails: bool) -> None:
+    future: asyncio.Future[int] = asyncio.get_running_loop().create_future()
+    if fails:
+        future.set_exception(ValueError("original error"))
+    else:
+        future.set_result(42)
+    retrying = AsyncRetrying(enabled=False, stop=stop_after_attempt(2))
+    try:
+        if fails:
+            with pytest.raises(ValueError, match="original error"):
+                await retrying(lambda: future)
+        else:
+            assert await retrying(lambda: future) == 42
+        assert retrying.statistics == {}
+    finally:
+        future.exception()
 
 
 class TestAsyncEnabled(unittest.TestCase):
