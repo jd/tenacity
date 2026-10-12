@@ -373,6 +373,24 @@ class TestWaitConditions(unittest.TestCase):
         r = Retrying(wait=tenacity.wait_exponential(multiplier=1e300, max=1e-100))
         self.assertEqual(r.wait(make_retry_state(1, 0)), 1e-100)
 
+    def test_exponential_zero_multiplier_returns_zero_for_huge_attempts(self) -> None:
+        # regression test for #710: with multiplier=0 the result is always 0
+        # (clamped by min/max), but exp_base**exponent used to overflow into
+        # the OverflowError branch and wrongly return max for large attempts
+        r = Retrying(wait=tenacity.wait_exponential(multiplier=0.0, max=60))
+        self.assertEqual(r.wait(make_retry_state(2, 0)), 0)
+        self.assertEqual(r.wait(make_retry_state(10, 0)), 0)
+        self.assertEqual(r.wait(make_retry_state(1025, 0)), 0)
+
+        r2 = Retrying(
+            wait=tenacity.wait_exponential(multiplier=0, exp_base=2.0, max=60)
+        )
+        self.assertEqual(r2.wait(make_retry_state(1025, 0)), 0)
+
+    def test_exponential_zero_multiplier_with_min_wait(self) -> None:
+        r = Retrying(wait=tenacity.wait_exponential(multiplier=0.0, min=5, max=60))
+        self.assertEqual(r.wait(make_retry_state(1025, 0)), 5)
+
     def test_exponential_with_min_wait(self) -> None:
         r = Retrying(wait=tenacity.wait_exponential(min=20))
         self.assertEqual(r.wait(make_retry_state(1, 0)), 20)
@@ -949,7 +967,7 @@ class TestRetryConditions(unittest.TestCase):
                 raise UnderlyingError("boom")
             except UnderlyingError:
                 # Implicit chaining via __context__ is exactly what we test.
-                raise tenacity.TryAgain  # noqa: B904
+                raise tenacity.TryAgain  # noqa: B904  (implicit __context__ chaining is exactly what this test exercises)
 
         r = Retrying(
             stop=tenacity.stop_after_attempt(5),
