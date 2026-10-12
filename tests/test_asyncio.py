@@ -639,6 +639,21 @@ async def foo() -> None:
 
 class TestSyncFunctionWithAsyncSleep(unittest.TestCase):
     @asynctest
+    async def test_disabled_sync_function_with_async_sleep(self) -> None:
+        mock_sleep = mock.AsyncMock()
+        calls = 0
+
+        @retry(sleep=mock_sleep, enabled=False, retry=retry_if_result(lambda _: True))
+        def sync_function() -> Any:
+            nonlocal calls
+            calls += 1
+            return "ok"
+
+        assert await sync_function() == "ok"
+        assert calls == 1
+        mock_sleep.assert_not_called()
+
+    @asynctest
     async def test_sync_function_with_async_sleep(self) -> None:
         """A sync function with an async sleep callable uses AsyncRetrying."""
         mock_sleep = mock.AsyncMock()
