@@ -11,3 +11,6 @@ doc/_build
 
 tenacity/_version.py
 /.pytest_cache
+venv/
+__pycache__/
+*.pyc
