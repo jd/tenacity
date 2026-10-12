@@ -101,7 +101,7 @@ def get_callback_name(cb: typing.Callable[..., typing.Any]) -> str:
     return ".".join(segments)
 
 
-time_unit_type = int | float | timedelta
+time_unit_type: typing.TypeAlias = int | float | timedelta  # noqa: PYI042
 
 
 def to_seconds(time_unit: time_unit_type) -> float:

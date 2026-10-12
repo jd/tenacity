@@ -56,7 +56,7 @@ class async_retry_base(retry_base):
         return retry_any(other, self)
 
 
-RetryBaseT = (
+RetryBaseT: typing.TypeAlias = (
     async_retry_base | typing.Callable[["RetryCallState"], typing.Awaitable[bool]]
 )
 
