@@ -451,6 +451,24 @@ Other Custom Callbacks
 
 It's also possible to define custom callbacks for other keyword arguments.
 
+The diagram below follows one attempt with retries enabled. ``before`` runs
+before the function call. If the outcome is not selected for retry, its value
+is returned (or its exception is raised), without calling ``after``. Otherwise,
+``after`` runs, ``wait`` computes the next delay, and ``stop`` decides whether
+to finish. ``before_sleep`` only runs when another attempt will be made;
+it does not run on the final attempt. Optional callbacks are shown when
+configured. A raised :class:`~tenacity.TryAgain` also takes the retry branch.
+
+.. figure:: _static/callback-order.png
+   :alt: Callback order for one attempt: before, function call, retry decision; if retrying, after, wait, stop decision; then exhaustion handling or before_sleep and sleep.
+
+   Callback order with ``reraise=False``. When stopping, a configured
+   ``retry_error_callback`` takes precedence over ``RetryError``.
+   With ``reraise=True``, an exhausted exception retry raises the original
+   exception instead. Sleeping leads to a new attempt beginning with ``before``.
+   :download:`Editable SVG <_static/callback-order.svg>`.
+   `Edit diagram <https://svgdiagram.ai/diagram-sources/tenacity-callback-order?version=1>`__.
+
 .. function:: my_stop(retry_state)
 
    :param RetryCallState retry_state: info about current retry invocation
