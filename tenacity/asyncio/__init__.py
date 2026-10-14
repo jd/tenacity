@@ -15,9 +15,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 import functools
 import sys
 import typing as t
+from contextvars import ContextVar
 
 import tenacity
 from tenacity import (
@@ -25,6 +27,7 @@ from tenacity import (
     BaseRetrying,
     DoAttempt,
     DoSleep,
+    IterState,
     RetryCallState,
     RetryError,
     _RetryDecorated,
@@ -52,6 +55,16 @@ WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Awaitable[t.Any]])
 P = t.ParamSpec("P")
 R = t.TypeVar("R")
+
+
+@dataclasses.dataclass
+class _IterStateScope:
+    value: tuple["AsyncRetrying", IterState] | None
+
+
+_iter_state_context: ContextVar[tuple[_IterStateScope, ...]] = ContextVar(
+    "tenacity_async_iter_state", default=()
+)
 
 
 def _portable_async_sleep(seconds: float) -> t.Awaitable[None]:
@@ -163,13 +176,32 @@ class AsyncRetrying(BaseRetrying):
             retry_state
         )
 
+    @property
+    @override
+    def iter_state(self) -> IterState:
+        for scope in _iter_state_context.get():
+            value = scope.value
+            if value is not None and value[0] is self:
+                return value[1]
+        return super().iter_state
+
     @override
     async def iter(self, retry_state: "RetryCallState") -> DoAttempt | DoSleep | t.Any:
-        self._begin_iter(retry_state)
-        result = None
-        for action in self.iter_state.actions:
-            result = await action(retry_state)
-        return result
+        # Callbacks can suspend or re-enter this controller. Keep their action
+        # lists separate, even when they run in the same thread or task.
+        scope = _IterStateScope((self, IterState()))
+        token = _iter_state_context.set((scope,) + _iter_state_context.get())
+        try:
+            self._begin_iter(retry_state)
+            result = None
+            for action in self.iter_state.actions:
+                result = await action(retry_state)
+            return result
+        finally:
+            # Child tasks inherit the context. Do not let a long-lived task
+            # spawned by a callback retain a completed controller or its actions.
+            scope.value = None
+            _iter_state_context.reset(token)
 
     @override
     def __iter__(self) -> t.Generator[AttemptManager, None, None]:
