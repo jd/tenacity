@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Methods decorated with ``@classmethod`` on top of ``@retry`` type-check
+    again when called on the class (for example ``Foo.method(1)``) under mypy
+    and pyright, for both sync and async functions. The ``retry``,
+    ``statistics`` and ``retry_with`` attributes stay visible to type
+    checkers. See issue #756.
