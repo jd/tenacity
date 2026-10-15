@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    A ``@retry``-decorated call that returns no longer leaves a reference
+    cycle behind. The iteration state of the retrying object used for each
+    call kept bound methods of that same object, so every call, even one
+    that succeeded on the first attempt, left garbage for the cycle collector
+    instead of being freed when the call returned. This applies to
+    ``Retrying``, ``AsyncRetrying`` and ``TornadoRetrying``.

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import asyncio
+import contextlib
 import inspect
 import unittest
 from collections.abc import Callable, Coroutine
@@ -43,8 +44,10 @@ from tenacity import asyncio as tasyncio
 from tenacity.wait import wait_fixed
 
 from .test_tenacity import (
+    CustomError,
     NoIOErrorAfterCount,
     NoneReturnUntilAfterCount,
+    count_garbage,
     current_time_ms,
 )
 
@@ -656,6 +659,68 @@ class TestSyncFunctionWithAsyncSleep(unittest.TestCase):
         result = await sync_function()
         assert result is True
         assert mock_sleep.await_count == 2
+
+
+def count_async_garbage(fn: Callable[[], Coroutine[Any, Any, object]]) -> int:
+    # asyncio.run() would count the garbage of creating and closing the loop.
+    loop = asyncio.new_event_loop()
+    try:
+        return count_garbage(lambda: loop.run_until_complete(fn()))
+    finally:
+        loop.close()
+
+
+class TestAsyncReferenceCycles:
+    """A finished call must not leave the retrying object in a reference cycle."""
+
+    @pytest.mark.parametrize("reraise", [False, True])
+    def test_decorator_success(self, reraise: bool) -> None:
+        @retry(stop=stop_after_attempt(3), reraise=reraise)
+        async def succeeds() -> int:
+            return 1
+
+        assert count_async_garbage(succeeds) == 0
+        assert succeeds.statistics["attempt_number"] == 1
+
+    @pytest.mark.parametrize("reraise", [False, True])
+    def test_decorator_retry_then_success(self, reraise: bool) -> None:
+        attempts = 0
+
+        @retry(stop=stop_after_attempt(3), reraise=reraise)
+        async def fails_once() -> int:
+            nonlocal attempts
+            attempts += 1
+            if attempts % 2:
+                raise ValueError("fail")
+            return attempts
+
+        assert count_async_garbage(fails_once) == 0
+        assert fails_once.statistics["attempt_number"] == 2
+
+    def test_direct_call(self) -> None:
+        async def succeeds() -> int:
+            return 1
+
+        async def run() -> int:
+            return await AsyncRetrying(stop=stop_after_attempt(3))(succeeds)
+
+        assert count_async_garbage(run) == 0
+
+    def test_error_in_action(self) -> None:
+        def stop(retry_state: RetryCallState) -> bool:
+            raise CustomError("stop failed")
+
+        async def succeeds() -> int:
+            return 1
+
+        async def run() -> None:
+            controller = AsyncRetrying(
+                stop=stop, retry=retry_if_result(lambda result: True)
+            )
+            with contextlib.suppress(CustomError):
+                await controller(succeeds)
+
+        assert count_async_garbage(run) == 0
 
 
 if __name__ == "__main__":
