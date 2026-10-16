@@ -1,0 +1,3 @@
+fixes:
+  - Allow callable stop conditions in the type annotations of ``stop_any`` and
+    ``stop_all``, matching the inputs already supported at runtime.

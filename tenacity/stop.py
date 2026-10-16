@@ -45,7 +45,7 @@ StopBaseT = stop_base | typing.Callable[["RetryCallState"], bool]
 class stop_any(stop_base):
     """Stop if any of the stop condition is valid."""
 
-    def __init__(self, *stops: stop_base) -> None:
+    def __init__(self, *stops: "StopBaseT") -> None:
         self.stops = stops
 
     @override
@@ -56,7 +56,7 @@ class stop_any(stop_base):
 class stop_all(stop_base):
     """Stop if all the stop conditions are valid."""
 
-    def __init__(self, *stops: stop_base) -> None:
+    def __init__(self, *stops: "StopBaseT") -> None:
         self.stops = stops
 
     @override
