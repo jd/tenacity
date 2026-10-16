@@ -213,6 +213,24 @@ class TestStopConditions(unittest.TestCase):
         self.assertFalse(s(3, 1.8))
         self.assertTrue(s(4, 1.8))
 
+    def test_stop_combinations_accept_callable(self) -> None:
+        def stop_after_two_attempts(retry_state: RetryCallState) -> bool:
+            return retry_state.attempt_number >= 2
+
+        any_stop = tenacity.stop_any(
+            tenacity.stop_after_delay(1), stop_after_two_attempts
+        )
+        all_stop = tenacity.stop_all(
+            tenacity.stop_after_delay(1), stop_after_two_attempts
+        )
+
+        self.assertFalse(any_stop(make_retry_state(1, 0.1)))
+        self.assertTrue(any_stop(make_retry_state(2, 0.1)))
+        self.assertTrue(any_stop(make_retry_state(1, 1.1)))
+        self.assertFalse(all_stop(make_retry_state(2, 0.1)))
+        self.assertFalse(all_stop(make_retry_state(1, 1.1)))
+        self.assertTrue(all_stop(make_retry_state(2, 1.1)))
+
     def test_stop_or(self) -> None:
         stop = tenacity.stop_after_delay(1) | tenacity.stop_after_attempt(4)
 
