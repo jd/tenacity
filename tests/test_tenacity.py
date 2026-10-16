@@ -2265,6 +2265,19 @@ class TestReferenceCycles:
 
         assert count_garbage(run) == 0
 
+    def test_retry_error_callback_fallback(self) -> None:
+        @retry(
+            stop=tenacity.stop_after_attempt(3),
+            retry=tenacity.retry_if_result(lambda result: True),
+            retry_error_callback=lambda retry_state: "fallback",
+        )
+        def always_retried() -> str:
+            return "retried"
+
+        assert always_retried() == "fallback"
+        assert count_garbage(always_retried) == 0
+        assert always_retried.statistics["attempt_number"] == 3
+
 
 class TestInvokeAsCallable:
     """Test direct invocation of Retrying as a callable."""
