@@ -15,6 +15,7 @@
 # limitations under the License.
 import contextlib
 import datetime
+import gc
 import logging
 import pickle
 import re
@@ -1219,6 +1220,20 @@ def current_time_ms() -> int:
     return round(time.time() * 1000)
 
 
+def count_garbage(fn: typing.Callable[[], object]) -> int:
+    """Return the number of objects a call to ``fn`` leaves to the cycle collector."""
+    fn()  # warm up, so one-time caches are not counted
+    was_enabled = gc.isenabled()
+    gc.collect()
+    gc.disable()
+    try:
+        fn()
+        return gc.collect()
+    finally:
+        if was_enabled:
+            gc.enable()
+
+
 @retry(
     wait=tenacity.wait_fixed(0.05),
     retry=tenacity.retry_if_result(lambda result: result is None),
@@ -2190,6 +2205,78 @@ class TestContextManager(unittest.TestCase):
                     raise CustomError("Don't retry!")
 
         self.assertRaises(CustomError, test)
+
+
+class TestReferenceCycles:
+    """A finished call must not leave the retrying object in a reference cycle.
+
+    Cycles are only freed when the cycle collector runs, so a call that makes
+    one on every invocation piles up garbage until the next collection.
+    """
+
+    @pytest.mark.parametrize("reraise", [False, True])
+    def test_decorator_success(self, reraise: bool) -> None:
+        @retry(stop=tenacity.stop_after_attempt(3), reraise=reraise)
+        def succeeds() -> int:
+            return 1
+
+        assert count_garbage(succeeds) == 0
+        assert succeeds.statistics["attempt_number"] == 1
+
+    @pytest.mark.parametrize("reraise", [False, True])
+    def test_decorator_retry_then_success(self, reraise: bool) -> None:
+        attempts = 0
+
+        @retry(stop=tenacity.stop_after_attempt(3), reraise=reraise)
+        def fails_once() -> int:
+            nonlocal attempts
+            attempts += 1
+            if attempts % 2:
+                raise ValueError("fail")
+            return attempts
+
+        assert count_garbage(fails_once) == 0
+        assert fails_once.statistics["attempt_number"] == 2
+
+    def test_direct_call(self) -> None:
+        def run() -> int:
+            return Retrying(stop=tenacity.stop_after_attempt(3))(lambda: 1)
+
+        assert count_garbage(run) == 0
+
+    def test_attempt_iteration(self) -> None:
+        def run() -> None:
+            for attempt in Retrying(stop=tenacity.stop_after_attempt(3)):
+                with attempt:
+                    pass
+
+        assert count_garbage(run) == 0
+
+    def test_error_in_action(self) -> None:
+        def stop(retry_state: RetryCallState) -> bool:
+            raise CustomError("stop failed")
+
+        def run() -> None:
+            controller = Retrying(
+                stop=stop, retry=tenacity.retry_if_result(lambda result: True)
+            )
+            with contextlib.suppress(CustomError):
+                controller(lambda: 1)
+
+        assert count_garbage(run) == 0
+
+    def test_retry_error_callback_fallback(self) -> None:
+        @retry(
+            stop=tenacity.stop_after_attempt(3),
+            retry=tenacity.retry_if_result(lambda result: True),
+            retry_error_callback=lambda retry_state: "fallback",
+        )
+        def always_retried() -> str:
+            return "retried"
+
+        assert always_retried() == "fallback"
+        assert count_garbage(always_retried) == 0
+        assert always_retried.statistics["attempt_number"] == 3
 
 
 class TestInvokeAsCallable:
