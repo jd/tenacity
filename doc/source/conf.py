@@ -25,5 +25,9 @@ version = ".".join(release.split(".")[:2])
 extensions = [
     "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
+    "sphinx_copybutton",
     "reno.sphinxext",
 ]
+
+copybutton_prompt_text = r">>> |\.\.\. |\$ "
+copybutton_prompt_is_regexp = True
