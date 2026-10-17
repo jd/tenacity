@@ -43,6 +43,46 @@ def _retryable_coroutine_with_2_attempts(
 
 class TestTornado(testing.AsyncTestCase):
     @testing.gen_test
+    def test_self_keyword_is_forwarded(self) -> Generator[Any, Any, None]:
+        for invocation in ("direct", "keyword_target", "wraps", "decorator"):
+            with self.subTest(invocation=invocation):
+                states: list[tenacity.RetryCallState] = []
+
+                class Service:
+                    calls = 0
+
+                    @gen.coroutine
+                    def call(self, value: int) -> Generator[Any, Any, int]:
+                        self.calls += 1
+                        yield gen.sleep(0)
+                        if self.calls == 1:
+                            raise OSError("try again")
+                        return value
+
+                service = Service()
+                controller = tornadoweb.TornadoRetrying(
+                    stop=stop_after_attempt(2), before=states.append
+                )
+                if invocation == "direct":
+                    result = yield controller(Service.call, self=service, value=42)
+                elif invocation == "keyword_target":
+                    result = yield controller(fn=Service.call, self=service, value=42)
+                elif invocation == "wraps":
+                    result = yield controller.wraps(Service.call)(
+                        self=service, value=42
+                    )
+                else:
+                    result = yield retry(
+                        stop=stop_after_attempt(2), before=states.append
+                    )(Service.call)(self=service, value=42)
+                assert result == 42
+                assert service.calls == 2
+                assert len(states) == 2
+                assert all(
+                    state.kwargs == {"self": service, "value": 42} for state in states
+                )
+
+    @testing.gen_test
     def test_retry(self) -> Generator[Any, Any, None]:
         assert gen.is_coroutine_function(_retryable_coroutine)
         thing = NoIOErrorAfterCount(5)

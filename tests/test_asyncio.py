@@ -76,6 +76,51 @@ async def _retryable_coroutine_with_2_attempts(thing: NoIOErrorAfterCount) -> An
     return thing.go()
 
 
+@pytest.mark.parametrize(
+    "invocation", ["direct", "keyword_target", "wraps", "decorator"]
+)
+@pytest.mark.parametrize("enabled", [True, False])
+@asynctest
+async def test_self_keyword_is_forwarded(invocation: str, enabled: bool) -> None:
+    states: list[RetryCallState] = []
+
+    class Service:
+        calls = 0
+
+        async def call(self, value: int) -> int:
+            self.calls += 1
+            if self.calls == 1:
+                raise OSError("try again")
+            return value
+
+    service = Service()
+    controller = AsyncRetrying(
+        stop=stop_after_attempt(2), before=states.append, enabled=enabled
+    )
+
+    async def invoke() -> int:
+        if invocation == "direct":
+            return await controller(Service.call, self=service, value=42)
+        if invocation == "keyword_target":
+            return await controller(fn=Service.call, self=service, value=42)
+        if invocation == "wraps":
+            return await controller.wraps(Service.call)(self=service, value=42)
+        return await retry(
+            stop=stop_after_attempt(2), before=states.append, enabled=enabled
+        )(Service.call)(self=service, value=42)
+
+    if enabled:
+        assert await invoke() == 42
+        assert service.calls == 2
+        assert len(states) == 2
+        assert all(state.kwargs == {"self": service, "value": 42} for state in states)
+    else:
+        with pytest.raises(OSError, match="try again"):
+            await invoke()
+        assert service.calls == 1
+        assert states == []
+
+
 class TestAsyncio(unittest.TestCase):
     @asynctest
     async def test_retry(self) -> None:

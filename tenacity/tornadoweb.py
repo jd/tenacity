@@ -41,6 +41,7 @@ class TornadoRetrying(BaseRetrying):
     @override
     def __call__(  # type: ignore[override]
         self,
+        /,
         fn: "typing.Callable[..., typing.Generator[typing.Any, typing.Any, _RetValT] | Future[_RetValT]]",
         *args: typing.Any,
         **kwargs: typing.Any,
