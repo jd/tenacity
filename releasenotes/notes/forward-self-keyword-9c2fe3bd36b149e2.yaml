@@ -6,3 +6,12 @@ fixes:
     ``Service.method(self=instance)`` with synchronous, asynchronous, and
     Tornado retry controllers. The target callable can still be passed as
     ``fn=`` when invoking a controller directly.
+upgrade:
+  - |
+    The retry controller receiver is now positional-only in
+    ``Retrying.__call__()``, ``AsyncRetrying.__call__()``, and
+    ``TornadoRetrying.__call__()``. Explicit class-level calls such as
+    ``Retrying.__call__(self=controller, fn=target)`` must pass the controller
+    positionally instead: ``Retrying.__call__(controller, fn=target)``.
+    Ordinary bound calls are unchanged; class-level signature inspection now
+    reports the receiver as positional-only.

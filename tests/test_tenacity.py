@@ -2236,6 +2236,17 @@ def test_self_keyword_is_forwarded(invocation: str, enabled: bool) -> None:
         assert states == []
 
 
+def test_unbound_controller_receiver_is_positional_only() -> None:
+    controller = Retrying(stop=tenacity.stop_after_attempt(1))
+
+    def target() -> int:
+        return 42
+
+    assert Retrying.__call__(controller, fn=target) == 42
+    with pytest.raises(TypeError):
+        Retrying.__call__(self=controller, fn=target)  # type: ignore[call-arg]
+
+
 class TestInvokeAsCallable:
     """Test direct invocation of Retrying as a callable."""
 
