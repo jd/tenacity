@@ -2192,6 +2192,50 @@ class TestContextManager(unittest.TestCase):
         self.assertRaises(CustomError, test)
 
 
+@pytest.mark.parametrize(
+    "invocation", ["direct", "keyword_target", "wraps", "decorator"]
+)
+@pytest.mark.parametrize("enabled", [True, False])
+def test_self_keyword_is_forwarded(invocation: str, enabled: bool) -> None:
+    states: list[RetryCallState] = []
+
+    class Service:
+        calls = 0
+
+        def call(self, value: int) -> int:
+            self.calls += 1
+            if self.calls == 1:
+                raise OSError("try again")
+            return value
+
+    service = Service()
+    controller = Retrying(
+        stop=tenacity.stop_after_attempt(2), before=states.append, enabled=enabled
+    )
+
+    def invoke() -> int:
+        if invocation == "direct":
+            return controller(Service.call, self=service, value=42)
+        if invocation == "keyword_target":
+            return controller(fn=Service.call, self=service, value=42)
+        if invocation == "wraps":
+            return controller.wraps(Service.call)(self=service, value=42)
+        return retry(
+            stop=tenacity.stop_after_attempt(2), before=states.append, enabled=enabled
+        )(Service.call)(self=service, value=42)
+
+    if enabled:
+        assert invoke() == 42
+        assert service.calls == 2
+        assert len(states) == 2
+        assert all(state.kwargs == {"self": service, "value": 42} for state in states)
+    else:
+        with pytest.raises(OSError, match="try again"):
+            invoke()
+        assert service.calls == 1
+        assert states == []
+
+
 class TestInvokeAsCallable:
     """Test direct invocation of Retrying as a callable."""
 

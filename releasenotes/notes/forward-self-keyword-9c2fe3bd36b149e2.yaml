@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Forward the ``self`` keyword argument to retried functions instead of
+    binding it to the retry controller's receiver. This allows calls such as
+    ``Service.method(self=instance)`` with synchronous, asynchronous, and
+    Tornado retry controllers. The target callable can still be passed as
+    ``fn=`` when invoking a controller directly.

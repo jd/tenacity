@@ -523,6 +523,7 @@ class BaseRetrying(ABC):
     @abstractmethod
     def __call__(
         self,
+        /,
         fn: t.Callable[..., WrappedFnReturnT],
         *args: t.Any,
         **kwargs: t.Any,
@@ -536,6 +537,7 @@ class Retrying(BaseRetrying):
     @override
     def __call__(
         self,
+        /,
         fn: t.Callable[..., WrappedFnReturnT],
         *args: t.Any,
         **kwargs: t.Any,
