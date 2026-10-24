@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    A plain callable stop strategy can now be combined with another stop
+    strategy from either side of ``|`` and ``&``. ``callable | stop_after_attempt(3)``
+    raised ``TypeError`` while the mirrored order worked.
+  - |
+    A non-callable operand of ``|`` or ``&`` now raises ``TypeError`` at the
+    operator. Previously ``stop_after_attempt(2) | 1`` built a ``stop_any``
+    that only failed when the retry loop reached the integer, and
+    ``stop_after_attempt(1) | 1`` finished a retry without ever touching it,
+    so the mistake stayed hidden.

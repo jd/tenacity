@@ -32,11 +32,35 @@ class stop_base(abc.ABC):
     def __call__(self, retry_state: "RetryCallState") -> bool:
         pass
 
-    def __and__(self, other: "stop_base") -> "stop_all":
+    def __and__(self, other: "StopBaseT") -> "stop_all":
+        if not callable(other):
+            # A non-callable is not a stop strategy. Saying so here raises
+            # TypeError at the `&` instead of building a combination that only
+            # fails when the retry loop calls it -- the same early failure
+            # `wait_base.__radd__` applies to a non-zero number operand.
+            return NotImplemented
         return stop_all(self, other)
 
-    def __or__(self, other: "stop_base") -> "stop_any":
+    def __rand__(self, other: "StopBaseT") -> "stop_all":
+        # A plain callable is a valid `StopBaseT` -- `Retrying(stop=fn)` and
+        # `stop_all(fn, ...)` accept one -- but a function has no `__and__` of
+        # its own, so `callable & strategy` needs the reflected operator to
+        # build the combination. Operands keep their left-to-right order, like
+        # `retry_base.__rand__` does.
+        if not callable(other):
+            return NotImplemented
+        return stop_all(other, self)
+
+    def __or__(self, other: "StopBaseT") -> "stop_any":
+        if not callable(other):
+            return NotImplemented
         return stop_any(self, other)
+
+    def __ror__(self, other: "StopBaseT") -> "stop_any":
+        # Reflected `|`, see `__rand__` above.
+        if not callable(other):
+            return NotImplemented
+        return stop_any(other, self)
 
 
 StopBaseT = stop_base | typing.Callable[["RetryCallState"], bool]
@@ -45,7 +69,7 @@ StopBaseT = stop_base | typing.Callable[["RetryCallState"], bool]
 class stop_any(stop_base):
     """Stop if any of the stop condition is valid."""
 
-    def __init__(self, *stops: stop_base) -> None:
+    def __init__(self, *stops: "StopBaseT") -> None:
         self.stops = stops
 
     @override
@@ -56,7 +80,7 @@ class stop_any(stop_base):
 class stop_all(stop_base):
     """Stop if all the stop conditions are valid."""
 
-    def __init__(self, *stops: stop_base) -> None:
+    def __init__(self, *stops: "StopBaseT") -> None:
         self.stops = stops
 
     @override
