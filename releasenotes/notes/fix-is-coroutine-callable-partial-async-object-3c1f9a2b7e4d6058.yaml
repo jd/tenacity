@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Detect a ``functools.partial`` wrapping a callable object whose
+    ``__call__`` is asynchronous as a coroutine callable. Previously such a
+    partial was misrouted to the synchronous retry path, which returned an
+    un-awaited coroutine instead of retrying the awaited call.
