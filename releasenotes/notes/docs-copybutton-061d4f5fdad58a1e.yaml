@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add copy buttons to documentation code examples, stripping Python and
+    shell prompts from copied commands.
