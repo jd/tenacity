@@ -436,8 +436,14 @@ class BaseRetrying(ABC):
     def iter(self, retry_state: "RetryCallState") -> DoAttempt | DoSleep | t.Any:
         self._begin_iter(retry_state)
         result = None
-        for action in self.iter_state.actions:
-            result = action(retry_state)
+        actions = self.iter_state.actions
+        try:
+            for action in actions:
+                result = action(retry_state)
+        finally:
+            # The actions are bound methods of ``self``: kept in the iteration
+            # state, they make a cycle that only the cycle collector can free.
+            actions.clear()
         return result
 
     def _begin_iter(self, retry_state: "RetryCallState") -> None:

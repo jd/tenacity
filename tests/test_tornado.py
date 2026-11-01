@@ -22,7 +22,7 @@ from tornado import gen, testing
 import tenacity
 from tenacity import RetryError, retry, stop_after_attempt, tornadoweb
 
-from .test_tenacity import NoIOErrorAfterCount
+from .test_tenacity import NoIOErrorAfterCount, count_garbage
 
 
 @retry
@@ -57,6 +57,15 @@ class TestTornado(testing.AsyncTestCase):
             yield _retryable_coroutine_with_2_attempts(thing)
         except RetryError:
             assert thing.counter == 2
+
+    def test_no_reference_cycle(self) -> None:
+        @retry(stop=stop_after_attempt(3))
+        @gen.coroutine
+        def succeeds() -> Generator[Any, Any, int]:
+            yield gen.sleep(0)
+            raise gen.Return(1)
+
+        assert count_garbage(lambda: self.io_loop.run_sync(succeeds)) == 0
 
     def test_repr(self) -> None:
         repr(tornadoweb.TornadoRetrying())
