@@ -39,7 +39,7 @@ class stop_base(abc.ABC):
         return stop_any(self, other)
 
 
-StopBaseT = stop_base | typing.Callable[["RetryCallState"], bool]
+StopBaseT: typing.TypeAlias = stop_base | typing.Callable[["RetryCallState"], bool]
 
 
 class stop_any(stop_base):

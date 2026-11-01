@@ -55,7 +55,9 @@ class wait_base(abc.ABC):
         return wait_combine(self, other)
 
 
-WaitBaseT = wait_base | typing.Callable[["RetryCallState"], float | int]
+WaitBaseT: typing.TypeAlias = (
+    wait_base | typing.Callable[["RetryCallState"], float | int]
+)
 
 
 class wait_fixed(wait_base):
