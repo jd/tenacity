@@ -119,33 +119,71 @@ class retry_if_exception_type(retry_if_exception):
         return isinstance(e, self.exception_types)
 
 
+def _signals_control_flow(e: BaseException) -> bool:
+    """Whether ``e`` interrupts execution rather than reporting a failure.
+
+    ``asyncio.CancelledError``, ``KeyboardInterrupt``, ``SystemExit`` and
+    ``GeneratorExit`` derive from ``BaseException`` but not ``Exception``,
+    precisely so that blanket handlers leave them alone.
+    """
+    return not isinstance(e, Exception)
+
+
 class retry_if_not_exception_type(retry_if_exception):
-    """Retries except an exception has been raised of one or more types."""
+    """Retries except an exception has been raised of one or more types.
+
+    By default this retries anything outside ``exception_types``, including the
+    ``BaseException`` types that are not ``Exception`` types --
+    ``asyncio.CancelledError``, ``KeyboardInterrupt``, ``SystemExit`` and
+    ``GeneratorExit``. Retrying one of those swallows it: under
+    ``asyncio.wait_for`` the call is retried instead of unwinding, so
+    ``wait_for`` never raises ``TimeoutError``.
+
+    Pass ``retry_base_exceptions=False`` to let them propagate::
+
+        retry_if_not_exception_type(IOError, retry_base_exceptions=False)
+
+    The default stays ``True``, which is the historical behaviour.
+    """
 
     def __init__(
         self,
         exception_types: type[BaseException]
         | tuple[type[BaseException], ...] = Exception,
+        retry_base_exceptions: bool = True,
     ) -> None:
         self.exception_types = exception_types
+        self.retry_base_exceptions = retry_base_exceptions
         super().__init__(self._check)
 
     def _check(self, e: BaseException) -> bool:
+        if not self.retry_base_exceptions and _signals_control_flow(e):
+            return False
         return not isinstance(e, self.exception_types)
 
 
 class retry_unless_exception_type(retry_if_exception):
-    """Retries until an exception is raised of one or more types."""
+    """Retries until an exception is raised of one or more types.
+
+    Takes ``retry_base_exceptions`` with the same meaning as
+    :class:`retry_if_not_exception_type`: it defaults to ``True``, and ``False``
+    lets a ``BaseException`` that is not an ``Exception`` propagate instead of
+    being retried.
+    """
 
     def __init__(
         self,
         exception_types: type[BaseException]
         | tuple[type[BaseException], ...] = Exception,
+        retry_base_exceptions: bool = True,
     ) -> None:
         self.exception_types = exception_types
+        self.retry_base_exceptions = retry_base_exceptions
         super().__init__(self._check)
 
     def _check(self, e: BaseException) -> bool:
+        if not self.retry_base_exceptions and _signals_control_flow(e):
+            return False
         return not isinstance(e, self.exception_types)
 
     @override
