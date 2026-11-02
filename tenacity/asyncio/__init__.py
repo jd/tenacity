@@ -111,7 +111,7 @@ class AsyncRetrying(BaseRetrying):
 
     @override
     async def __call__(  # type: ignore[override]
-        self, fn: WrappedFn, *args: t.Any, **kwargs: t.Any
+        self, /, fn: WrappedFn, *args: t.Any, **kwargs: t.Any
     ) -> WrappedFnReturnT:
         is_async = _utils.is_coroutine_callable(fn)
         if not self.enabled:
