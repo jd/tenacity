@@ -55,7 +55,11 @@ class LoggerProtocol(typing.Protocol):
     Compatible with logging, structlog, loguru, etc...
     """
 
-    def log(self, level: int, msg: str, *args: typing.Any) -> typing.Any: ...
+    # `level` and `msg` are positional-only: tenacity only ever calls
+    # `logger.log(level, msg)` positionally, and this matches loggers
+    # whose `log` parameters are positional-only (eg: loguru, whose stub
+    # declares them with the `__` positional-only convention).
+    def log(self, level: int, msg: str, /, *args: typing.Any) -> typing.Any: ...
 
 
 def find_ordinal(pos_num: int) -> str:

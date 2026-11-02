@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    ``LoggerProtocol.log`` now declares its ``level`` and ``msg``
+    parameters as positional-only, so loggers whose ``log`` parameters
+    are positional-only (eg: loguru) once again satisfy the protocol
+    and type check when passed to ``before_sleep_log``,
+    ``before_log`` and ``after_log``.
