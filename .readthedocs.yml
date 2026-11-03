@@ -3,6 +3,10 @@ build:
   os: ubuntu-24.04
   tools:
     python: "3.13"
+  jobs:
+    post_checkout:
+      # unshallow: reno needs full tag history (see PR description)
+      - git fetch --unshallow --tags || true
 python:
   install:
     - method: pip
