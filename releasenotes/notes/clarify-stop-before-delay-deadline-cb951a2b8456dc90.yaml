@@ -1,0 +1,4 @@
+---
+fixes:
+  - Clarify that time-based stop strategies do not interrupt a running attempt,
+    and show how stop_before_delay accounts for the next wait.

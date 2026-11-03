@@ -127,15 +127,23 @@ retrying stuff.
         print("Stopping after 10 seconds")
         raise Exception
 
-If you're on a tight deadline, and exceeding your delay time isn't ok,
-then you can give up on retries one attempt before you would exceed the delay.
+Use ``stop_before_delay`` to stop when the next wait would reach or exceed
+the time limit, instead of waiting and making another attempt.
 
 .. testcode::
 
-    @retry(stop=stop_before_delay(10))
+    @retry(stop=stop_before_delay(10), wait=wait_fixed(3))
     def stop_before_10_s():
-        print("Stopping 1 attempt before 10 seconds")
+        print("Retrying unless the next wait would reach 10 seconds")
         raise Exception
+
+If each attempt fails immediately, this makes four attempts, at roughly 0, 3,
+6, and 9 seconds. It stops before the next three-second wait.
+
+Neither ``stop_after_delay`` nor ``stop_before_delay`` interrupts a running
+attempt. A slow or blocked function can still run beyond the time limit.
+Configure a timeout on the operation itself when you need to limit how long
+an individual attempt can take.
 
 You can combine several stop conditions by using the `|` operator:
 

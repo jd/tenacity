@@ -119,10 +119,11 @@ class stop_after_delay(stop_base):
 
 class stop_before_delay(stop_base):
     """
-    Stop right before the next attempt would take place after the time from the first attempt >= limit.
+    Stop when the elapsed time plus the next wait would reach or exceed the limit.
 
-    Most useful when you are using with a `wait` function like wait_random_exponential, but need to make
-    sure that the max_delay is not exceeded.
+    Unlike `stop_after_delay`, this accounts for the upcoming sleep before
+    allowing another attempt. It does not interrupt a running attempt, so the
+    function's execution time can still cause `max_delay` to be exceeded.
     """
 
     def __init__(self, max_delay: _utils.time_unit_type) -> None:
