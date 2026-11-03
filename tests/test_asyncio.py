@@ -15,7 +15,7 @@
 import asyncio
 import inspect
 import unittest
-from collections.abc import Callable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine
 from functools import wraps
 from typing import Any, TypeVar
 from unittest import mock
@@ -74,6 +74,100 @@ async def _retryable_coroutine(thing: NoIOErrorAfterCount) -> Any:
 async def _retryable_coroutine_with_2_attempts(thing: NoIOErrorAfterCount) -> Any:
     await asyncio.sleep(0.00001)
     return thing.go()
+
+
+@pytest.mark.parametrize("iterate", [False, True])
+@pytest.mark.parametrize("task", [False, True])
+@pytest.mark.parametrize("callback", ["before", "after", "before_sleep"])
+@asynctest
+async def test_sync_callback_awaits_returned_awaitable(
+    callback: str, task: bool, iterate: bool
+) -> None:
+    events: list[tuple[str, int]] = []
+    pending: list[Awaitable[None]] = []
+    attempts = 0
+
+    async def record(state: RetryCallState) -> None:
+        await asyncio.sleep(0)
+        events.append(("callback", state.attempt_number))
+
+    def before(state: RetryCallState) -> Awaitable[None]:
+        result = record(state)
+        awaitable = asyncio.create_task(result) if task else result
+        pending.append(awaitable)
+        return awaitable
+
+    async def operation() -> str:
+        nonlocal attempts
+        attempts += 1
+        events.append(("operation", attempts))
+        if attempts == 1:
+            raise ValueError("retry")
+        return "ok"
+
+    callbacks: dict[str, Any] = {callback: before}
+    retrying = AsyncRetrying(**callbacks, stop=stop_after_attempt(2))
+    result = None
+    try:
+        if iterate:
+            async for attempt in retrying:
+                with attempt:
+                    result = await operation()
+        else:
+            result = await retrying(operation)
+        assert result == "ok"
+        if callback == "before":
+            assert events == [
+                ("callback", 1),
+                ("operation", 1),
+                ("callback", 2),
+                ("operation", 2),
+            ]
+            assert len(pending) == 2
+        else:
+            assert events == [("operation", 1), ("callback", 1), ("operation", 2)]
+            assert len(pending) == 1
+    finally:
+        for awaitable in pending:
+            if inspect.iscoroutine(awaitable):
+                awaitable.close()
+        if task:
+            await asyncio.gather(*pending)
+
+
+@asynctest
+async def test_callback_future_exception_propagates() -> None:
+    future: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+    future.set_exception(ValueError("callback failed"))
+    calls = 0
+
+    def before(state: RetryCallState) -> asyncio.Future[None]:
+        return future
+
+    async def operation() -> None:
+        nonlocal calls
+        calls += 1
+
+    try:
+        with pytest.raises(ValueError, match="callback failed"):
+            await AsyncRetrying(before=before)(operation)
+        assert calls == 0
+    finally:
+        future.exception()
+
+
+@asynctest
+async def test_operation_returned_future_is_not_awaited_twice() -> None:
+    future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+
+    async def operation() -> asyncio.Future[str]:
+        return future
+
+    result: asyncio.Future[str] = await asyncio.wait_for(
+        AsyncRetrying()(operation), timeout=1
+    )
+    assert result is future
+    assert not future.done()
 
 
 class TestAsyncio(unittest.TestCase):

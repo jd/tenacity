@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import functools
+import inspect
 import sys
 import typing as t
 
@@ -142,7 +143,17 @@ class AsyncRetrying(BaseRetrying):
 
     @override
     def _add_action_func(self, fn: t.Callable[..., t.Any]) -> None:
-        self.iter_state.actions.append(_utils.wrap_to_async_func(fn))
+        if fn is self.before or fn is self.after or fn is self.before_sleep:
+
+            async def wrapped_callback(retry_state: RetryCallState) -> t.Any:
+                result = fn(retry_state)
+                if inspect.isawaitable(result):
+                    return await result
+                return result
+
+            self.iter_state.actions.append(wrapped_callback)
+        else:
+            self.iter_state.actions.append(_utils.wrap_to_async_func(fn))
 
     @override
     async def _run_retry(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
