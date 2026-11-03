@@ -366,6 +366,22 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(2, retrying.statistics["attempt_number"])
 
     @asynctest
+    async def test_reraise_try_again_with_falsey_cause(self) -> None:
+        class UnderlyingError(Exception):
+            def __bool__(self) -> bool:
+                return False
+
+        cause = UnderlyingError("explicit cause")
+
+        async def _test() -> None:
+            raise tenacity.TryAgain from cause
+
+        retrying = AsyncRetrying(stop=stop_after_attempt(1), reraise=True)
+        with pytest.raises(UnderlyingError) as raised:
+            await retrying(_test)
+        assert raised.value is cause
+
+    @asynctest
     async def test_sleeps(self) -> None:
         start = current_time_ms()
         try:
