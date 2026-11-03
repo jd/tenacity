@@ -116,7 +116,11 @@ class TestAsyncio(unittest.TestCase):
             assert thing.counter == 2
 
     def test_repr(self) -> None:
-        repr(tasyncio.AsyncRetrying())
+        retrying = tasyncio.AsyncRetrying()
+        result = repr(retrying)
+        assert result.startswith("<AsyncRetrying object at 0x")
+        assert f"sleep={retrying.sleep}, " in result
+        assert result.endswith("name=None)>")
 
     def test_retry_attributes(self) -> None:
         assert hasattr(_retryable_coroutine, "retry")
@@ -578,14 +582,24 @@ class TestDecoratorWrapper(unittest.TestCase):
         - retry object statistics are synced with function statistics
         """
 
-        self.assertTrue(
-            await _retryable_coroutine_with_2_attempts(NoIOErrorAfterCount(1))
-        )
+        with (
+            mock.patch.object(
+                _retryable_coroutine_with_2_attempts.retry, "wait", wait_fixed(0.25)
+            ),
+            mock.patch.object(
+                _retryable_coroutine_with_2_attempts.retry,
+                "sleep",
+                new=mock.AsyncMock(),
+            ),
+        ):
+            self.assertTrue(
+                await _retryable_coroutine_with_2_attempts(NoIOErrorAfterCount(1))
+            )
 
         expected_stats = {
             "attempt_number": 2,
             "delay_since_first_attempt": mock.ANY,
-            "idle_for": mock.ANY,
+            "idle_for": 0.25,
             "start_time": mock.ANY,
         }
         self.assertEqual(
@@ -610,7 +624,7 @@ class TestDecoratorWrapper(unittest.TestCase):
                 expected_stats = {
                     "attempt_number": 1,
                     "delay_since_first_attempt": mock.ANY,
-                    "idle_for": mock.ANY,
+                    "idle_for": 0,
                     "start_time": mock.ANY,
                 }
                 self.assertEqual(
