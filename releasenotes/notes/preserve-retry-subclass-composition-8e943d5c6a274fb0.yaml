@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Preserve overridden retry decisions when composing subclasses of
+    ``retry_any`` and ``retry_all`` with ``|`` or ``&``, including asynchronous
+    strategies. Only exact built-in combinations are flattened, so a subclass's
+    ``__call__`` is no longer bypassed.

@@ -272,6 +272,11 @@ We can also combine several conditions:
     def might_return_none():
         print("Retry forever ignoring Exceptions with no wait if return value is None")
 
+Combining retry conditions with ``|`` or ``&`` preserves overridden
+``__call__`` methods on subclasses of ``retry_any`` and ``retry_all``, including
+their asynchronous counterparts. Conditions are evaluated from left to right
+and stop as soon as the combined decision is known.
+
 Any combination of stop, wait, etc. is also supported to give you the freedom
 to mix and match.
 

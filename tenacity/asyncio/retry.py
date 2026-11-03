@@ -119,9 +119,11 @@ class retry_any(async_retry_base):
     def __ror__(  # type: ignore[misc,override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_any":
-        if isinstance(other, retry_any):
-            return retry_any(*other.retries, *self.retries)
-        return retry_any(other, *self.retries)
+        # Subclasses may override __call__, so only flatten exact built-ins.
+        retries = self.retries if type(self) is retry_any else (self,)
+        if type(other) is retry_any:
+            return retry_any(*other.retries, *retries)
+        return retry_any(other, *retries)
 
 
 class retry_all(async_retry_base):
@@ -143,6 +145,8 @@ class retry_all(async_retry_base):
     def __rand__(  # type: ignore[misc,override]
         self, other: "retry_base | async_retry_base"
     ) -> "retry_all":
-        if isinstance(other, retry_all):
-            return retry_all(*other.retries, *self.retries)
-        return retry_all(other, *self.retries)
+        # Subclasses may override __call__, so only flatten exact built-ins.
+        retries = self.retries if type(self) is retry_all else (self,)
+        if type(other) is retry_all:
+            return retry_all(*other.retries, *retries)
+        return retry_all(other, *retries)

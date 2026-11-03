@@ -34,28 +34,28 @@ class retry_base(abc.ABC):
     def __and__(self, other: "RetryBaseT") -> "retry_all":
         if isinstance(other, retry_base):
             return other.__rand__(self)
-        # Plain callable: flatten if self is already a retry_all
-        if isinstance(self, retry_all):
+        # Plain callable: only flatten a built-in retry_all
+        if type(self) is retry_all:
             return retry_all(*self.retries, other)
         return retry_all(self, other)
 
     def __rand__(self, other: "RetryBaseT") -> "retry_all":
-        # Flatten if other is already a retry_all
-        if isinstance(other, retry_all):
+        # Only flatten a built-in retry_all
+        if type(other) is retry_all:
             return retry_all(*other.retries, self)
         return retry_all(other, self)
 
     def __or__(self, other: "RetryBaseT") -> "retry_any":
         if isinstance(other, retry_base):
             return other.__ror__(self)
-        # Plain callable: flatten if self is already a retry_any
-        if isinstance(self, retry_any):
+        # Plain callable: only flatten a built-in retry_any
+        if type(self) is retry_any:
             return retry_any(*self.retries, other)
         return retry_any(self, other)
 
     def __ror__(self, other: "RetryBaseT") -> "retry_any":
-        # Flatten if other is already a retry_any
-        if isinstance(other, retry_any):
+        # Only flatten a built-in retry_any
+        if type(other) is retry_any:
             return retry_any(*other.retries, self)
         return retry_any(other, self)
 
@@ -293,9 +293,11 @@ class retry_any(retry_base):
 
     @override
     def __ror__(self, other: "RetryBaseT") -> "retry_any":
-        if isinstance(other, retry_any):
-            return retry_any(*other.retries, *self.retries)
-        return retry_any(other, *self.retries)
+        # Subclasses may override __call__, so only flatten exact built-ins.
+        retries = self.retries if type(self) is retry_any else (self,)
+        if type(other) is retry_any:
+            return retry_any(*other.retries, *retries)
+        return retry_any(other, *retries)
 
 
 class retry_all(retry_base):
@@ -310,6 +312,8 @@ class retry_all(retry_base):
 
     @override
     def __rand__(self, other: "RetryBaseT") -> "retry_all":
-        if isinstance(other, retry_all):
-            return retry_all(*other.retries, *self.retries)
-        return retry_all(other, *self.retries)
+        # Subclasses may override __call__, so only flatten exact built-ins.
+        retries = self.retries if type(self) is retry_all else (self,)
+        if type(other) is retry_all:
+            return retry_all(*other.retries, *retries)
+        return retry_all(other, *retries)
