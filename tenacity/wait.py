@@ -237,8 +237,14 @@ class wait_exponential(wait_base):
         ):
             return max(max(0, self.min), self.max)
         try:
-            exp = self.exp_base**exponent
-            result = self.multiplier * exp
+            if self.multiplier == 0:
+                # 0 * exp == 0 regardless of the exponent, but computing
+                # exp first can raise OverflowError for large attempt
+                # numbers, which wrongly returned max instead of 0 (#710)
+                result: float = 0.0
+            else:
+                exp = self.exp_base**exponent
+                result = self.multiplier * exp
         except OverflowError:
             return self.max
         return max(max(0, self.min), min(result, self.max))
