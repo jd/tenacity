@@ -52,7 +52,8 @@ class wait_base(abc.ABC):
             return NotImplemented
         # A plain callable -- `WaitBaseT` admits those, and a function has no
         # `__add__` of its own to handle `callable + strategy`.
-        return wait_combine(self, other)
+        # Preserve the operand order, just as __add__ does.
+        return wait_combine(other, self)
 
 
 WaitBaseT = wait_base | typing.Callable[["RetryCallState"], float | int]
