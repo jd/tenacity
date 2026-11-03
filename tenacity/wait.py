@@ -34,7 +34,12 @@ class wait_base(abc.ABC):
     def __call__(self, retry_state: "RetryCallState") -> float:
         pass
 
-    def __add__(self, other: "wait_base") -> "wait_combine":
+    def __add__(self, other: "WaitBaseT") -> "wait_combine":
+        if not callable(other):
+            # Same reasoning as `__radd__` below: a number is not a wait
+            # strategy, and returning NotImplemented raises TypeError at the
+            # `+` rather than building a combination that fails when called.
+            return NotImplemented
         return wait_combine(self, other)
 
     # `other` is `int` rather than `Literal[0]` because typeshed's `sum()`
