@@ -366,6 +366,25 @@ class TestContextManager(unittest.TestCase):
         self.assertEqual(2, retrying.statistics["attempt_number"])
 
     @asynctest
+    async def test_reraise_try_again_keeps_exception_chain(self) -> None:
+        root = OSError("disk unavailable")
+
+        async def _test() -> None:
+            try:
+                try:
+                    raise root
+                except OSError as e:
+                    raise KeyError("config") from e
+            except KeyError:
+                raise tenacity.TryAgain  # noqa: B904
+
+        retrying = tasyncio.AsyncRetrying(stop=stop_after_attempt(2), reraise=True)
+        with pytest.raises(KeyError) as raised:
+            await retrying(_test)
+        assert raised.value.__cause__ is root
+        assert raised.value.__context__ is root
+
+    @asynctest
     async def test_sleeps(self) -> None:
         start = current_time_ms()
         try:

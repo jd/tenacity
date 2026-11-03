@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    When ``reraise=True`` surfaces the exception that triggered a ``TryAgain``,
+    that exception's own ``__cause__`` and ``__context__`` are now kept, so the
+    traceback still shows what led to it. Previously they were overwritten as
+    if it had been raised with ``from None``.

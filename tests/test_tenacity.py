@@ -975,6 +975,42 @@ class TestRetryConditions(unittest.TestCase):
         self.assertRaises(UnderlyingError, r, _r)
         self.assertEqual(5, r.statistics["attempt_number"])
 
+    def test_retry_try_again_reraise_keeps_exception_chain(self) -> None:
+        # Unwrapping TryAgain must not rewrite the chain of the exception it
+        # surfaces: its own cause and context still have to be reported.
+        root = OSError("disk unavailable")
+
+        def _r() -> None:
+            try:
+                try:
+                    raise root
+                except OSError as e:
+                    raise KeyError("config") from e
+            except KeyError:
+                raise tenacity.TryAgain  # noqa: B904
+
+        r = Retrying(stop=tenacity.stop_after_attempt(2), reraise=True)
+        with self.assertRaises(KeyError) as raised:
+            r(_r)
+        self.assertIs(raised.exception.__cause__, root)
+        self.assertIs(raised.exception.__context__, root)
+
+    def test_retry_try_again_reraise_keeps_implicit_context(self) -> None:
+        def _r() -> None:
+            try:
+                try:
+                    raise OSError("disk unavailable")
+                except OSError:
+                    raise KeyError("config")  # noqa: B904
+            except KeyError:
+                raise tenacity.TryAgain  # noqa: B904
+
+        r = Retrying(stop=tenacity.stop_after_attempt(2), reraise=True)
+        with self.assertRaises(KeyError) as raised:
+            r(_r)
+        self.assertIsInstance(raised.exception.__context__, OSError)
+        self.assertFalse(raised.exception.__suppress_context__)
+
     def test_retry_try_again_forever_reraise(self) -> None:
         def _r() -> None:
             raise tenacity.TryAgain
