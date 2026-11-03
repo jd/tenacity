@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Keep asynchronous retry action lists separate while callbacks suspend or
+    re-enter an ``AsyncRetrying`` controller. Interleaved direct calls could
+    otherwise discard a failed attempt's pending retry actions and return
+    ``None`` without retrying or raising the failure.
