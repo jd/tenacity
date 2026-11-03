@@ -373,6 +373,20 @@ class TestWaitConditions(unittest.TestCase):
         r = Retrying(wait=tenacity.wait_exponential(multiplier=1e300, max=1e-100))
         self.assertEqual(r.wait(make_retry_state(1, 0)), 1e-100)
 
+    def test_exponential_with_zero_multiplier(self) -> None:
+        for exp_base in (2, 2.0):
+            with self.subTest():
+                r = Retrying(
+                    wait=tenacity.wait_exponential(
+                        multiplier=0, exp_base=exp_base, max=60
+                    )
+                )
+                self.assertEqual(r.wait(make_retry_state(1025, 0)), 0)
+
+    def test_exponential_with_zero_multiplier_and_min_wait(self) -> None:
+        r = Retrying(wait=tenacity.wait_exponential(multiplier=0, min=5, max=60))
+        self.assertEqual(r.wait(make_retry_state(1025, 0)), 5)
+
     def test_exponential_with_min_wait(self) -> None:
         r = Retrying(wait=tenacity.wait_exponential(min=20))
         self.assertEqual(r.wait(make_retry_state(1, 0)), 20)
@@ -659,6 +673,13 @@ class TestWaitConditions(unittest.TestCase):
         fn = tenacity.wait_random_exponential()
         fn(make_retry_state(0, 0))
 
+    def test_wait_random_exponential_zero_multiplier(self) -> None:
+        fn = tenacity.wait_random_exponential(multiplier=0, max=60)
+        self.assertEqual(fn(make_retry_state(1025, 0)), 0)
+
+        fn = tenacity.wait_random_exponential(multiplier=0, min=5, max=60)
+        self.assertEqual(fn(make_retry_state(1025, 0)), 5)
+
     def test_wait_random_exponential_statistically(self) -> None:
         fn = tenacity.wait_random_exponential(0.5, 60.0)
 
@@ -710,6 +731,13 @@ class TestWaitConditions(unittest.TestCase):
             self._assert_inclusive_range(fn(make_retry_state(3, 0)), 5, 5)
             # For attempt 4, base wait=8 + jitter 0..1 = 8..9, above min
             self._assert_inclusive_range(fn(make_retry_state(4, 0)), 8, 9)
+
+    def test_wait_exponential_jitter_zero_multiplier(self) -> None:
+        fn = tenacity.wait_exponential_jitter(multiplier=0, jitter=0, max=60)
+        self.assertEqual(fn(make_retry_state(1025, 0)), 0)
+
+        fn = tenacity.wait_exponential_jitter(multiplier=0, jitter=1, min=5, max=60)
+        self.assertEqual(fn(make_retry_state(1025, 0)), 5)
 
     def test_wait_exponential_jitter_timedelta(self) -> None:
         from datetime import timedelta

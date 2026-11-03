@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    A zero ``multiplier`` in the exponential wait strategies no longer
+    overflows into the configured maximum wait for large attempt counts.
