@@ -729,6 +729,13 @@ Sleeps are done asynchronously too.
     async def my_async_tornado_function(http_client, url):
         await http_client.fetch(url)
 
+For a regular function that returns an awaitable, use ``AsyncRetrying`` explicitly.
+This includes wrappers that return a coroutine and functions that return a Task or
+Future. The returned awaitable is awaited before deciding whether to retry::
+
+    async_fetch = AsyncRetrying().wraps(lambda url: http_client.fetch(url))
+    response = await async_fetch(url)
+
 You can use alternative event loops by passing the correct sleep function:
 
 .. code-block:: python

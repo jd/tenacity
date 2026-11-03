@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    ``AsyncRetrying`` now awaits coroutine, Task, and Future results returned by
+    regular functions before checking their outcome. This restores retries for
+    coroutine-returning wrappers passed to ``AsyncRetrying().wraps()`` and also
+    preserves result and exception propagation when retries are disabled.

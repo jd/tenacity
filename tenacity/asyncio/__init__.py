@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import functools
+import inspect
 import sys
 import typing as t
 
@@ -113,11 +114,11 @@ class AsyncRetrying(BaseRetrying):
     async def __call__(  # type: ignore[override]
         self, fn: WrappedFn, *args: t.Any, **kwargs: t.Any
     ) -> WrappedFnReturnT:
-        is_async = _utils.is_coroutine_callable(fn)
         if not self.enabled:
-            if is_async:
-                return await fn(*args, **kwargs)  # type: ignore[no-any-return]
-            return fn(*args, **kwargs)  # type: ignore[return-value]
+            result: t.Any = fn(*args, **kwargs)
+            if inspect.isawaitable(result):
+                return await result  # type: ignore[no-any-return]
+            return t.cast("WrappedFnReturnT", result)
 
         self.begin()
 
@@ -126,10 +127,9 @@ class AsyncRetrying(BaseRetrying):
             do = await self.iter(retry_state=retry_state)
             if isinstance(do, DoAttempt):
                 try:
-                    if is_async:
-                        result = await fn(*args, **kwargs)
-                    else:
-                        result = fn(*args, **kwargs)
+                    result = fn(*args, **kwargs)
+                    if inspect.isawaitable(result):
+                        result = await result
                 except BaseException:
                     retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]
                 else:
