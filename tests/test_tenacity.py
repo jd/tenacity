@@ -30,6 +30,7 @@ import tenacity
 from tenacity import RetryCallState, RetryError, Retrying, retry
 from tenacity._utils import override
 from tenacity.retry import retry_all, retry_any
+from tenacity.stop import stop_base
 
 _unset = object()
 
@@ -280,6 +281,62 @@ class TestStopConditions(unittest.TestCase):
         self.assertFalse(r.stop(make_retry_state(1, 3)))
         self.assertFalse(r.stop(make_retry_state(100, 99)))
         self.assertTrue(r.stop(make_retry_state(101, 101)))
+
+
+@pytest.mark.parametrize("use_or", [False, True])
+@pytest.mark.parametrize("right_nested", [False, True])
+def test_long_stop_chains(use_or: bool, right_nested: bool) -> None:
+    neutral = tenacity.stop_never if use_or else tenacity.stop_after_attempt(1)
+
+    def combine(first: stop_base, second: stop_base) -> stop_base:
+        return first | second if use_or else first & second
+
+    stop: stop_base = neutral
+    for _ in range(1000):
+        stop = combine(neutral, stop) if right_nested else combine(stop, neutral)
+    stop = combine(stop, tenacity.stop_after_attempt(2))
+
+    def fail() -> None:
+        raise ValueError("temporary failure")
+
+    with pytest.raises(RetryError) as exc_info:
+        Retrying(stop=stop)(fail)
+    assert exc_info.value.last_attempt.attempt_number == 2
+
+
+@pytest.mark.parametrize("combine", [tenacity.stop_any, tenacity.stop_all])
+def test_stop_chain_preserves_short_circuit_order(
+    combine: type[tenacity.stop_any] | type[tenacity.stop_all],
+) -> None:
+    decisive = combine is tenacity.stop_any
+    first = mock.Mock(return_value=not decisive)
+    second = mock.Mock(return_value=decisive)
+    third = mock.Mock(return_value=not decisive)
+    calls = mock.Mock()
+    calls.attach_mock(first, "first")
+    calls.attach_mock(second, "second")
+    calls.attach_mock(third, "third")
+    state = make_retry_state(1, 0)
+
+    stop = combine(combine(first, second), third)
+    assert stop(state) is decisive
+    assert calls.mock_calls == [mock.call.first(state), mock.call.second(state)]
+
+
+def test_stop_chain_preserves_subclass_call() -> None:
+    class NeverStopAny(tenacity.stop_any):
+        @override
+        def __call__(self, retry_state: RetryCallState) -> bool:
+            return False
+
+    class AlwaysStopAll(tenacity.stop_all):
+        @override
+        def __call__(self, retry_state: RetryCallState) -> bool:
+            return True
+
+    state = make_retry_state(1, 0)
+    assert not tenacity.stop_any(NeverStopAny(tenacity.stop_after_attempt(1)))(state)
+    assert tenacity.stop_all(AlwaysStopAll(tenacity.stop_never))(state)
 
 
 class TestWaitConditions(unittest.TestCase):
