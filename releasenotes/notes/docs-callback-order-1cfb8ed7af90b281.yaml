@@ -1,0 +1,4 @@
+---
+other:
+  - Add a callback-order diagram explaining when after and before_sleep run,
+    with an editable SVG and a prose description of each branch.
