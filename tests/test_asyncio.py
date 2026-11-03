@@ -298,6 +298,30 @@ class TestTrio(unittest.TestCase):
 
 class TestContextManager(unittest.TestCase):
     @asynctest
+    async def test_shared_async_retrying_concurrent_tasks(self) -> None:
+        # One shared AsyncRetrying used by concurrent tasks must not mix
+        # their retry state (issue #766).
+        retrying = tasyncio.AsyncRetrying(
+            stop=stop_after_attempt(3), wait=wait_fixed(0.01)
+        )
+
+        async def worker(name: str, delay: float) -> str:
+            attempts = 0
+            async for attempt in retrying:
+                with attempt:
+                    attempts += 1
+                    await asyncio.sleep(delay)
+                    if attempts < 2:
+                        raise ValueError(name)
+                    return name
+            raise AssertionError(f"{name} fell through without a result")
+
+        results = await asyncio.gather(
+            worker("a", 0.03), worker("b", 0.01), worker("c", 0.02)
+        )
+        assert list(results) == ["a", "b", "c"]
+
+    @asynctest
     async def test_do_max_attempts(self) -> None:
         attempts = 0
         retrying = tasyncio.AsyncRetrying(stop=stop_after_attempt(3))

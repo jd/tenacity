@@ -420,59 +420,64 @@ class BaseRetrying(ABC):
         self.statistics["idle_for"] = 0
         self.statistics["delay_since_first_attempt"] = 0
 
-    def _add_action_func(self, fn: t.Callable[..., t.Any]) -> None:
-        self.iter_state.actions.append(fn)
+    def _add_action_func(
+        self, retry_state: "RetryCallState", fn: t.Callable[..., t.Any]
+    ) -> None:
+        retry_state.iter_state.actions.append(fn)
 
     def _run_retry(self, retry_state: "RetryCallState") -> None:
-        self.iter_state.retry_run_result = self.retry(retry_state)
+        retry_state.iter_state.retry_run_result = self.retry(retry_state)
 
     def _run_wait(self, retry_state: "RetryCallState") -> None:
         retry_state.upcoming_sleep = self.wait(retry_state)
 
     def _run_stop(self, retry_state: "RetryCallState") -> None:
         self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start
-        self.iter_state.stop_run_result = self.stop(retry_state)
+        retry_state.iter_state.stop_run_result = self.stop(retry_state)
 
     def iter(self, retry_state: "RetryCallState") -> DoAttempt | DoSleep | t.Any:
         self._begin_iter(retry_state)
         result = None
-        for action in self.iter_state.actions:
+        for action in retry_state.iter_state.actions:
             result = action(retry_state)
         return result
 
     def _begin_iter(self, retry_state: "RetryCallState") -> None:
-        self.iter_state.reset()
+        retry_state.iter_state.reset()
 
         fut = retry_state.outcome
         if fut is None:
             if self.before is not None:
-                self._add_action_func(self.before)
-            self._add_action_func(lambda rs: DoAttempt())
+                self._add_action_func(retry_state, self.before)
+            self._add_action_func(retry_state, lambda rs: DoAttempt())
             return
 
-        self.iter_state.is_explicit_retry = fut.failed and isinstance(
+        retry_state.iter_state.is_explicit_retry = fut.failed and isinstance(
             fut.exception(), TryAgain
         )
-        if not self.iter_state.is_explicit_retry:
-            self._add_action_func(self._run_retry)
-        self._add_action_func(self._post_retry_check_actions)
+        if not retry_state.iter_state.is_explicit_retry:
+            self._add_action_func(retry_state, self._run_retry)
+        self._add_action_func(retry_state, self._post_retry_check_actions)
 
     def _post_retry_check_actions(self, retry_state: "RetryCallState") -> None:
-        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):
-            self._add_action_func(lambda rs: rs.outcome.result())
+        if not (
+            retry_state.iter_state.is_explicit_retry
+            or retry_state.iter_state.retry_run_result
+        ):
+            self._add_action_func(retry_state, lambda rs: rs.outcome.result())
             return
 
         if self.after is not None:
-            self._add_action_func(self.after)
+            self._add_action_func(retry_state, self.after)
 
-        self._add_action_func(self._run_wait)
-        self._add_action_func(self._run_stop)
-        self._add_action_func(self._post_stop_check_actions)
+        self._add_action_func(retry_state, self._run_wait)
+        self._add_action_func(retry_state, self._run_stop)
+        self._add_action_func(retry_state, self._post_stop_check_actions)
 
     def _post_stop_check_actions(self, retry_state: "RetryCallState") -> None:
-        if self.iter_state.stop_run_result:
+        if retry_state.iter_state.stop_run_result:
             if self.retry_error_callback:
-                self._add_action_func(self.retry_error_callback)
+                self._add_action_func(retry_state, self.retry_error_callback)
                 return
 
             def exc_check(rs: "RetryCallState") -> None:
@@ -482,7 +487,7 @@ class BaseRetrying(ABC):
                     retry_exc.reraise()
                 raise retry_exc from fut.exception()
 
-            self._add_action_func(exc_check)
+            self._add_action_func(retry_state, exc_check)
             return
 
         def next_action(rs: "RetryCallState") -> None:
@@ -492,12 +497,12 @@ class BaseRetrying(ABC):
             self.statistics["idle_for"] += sleep
             self.statistics["attempt_number"] += 1
 
-        self._add_action_func(next_action)
+        self._add_action_func(retry_state, next_action)
 
         if self.before_sleep is not None:
-            self._add_action_func(self.before_sleep)
+            self._add_action_func(retry_state, self.before_sleep)
 
-        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))
+        self._add_action_func(retry_state, lambda rs: DoSleep(rs.upcoming_sleep))
 
     def __iter__(self) -> t.Generator[AttemptManager, None, None]:
         if not self.enabled:
@@ -620,6 +625,10 @@ class RetryCallState:
         self.next_action: RetryAction | None = None
         #: Next sleep time as decided by the retry manager.
         self.upcoming_sleep: float = 0.0
+        #: Action pipeline for this call only. Kept here (not on the retry
+        #: object) so concurrent calls sharing one Retrying/AsyncRetrying
+        #: do not overwrite each other's in-flight actions.
+        self.iter_state = IterState()
 
     def get_fn_name(self) -> str:
         """Get the name of the function being retried.

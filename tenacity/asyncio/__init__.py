@@ -141,14 +141,16 @@ class AsyncRetrying(BaseRetrying):
                 return do  # type: ignore[no-any-return]
 
     @override
-    def _add_action_func(self, fn: t.Callable[..., t.Any]) -> None:
-        self.iter_state.actions.append(_utils.wrap_to_async_func(fn))
+    def _add_action_func(
+        self, retry_state: "RetryCallState", fn: t.Callable[..., t.Any]
+    ) -> None:
+        retry_state.iter_state.actions.append(_utils.wrap_to_async_func(fn))
 
     @override
     async def _run_retry(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
-        self.iter_state.retry_run_result = await _utils.wrap_to_async_func(self.retry)(
-            retry_state
-        )
+        retry_state.iter_state.retry_run_result = await _utils.wrap_to_async_func(
+            self.retry
+        )(retry_state)
 
     @override
     async def _run_wait(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
@@ -159,15 +161,15 @@ class AsyncRetrying(BaseRetrying):
     @override
     async def _run_stop(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
         self.statistics["delay_since_first_attempt"] = retry_state.seconds_since_start
-        self.iter_state.stop_run_result = await _utils.wrap_to_async_func(self.stop)(
-            retry_state
-        )
+        retry_state.iter_state.stop_run_result = await _utils.wrap_to_async_func(
+            self.stop
+        )(retry_state)
 
     @override
     async def iter(self, retry_state: "RetryCallState") -> DoAttempt | DoSleep | t.Any:
         self._begin_iter(retry_state)
         result = None
-        for action in self.iter_state.actions:
+        for action in retry_state.iter_state.actions:
             result = await action(retry_state)
         return result
 
@@ -175,37 +177,12 @@ class AsyncRetrying(BaseRetrying):
     def __iter__(self) -> t.Generator[AttemptManager, None, None]:
         raise TypeError("AsyncRetrying object is not iterable")
 
-    def __aiter__(self) -> "AsyncRetrying":
-        if not self.enabled:
-            self._retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
-            self._disabled_iter_done = False
-            return self
-
-        self.begin()
-        self._retry_state = RetryCallState(self, fn=None, args=(), kwargs={})
-        return self
-
-    async def __anext__(self) -> AttemptManager:
-        if not self.enabled:
-            if self._disabled_iter_done:
-                outcome = self._retry_state.outcome
-                if outcome is not None and outcome.failed:
-                    raise outcome.exception()  # type: ignore[misc]
-                raise StopAsyncIteration
-            self._disabled_iter_done = True
-            return AttemptManager(retry_state=self._retry_state)
-
-        while True:
-            do = await self.iter(retry_state=self._retry_state)
-            if do is None:
-                raise StopAsyncIteration
-            if isinstance(do, DoAttempt):
-                return AttemptManager(retry_state=self._retry_state)
-            if isinstance(do, DoSleep):
-                self._retry_state.prepare_for_next_attempt()
-                await self.sleep(do)  # type: ignore[misc]
-            else:
-                raise StopAsyncIteration
+    def __aiter__(self) -> "_AsyncRetryingIterator":
+        # Each `async for` gets its own iterator and RetryCallState, so one
+        # AsyncRetrying can be shared by concurrent tasks (issue #766).
+        if self.enabled:
+            self.begin()
+        return _AsyncRetryingIterator(self)
 
     @override
     def wraps(self, fn: t.Callable[P, R]) -> _RetryDecorated[P, R]:
@@ -237,6 +214,41 @@ class AsyncRetrying(BaseRetrying):
         async_wrapped.statistics = {}  # type: ignore[attr-defined]
 
         return t.cast("_RetryDecorated[P, R]", async_wrapped)
+
+
+class _AsyncRetryingIterator:
+    """Per-iteration state for ``async for attempt in AsyncRetrying(...)``."""
+
+    def __init__(self, retrying: AsyncRetrying) -> None:
+        self._retrying = retrying
+        self._retry_state = RetryCallState(retrying, fn=None, args=(), kwargs={})
+        self._disabled_iter_done = False
+
+    def __aiter__(self) -> "_AsyncRetryingIterator":
+        return self
+
+    async def __anext__(self) -> AttemptManager:
+        retrying = self._retrying
+        if not retrying.enabled:
+            if self._disabled_iter_done:
+                outcome = self._retry_state.outcome
+                if outcome is not None and outcome.failed:
+                    raise outcome.exception()  # type: ignore[misc]
+                raise StopAsyncIteration
+            self._disabled_iter_done = True
+            return AttemptManager(retry_state=self._retry_state)
+
+        while True:
+            do = await retrying.iter(retry_state=self._retry_state)
+            if do is None:
+                raise StopAsyncIteration
+            if isinstance(do, DoAttempt):
+                return AttemptManager(retry_state=self._retry_state)
+            if isinstance(do, DoSleep):
+                self._retry_state.prepare_for_next_attempt()
+                await retrying.sleep(do)  # type: ignore[misc]
+            else:
+                raise StopAsyncIteration
 
 
 __all__ = [
