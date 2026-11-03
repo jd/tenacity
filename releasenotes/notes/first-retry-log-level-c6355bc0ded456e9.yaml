@@ -1,0 +1,4 @@
+---
+fixes:
+  - Fix the custom before_sleep documentation example to log the first retry
+    at INFO and later retries at WARNING.
