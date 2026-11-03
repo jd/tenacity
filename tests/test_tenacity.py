@@ -31,6 +31,14 @@ from tenacity import RetryCallState, RetryError, Retrying, retry
 from tenacity._utils import override
 from tenacity.retry import retry_all, retry_any
 
+if typing.TYPE_CHECKING:
+    from typing_extensions import assert_type
+else:
+
+    def assert_type(value: typing.Any, _typ: typing.Any) -> typing.Any:
+        return value
+
+
 _unset = object()
 
 
@@ -2324,6 +2332,69 @@ class TestRetryTyping(unittest.TestCase):
         doubler = Doubler()
         result: int = doubler.double(value=21)
         self.assertEqual(result, 42)
+
+    def test_retry_decorated_method_kinds_keep_signature(self) -> None:
+        """Classmethods, staticmethods, methods and functions must type-check.
+
+        Since `retry` returns the `_RetryDecorated` protocol, mypy and pyright
+        no longer apply `classmethod` binding, so `Foo.make(1)` was reported as
+        missing an argument. `assert_type` makes both checkers fail if a call
+        resolves to the wrong type or to `Any`. See issue #756.
+        """
+        attempts: list[int] = []
+
+        class Foo:
+            @classmethod
+            @retry(stop=tenacity.stop_after_attempt(3))
+            def make(cls, value: int) -> str:
+                attempts.append(value)
+                if len(attempts) < 2:
+                    raise ValueError
+                return f"{cls.__name__}:{value}"
+
+            @classmethod
+            @retry
+            def bare(cls, value: int) -> int:
+                return value
+
+            @staticmethod
+            @retry
+            def static(value: int) -> int:
+                return value
+
+            @retry
+            def method(self, value: int) -> int:
+                return value
+
+        @retry
+        def func(value: int) -> int:
+            return value
+
+        @retry
+        def no_args() -> int:
+            return 0
+
+        foo = Foo()
+        assert_type(Foo.make(1), str)
+        assert_type(foo.make(2), str)
+        assert_type(Foo.bare(3), int)
+        assert_type(Foo.static(4), int)
+        assert_type(foo.static(4), int)
+        assert_type(foo.method(5), int)
+        assert_type(Foo.method(foo, 5), int)
+        assert_type(func(6), int)
+        assert_type(no_args(), int)
+
+        # The #601 attributes stay visible on every kind of access.
+        assert_type(Foo.make.statistics, dict[str, typing.Any])
+        assert_type(foo.method.statistics, dict[str, typing.Any])
+        assert_type(func.statistics, dict[str, typing.Any])
+        assert_type(Foo.make.retry, tenacity.BaseRetrying)
+        assert_type(foo.method.retry, tenacity.BaseRetrying)
+        assert_type(Foo.static.retry, tenacity.BaseRetrying)
+
+        self.assertEqual(Foo.make(7), "Foo:7")
+        self.assertEqual(attempts, [1, 1, 2, 7])
 
 
 class TestMockingSleep:

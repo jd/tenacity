@@ -115,6 +115,8 @@ WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Any])
 P = t.ParamSpec("P")
 R = t.TypeVar("R")
+_S = t.TypeVar("_S")
+_T = t.TypeVar("_T")
 
 
 @dataclasses.dataclass(slots=True)
@@ -711,7 +713,76 @@ class _RetryDecorated(t.Protocol[P, R]):
     ) -> "_RetryDecorated[..., R]": ...
 
 
+class _RetryDecoratedMethod(t.Protocol[_S, P, R]):  # pyright: ignore[reportInvalidTypeVarUse]
+    """`_RetryDecorated` for a callable with at least one positional parameter.
+
+    Splitting off the first parameter (`_S`) lets `__get__` tell a
+    classmethod apart from other callables. Neither mypy nor pyright applies
+    `classmethod` binding to a callable protocol, so they fall back to this
+    descriptor; when the first parameter is `type[_T]` (the `cls` of a
+    classmethod) it is dropped on both class and instance access. Instance
+    methods also bind `self` precisely instead of degrading to `...`. Like
+    `_RetryDecorated.__get__`, this only affects static analysis. See issue
+    #756.
+    """
+
+    retry: "BaseRetrying"
+    statistics: dict[str, t.Any]
+    __wrapped__: "_RetryDecoratedMethod[_S, P, R]"
+
+    def retry_with(
+        self, *args: t.Any, **kwargs: t.Any
+    ) -> "_RetryDecoratedMethod[_S, P, R]": ...
+
+    def __call__(self, first: _S, /, *args: P.args, **kwargs: P.kwargs) -> R: ...
+
+    @t.overload
+    def __get__(
+        self: "_RetryDecoratedMethod[type[_T], P, R]",
+        instance: "_T | None",
+        owner: "type[_T] | None" = None,
+    ) -> _RetryDecorated[P, R]: ...
+    @t.overload
+    def __get__(
+        self, instance: None, owner: type | None = None
+    ) -> "_RetryDecoratedMethod[_S, P, R]": ...
+    @t.overload
+    def __get__(
+        self, instance: _S, owner: type | None = None
+    ) -> _RetryDecorated[P, R]: ...
+    @t.overload
+    def __get__(
+        self, instance: object, owner: type | None = None
+    ) -> _RetryDecorated[..., R]: ...
+
+
+class _RetryDecorator(t.Protocol):
+    @t.overload
+    def __call__(
+        self, fn: t.Callable[t.Concatenate[_S, P], R]
+    ) -> _RetryDecoratedMethod[_S, P, R]: ...
+    @t.overload
+    def __call__(self, fn: t.Callable[P, R]) -> _RetryDecorated[P, R]: ...
+
+
 class _AsyncRetryDecorator(t.Protocol):
+    @t.overload
+    def __call__(  # type: ignore[overload-overlap]
+        self,
+        fn: "t.Callable[t.Concatenate[_S, P], types.CoroutineType[t.Any, t.Any, R]]",
+    ) -> "_RetryDecoratedMethod[_S, P, types.CoroutineType[t.Any, t.Any, R]]": ...
+    @t.overload
+    def __call__(  # type: ignore[overload-overlap]
+        self, fn: t.Callable[t.Concatenate[_S, P], t.Coroutine[t.Any, t.Any, R]]
+    ) -> _RetryDecoratedMethod[_S, P, t.Coroutine[t.Any, t.Any, R]]: ...
+    @t.overload
+    def __call__(  # type: ignore[overload-overlap]
+        self, fn: t.Callable[t.Concatenate[_S, P], t.Awaitable[R]]
+    ) -> _RetryDecoratedMethod[_S, P, t.Awaitable[R]]: ...
+    @t.overload
+    def __call__(
+        self, fn: t.Callable[t.Concatenate[_S, P], R]
+    ) -> _RetryDecoratedMethod[_S, P, t.Awaitable[R]]: ...
     @t.overload
     def __call__(
         self, fn: "t.Callable[P, types.CoroutineType[t.Any, t.Any, R]]"
@@ -728,6 +799,12 @@ class _AsyncRetryDecorator(t.Protocol):
     def __call__(
         self, fn: t.Callable[P, R]
     ) -> "_RetryDecorated[P, t.Awaitable[R]]": ...
+
+
+@t.overload
+def retry(
+    func: t.Callable[t.Concatenate[_S, P], R],
+) -> _RetryDecoratedMethod[_S, P, R]: ...
 
 
 @t.overload
@@ -767,7 +844,7 @@ def retry(
     retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
     | None = None,
     enabled: bool = True,
-) -> t.Callable[[t.Callable[P, R]], _RetryDecorated[P, R]]: ...
+) -> _RetryDecorator: ...
 
 
 def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:

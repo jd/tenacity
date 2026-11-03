@@ -148,6 +148,37 @@ class TestAsyncio(unittest.TestCase):
         assert my_call.statistics["attempt_number"] == 1
         assert my_call.statistics is my_call.__wrapped__.statistics
 
+    @asynctest
+    async def test_decorated_async_classmethod_keeps_signature(self) -> None:
+        """Async classmethods must type-check when called on the class.
+
+        See issue #756.
+        """
+
+        class Foo:
+            @classmethod
+            @retry(stop=stop_after_attempt(3))
+            async def make(cls, value: int) -> str:
+                return f"{cls.__name__}:{value}"
+
+            @classmethod
+            @retry
+            async def bare(cls, value: int) -> int:
+                return value
+
+            @retry
+            async def method(self, value: int) -> int:
+                return value
+
+        foo = Foo()
+        made: str = await Foo.make(1)
+        made_from_instance: str = await foo.make(2)
+        bare: int = await Foo.bare(3)
+        method: int = await foo.method(4)
+        assert (made, made_from_instance, bare, method) == ("Foo:1", "Foo:2", 3, 4)
+        assert Foo.make.statistics["attempt_number"] == 1
+        assert isinstance(Foo.make.retry, tenacity.AsyncRetrying)
+
     def test_retry_preserves_argument_defaults(self) -> None:
         async def function_with_defaults(a: int = 1) -> int:
             return a
