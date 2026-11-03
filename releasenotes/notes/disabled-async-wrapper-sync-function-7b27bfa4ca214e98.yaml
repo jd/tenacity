@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Disabling retries for a synchronous function with an asynchronous sleep
+    callable now returns the function's result instead of raising TypeError
+    when the asynchronous wrapper tries to await it.
