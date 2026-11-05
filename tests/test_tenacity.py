@@ -239,6 +239,68 @@ class TestStopConditions(unittest.TestCase):
         self.assertFalse(s(3, 1.8))
         self.assertTrue(s(4, 1.8))
 
+    def test_stop_or_with_callable_on_the_left(self) -> None:
+        """A plain callable stop strategy composes from either operand side."""
+
+        def stop_after_two_attempts(retry_state: RetryCallState) -> bool:
+            return retry_state.attempt_number >= 2
+
+        # `|` and `&` used to raise TypeError when the callable was on the left,
+        # even though the same callable is accepted as `stop=`, by `stop_any()`
+        # / `stop_all()` and on the right-hand side of these very operators.
+        stop_any_combo = stop_after_two_attempts | tenacity.stop_after_delay(1)
+        self.assertIsInstance(stop_any_combo, tenacity.stop_any)
+        self.assertFalse(stop_any_combo(make_retry_state(1, 0.1)))
+        self.assertTrue(stop_any_combo(make_retry_state(2, 0.1)))
+        self.assertTrue(stop_any_combo(make_retry_state(1, 1.1)))
+
+        stop_all_combo = stop_after_two_attempts & tenacity.stop_after_delay(1)
+        self.assertIsInstance(stop_all_combo, tenacity.stop_all)
+        self.assertFalse(stop_all_combo(make_retry_state(1, 1.1)))
+        self.assertFalse(stop_all_combo(make_retry_state(2, 0.1)))
+        self.assertTrue(stop_all_combo(make_retry_state(2, 1.1)))
+
+    def test_stop_callable_on_the_left_stops_retrying(self) -> None:
+        """The reflected composition is used to drive a real retry loop."""
+        attempts = []
+
+        def stop_after_two_attempts(retry_state: RetryCallState) -> bool:
+            return retry_state.attempt_number >= 2
+
+        r = Retrying(
+            stop=stop_after_two_attempts | tenacity.stop_after_attempt(5),
+            wait=tenacity.wait_fixed(0),
+            sleep=lambda _seconds: None,
+            reraise=True,
+        )
+
+        def fail() -> None:
+            attempts.append(1)
+            raise ValueError("boom")
+
+        with self.assertRaises(ValueError):
+            r(fail)
+
+        self.assertEqual(2, len(attempts))
+        self.assertEqual(2, r.statistics["attempt_number"])
+
+    def test_stop_rejects_a_non_callable_operand(self) -> None:
+        stop = tenacity.stop_after_attempt(2)
+        # Statically accepted -- these are only rejected at runtime -- so the
+        # rejection is what has to be tested. `stop_after_attempt(1) | 1` used to
+        # build a `stop_any` instead, and `any()` stopped at the first operand,
+        # so a one-attempt retry completed without ever calling the integer.
+        bad_operands: list[typing.Any] = [1, 1.0, "stop_after_attempt", None, []]
+        for bad in bad_operands:
+            with self.assertRaises(TypeError):
+                stop | bad
+            with self.assertRaises(TypeError):
+                bad | stop
+            with self.assertRaises(TypeError):
+                stop & bad
+            with self.assertRaises(TypeError):
+                bad & stop
+
     def test_stop_after_attempt(self) -> None:
         r = Retrying(stop=tenacity.stop_after_attempt(3))
         self.assertFalse(r.stop(make_retry_state(2, 6546)))
