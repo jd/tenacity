@@ -659,6 +659,13 @@ class TestWaitConditions(unittest.TestCase):
         fn = tenacity.wait_random_exponential()
         fn(make_retry_state(0, 0))
 
+    def test_wait_random_exponential_negative_min(self) -> None:
+        wait = tenacity.wait_random_exponential(min=-1)
+        with mock.patch(
+            "tenacity.wait.random.uniform", side_effect=lambda low, high: low
+        ):
+            self.assertEqual(wait(make_retry_state(1, 0)), 0.0)
+
     def test_wait_random_exponential_statistically(self) -> None:
         fn = tenacity.wait_random_exponential(0.5, 60.0)
 

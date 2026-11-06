@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Clamp a negative minimum to zero when sampling a delay with
+    ``wait_random_exponential``, consistent with ``wait_exponential``.
