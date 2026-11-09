@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    A call of a function decorated with ``retry`` no longer leaves a reference
+    cycle behind when it succeeds, so it does not need the cycle garbage
+    collector to be freed.
