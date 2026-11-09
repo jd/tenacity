@@ -167,8 +167,13 @@ class AsyncRetrying(BaseRetrying):
     async def iter(self, retry_state: "RetryCallState") -> DoAttempt | DoSleep | t.Any:
         self._begin_iter(retry_state)
         result = None
-        for action in self.iter_state.actions:
-            result = await action(retry_state)
+        try:
+            for action in self.iter_state.actions:
+                result = await action(retry_state)
+        finally:
+            # The actions are bound methods of self: keeping them after the
+            # iteration makes a reference cycle.
+            self.iter_state.reset()
         return result
 
     @override
