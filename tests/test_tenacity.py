@@ -2367,6 +2367,27 @@ class TestMockingSleep:
         assert mock_sleep.call_count == 1
 
 
+class TestMockingDefaultSleep(unittest.TestCase):
+    def test_retry_does_not_sleep_when_mocked(self) -> None:
+        """It should be possible to mock the default sleep function for fast testing."""
+        thing = NoneReturnUntilAfterCount(2)
+
+        @retry(
+            wait=tenacity.wait_fixed(1),
+            retry=tenacity.retry_if_result(lambda x: x is None),
+        )
+        def function() -> typing.Any:
+            return thing.go()
+
+        start_time = current_time_ms()
+        with mock.patch("tenacity.nap.sleep") as mock_sleep:
+            result = function()
+        assert result is True
+        assert mock_sleep.call_count == 2
+        t = current_time_ms() - start_time
+        self.assertLess(t, 10)
+
+
 class TestPickle(unittest.TestCase):
     def test_retrying_picklable(self) -> None:
         """Retrying objects can be pickled for multiprocessing support."""

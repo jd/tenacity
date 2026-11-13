@@ -658,5 +658,29 @@ class TestSyncFunctionWithAsyncSleep(unittest.TestCase):
         assert mock_sleep.await_count == 2
 
 
+class TestMockingDefaultSleep(unittest.TestCase):
+    @asynctest
+    async def test_retry_does_not_sleep_when_mocked(self) -> None:
+        """It should be possible to mock the default sleep function for fast testing."""
+        mock_sleep = mock.AsyncMock()
+
+        thing = NoneReturnUntilAfterCount(2)
+
+        @retry(
+            wait=wait_fixed(1),
+            retry=retry_if_result(lambda x: x is None),
+        )
+        async def function() -> Any:
+            return thing.go()
+
+        start_time = current_time_ms()
+        with mock.patch("tenacity.asyncio.nap.sleep", side_effect=mock_sleep):
+            result = await function()
+        assert result is True
+        assert mock_sleep.call_count == 2
+        t = current_time_ms() - start_time
+        self.assertLess(t, 10)
+
+
 if __name__ == "__main__":
     unittest.main()

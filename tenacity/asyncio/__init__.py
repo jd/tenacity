@@ -33,6 +33,9 @@ from tenacity import (
     before_nothing,
 )
 from tenacity._utils import override
+from tenacity.asyncio import nap
+
+from .nap import sleep
 
 # Import all built-in retry strategies for easier usage.
 from .retry import (
@@ -54,30 +57,10 @@ P = t.ParamSpec("P")
 R = t.TypeVar("R")
 
 
-def _portable_async_sleep(seconds: float) -> t.Awaitable[None]:
-    # If trio is already imported, then importing it is cheap.
-    # If trio isn't already imported, then it's definitely not running, so we
-    # can skip further checks.
-    if "trio" in sys.modules:
-        # If trio is available, then sniffio is too
-        import sniffio
-        import trio
-
-        if sniffio.current_async_library() == "trio":
-            return trio.sleep(seconds)  # noqa: ASYNC105
-    # Otherwise, assume asyncio
-    # Lazy import asyncio as it's expensive (responsible for 25-50% of total import overhead).
-    import asyncio
-
-    return asyncio.sleep(seconds)
-
-
 class AsyncRetrying(BaseRetrying):
     def __init__(
         self,
-        sleep: t.Callable[
-            [int | float], t.Awaitable[None] | None
-        ] = _portable_async_sleep,
+        sleep: t.Callable[[int | float], t.Awaitable[None] | None] | None = None,
         stop: "StopBaseT" = tenacity.stop.stop_never,
         wait: "WaitBaseT" = tenacity.wait.wait_none(),
         retry: "SyncRetryBaseT | RetryBaseT" = tenacity.retry_if_exception_type(),
@@ -136,7 +119,8 @@ class AsyncRetrying(BaseRetrying):
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):
                 retry_state.prepare_for_next_attempt()
-                await self.sleep(do)  # type: ignore[misc]
+                sleeper = self.sleep or nap.sleep
+                await sleeper(do)  # type: ignore[misc]
             else:
                 return do  # type: ignore[no-any-return]
 
@@ -203,7 +187,8 @@ class AsyncRetrying(BaseRetrying):
                 return AttemptManager(retry_state=self._retry_state)
             if isinstance(do, DoSleep):
                 self._retry_state.prepare_for_next_attempt()
-                await self.sleep(do)  # type: ignore[misc]
+                sleeper = self.sleep or nap.sleep
+                await sleeper(do)  # type: ignore[misc]
             else:
                 raise StopAsyncIteration
 
@@ -246,4 +231,5 @@ __all__ = [
     "retry_any",
     "retry_if_exception",
     "retry_if_result",
+    "sleep",
 ]
