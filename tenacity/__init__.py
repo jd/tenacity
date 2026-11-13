@@ -25,6 +25,8 @@ import warnings
 from abc import ABC, abstractmethod
 from concurrent import futures
 
+from tenacity import nap
+
 from . import _utils
 from ._utils import override
 
@@ -258,7 +260,7 @@ class AttemptManager:
 class BaseRetrying(ABC):
     def __init__(
         self,
-        sleep: t.Callable[[int | float], None] = sleep,
+        sleep: t.Callable[[int | float], None] | None = None,
         stop: "StopBaseT" = stop_never,
         wait: "WaitBaseT" = wait_none(),
         retry: "RetryBaseT" = retry_if_exception_type(),
@@ -516,7 +518,8 @@ class BaseRetrying(ABC):
                 yield AttemptManager(retry_state=retry_state)
             elif isinstance(do, DoSleep):
                 retry_state.prepare_for_next_attempt()
-                self.sleep(do)
+                sleeper = self.sleep or nap.sleep
+                sleeper(do)
             else:
                 break
 
@@ -557,7 +560,8 @@ class Retrying(BaseRetrying):
                     retry_state.set_result(result)
             elif isinstance(do, DoSleep):
                 retry_state.prepare_for_next_attempt()
-                self.sleep(do)
+                sleeper = self.sleep or nap.sleep
+                sleeper(do)
             else:
                 return do  # type: ignore[no-any-return]
 
@@ -754,7 +758,7 @@ def retry(
 
 @t.overload
 def retry(
-    sleep: t.Callable[[int | float], None] = sleep,
+    sleep: t.Callable[[int | float], None] | None = None,
     stop: "StopBaseT" = stop_never,
     wait: "WaitBaseT" = wait_none(),
     retry: "RetryBaseT | tasyncio.retry.RetryBaseT" = retry_if_exception_type(),

@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Fix mocking of ``nap.sleep()``.
+    Previously, tests had to mock ``tenacity.nap.time.sleep`` or ``time.sleep`` directly.
+    Now, they can mock ``tenacity.nap.sleep`` as stated by the documentation.
+other:
+  - Enable async retrying code to mock the default sleeps (``tenacity.asyncio.nap.sleep``).
