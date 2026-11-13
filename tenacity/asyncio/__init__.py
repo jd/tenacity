@@ -35,6 +35,8 @@ from tenacity import (
 from tenacity._utils import override
 from tenacity.asyncio import nap
 
+from .nap import sleep
+
 # Import all built-in retry strategies for easier usage.
 from .retry import (
     RetryBaseT,
