@@ -30,7 +30,7 @@ def sleep(seconds: float) -> t.Awaitable[None]:
 
     For example::
 
-        with mock.patch("tenacity.asyncio.nap.sleep"):
+        with mock.patch("tenacity.asyncio.nap.sleep", side_effect=mock.AsyncMock()):
             ...
     """
     # If trio is already imported, then importing it is cheap.
