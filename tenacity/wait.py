@@ -318,10 +318,14 @@ class wait_exponential_jitter(wait_base):
 
     @override
     def __call__(self, retry_state: "RetryCallState") -> float:
-        jitter = random.uniform(0, self.jitter)
+        #jitter = random.uniform(0, self.jitter)
         try:
             exp = self.exp_base ** (retry_state.attempt_number - 1)
-            result = self.multiplier * exp + jitter
+            result = self.multiplier * exp
         except OverflowError:
             result = self.max
+        # Subtract jitter width from max delay before adding jitter
+        # It prevents capped retries from syncing up at the same timestamp
+        result = min(result, max(0, self.max - self.jitter))
+        result += random.uniform(0, self.jitter)
         return max(max(0, self.min), min(result, self.max))
