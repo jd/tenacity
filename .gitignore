@@ -11,3 +11,5 @@ doc/_build
 
 tenacity/_version.py
 /.pytest_cache
+.cie/
+.forge/
