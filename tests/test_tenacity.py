@@ -113,8 +113,8 @@ class TestBase(unittest.TestCase):
 
 class TestRetryingName(unittest.TestCase):
     def test_str_default(self) -> None:
-        """Without a name, str() returns '<unknown>'."""
-        assert str(Retrying()) == "<unknown>"
+        """Without a name, str() returns the constructing function's qualified name."""
+        assert str(Retrying()) == "TestRetryingName.test_str_default"
 
     def test_str_with_name(self) -> None:
         """With a name, str() returns the given name."""
@@ -147,10 +147,13 @@ class TestRetryingName(unittest.TestCase):
         assert "my_func" in captured[0].get_fn_name()
 
     def test_get_fn_name_context_manager_no_name(self) -> None:
-        """get_fn_name() returns '<unknown>' in context manager mode without a name."""
+        """get_fn_name() returns the constructing function's qualname in context manager mode without a name."""
         r = Retrying(stop=tenacity.stop_after_attempt(1))
         rs = RetryCallState(r, None, (), {})
-        assert rs.get_fn_name() == "<unknown>"
+        assert (
+            rs.get_fn_name()
+            == "TestRetryingName.test_get_fn_name_context_manager_no_name"
+        )
 
     def test_get_fn_name_context_manager_with_name(self) -> None:
         """get_fn_name() returns the given name in context manager mode."""

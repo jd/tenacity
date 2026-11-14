@@ -282,6 +282,10 @@ class BaseRetrying(ABC):
         self._local = threading.local()
         self.retry_error_cls = retry_error_cls
         self.retry_error_callback = retry_error_callback
+        if name is None:
+            f = sys._getframe(1)
+            name = getattr(f.f_code, "co_qualname", f.f_code.co_name)
+            del f
         self._name = name
         self.enabled = enabled
 
