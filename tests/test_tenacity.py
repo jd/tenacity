@@ -192,7 +192,8 @@ class TestRetryingName(unittest.TestCase):
         assert "my_block" in args[1]
 
     def test_before_log_uses_caller_name(self) -> None:
-        """before_log uses caller name without explicit name; async path walks internal frames."""
+        """before_log uses caller name without explicit name; sync and async paths walk internal frames."""
+        import asyncio
         import sys
         import unittest.mock
 
@@ -209,15 +210,29 @@ class TestRetryingName(unittest.TestCase):
             before=tenacity.before_log(logger, logging.INFO),
             stop=tenacity.stop_after_attempt(1),
         )
-        async_retrying = AsyncRetrying(stop=tenacity.stop_after_attempt(1))
+        async_retrying = AsyncRetrying(
+            before=tenacity.before_log(logger, logging.INFO),
+            stop=tenacity.stop_after_attempt(1),
+        )
         assert str(sync_retrying) == expected
         assert str(async_retrying) == expected
         with contextlib.suppress(Exception):
             for attempt in sync_retrying:
                 with attempt:
                     raise ValueError
-        args = log.call_args[0]
-        assert expected in args[1]
+
+        async def drive() -> None:
+            with contextlib.suppress(Exception):
+                async for attempt in async_retrying:
+                    with attempt:
+                        raise ValueError
+
+        asyncio.run(drive())
+        messages = [call[0][1] for call in log.call_args_list]
+        assert len(messages) == 2
+        for message in messages:
+            assert expected in message
+            assert "<unknown>" not in message
 
 
 class TestStopConditions(unittest.TestCase):
