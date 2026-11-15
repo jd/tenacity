@@ -114,7 +114,14 @@ class TestBase(unittest.TestCase):
 class TestRetryingName(unittest.TestCase):
     def test_str_default(self) -> None:
         """Without a name, str() returns the constructing function's qualified name."""
-        assert str(Retrying()) == "TestRetryingName.test_str_default"
+        import sys
+
+        expected = (
+            "TestRetryingName.test_str_default"
+            if sys.version_info >= (3, 11)
+            else "test_str_default"
+        )
+        assert str(Retrying()) == expected
 
     def test_str_with_name(self) -> None:
         """With a name, str() returns the given name."""
@@ -148,12 +155,16 @@ class TestRetryingName(unittest.TestCase):
 
     def test_get_fn_name_context_manager_no_name(self) -> None:
         """get_fn_name() returns the constructing function's qualname in context manager mode without a name."""
+        import sys
+
+        expected = (
+            "TestRetryingName.test_get_fn_name_context_manager_no_name"
+            if sys.version_info >= (3, 11)
+            else "test_get_fn_name_context_manager_no_name"
+        )
         r = Retrying(stop=tenacity.stop_after_attempt(1))
         rs = RetryCallState(r, None, (), {})
-        assert (
-            rs.get_fn_name()
-            == "TestRetryingName.test_get_fn_name_context_manager_no_name"
-        )
+        assert rs.get_fn_name() == expected
 
     def test_get_fn_name_context_manager_with_name(self) -> None:
         """get_fn_name() returns the given name in context manager mode."""
@@ -179,6 +190,34 @@ class TestRetryingName(unittest.TestCase):
 
         args = log.call_args[0]
         assert "my_block" in args[1]
+
+    def test_before_log_uses_caller_name(self) -> None:
+        """before_log uses caller name without explicit name; async path walks internal frames."""
+        import sys
+        import unittest.mock
+
+        from tenacity.asyncio import AsyncRetrying
+
+        expected = (
+            "TestRetryingName.test_before_log_uses_caller_name"
+            if sys.version_info >= (3, 11)
+            else "test_before_log_uses_caller_name"
+        )
+        log = unittest.mock.MagicMock()
+        logger = unittest.mock.MagicMock(log=log)
+        sync_retrying = Retrying(
+            before=tenacity.before_log(logger, logging.INFO),
+            stop=tenacity.stop_after_attempt(1),
+        )
+        async_retrying = AsyncRetrying(stop=tenacity.stop_after_attempt(1))
+        assert str(sync_retrying) == expected
+        assert str(async_retrying) == expected
+        with contextlib.suppress(Exception):
+            for attempt in sync_retrying:
+                with attempt:
+                    raise ValueError
+        args = log.call_args[0]
+        assert expected in args[1]
 
 
 class TestStopConditions(unittest.TestCase):
