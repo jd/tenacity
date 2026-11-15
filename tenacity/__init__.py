@@ -284,7 +284,7 @@ class BaseRetrying(ABC):
         self.retry_error_callback = retry_error_callback
         if name is None:
             _pkg = __file__.rsplit("/", 1)[0] + "/"
-            f = sys._getframe(1)
+            f = sys._getframe(1)  # noqa: SLF001
             while f is not None and f.f_code.co_filename.startswith(_pkg):
                 _prev = f
                 f = f.f_back
