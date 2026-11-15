@@ -282,6 +282,18 @@ class BaseRetrying(ABC):
         self._local = threading.local()
         self.retry_error_cls = retry_error_cls
         self.retry_error_callback = retry_error_callback
+        if name is None:
+            _pkg = __file__.rsplit("/", 1)[0] + "/"
+            f: types.FrameType | None = sys._getframe(1)  # noqa: SLF001
+            while f is not None and f.f_code.co_filename.startswith(_pkg):
+                _prev = f
+                f = f.f_back
+                del _prev
+            if f is not None:
+                name = getattr(f.f_code, "co_qualname", f.f_code.co_name)
+                del f
+            else:
+                name = "<unknown>"
         self._name = name
         self.enabled = enabled
 
