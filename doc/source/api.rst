@@ -8,6 +8,9 @@ Retry Main API
 .. autofunction:: tenacity.retry
    :noindex:
 
+.. autofunction:: tenacity.retry_method
+   :noindex:
+
 .. autoclass:: tenacity.Retrying
    :members:
 

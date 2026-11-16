@@ -31,6 +31,9 @@ from tenacity import RetryCallState, RetryError, Retrying, retry
 from tenacity._utils import override
 from tenacity.retry import retry_all, retry_any
 
+if typing.TYPE_CHECKING:
+    from typing_extensions import assert_type
+
 _unset = object()
 
 
@@ -2324,6 +2327,96 @@ class TestRetryTyping(unittest.TestCase):
         doubler = Doubler()
         result: int = doubler.double(value=21)
         self.assertEqual(result, 42)
+
+
+class TestRetryMethod(unittest.TestCase):
+    def test_bare_form_retries(self) -> None:
+        """The bare ``@retry_method`` form retries like ``@retry``."""
+        calls = []
+
+        @tenacity.retry_method
+        def flaky() -> str:
+            calls.append(1)
+            if len(calls) < 3:
+                raise OSError("try again")
+            return "done"
+
+        self.assertEqual(flaky(), "done")
+        self.assertEqual(len(calls), 3)
+
+    def test_keyword_form_stops(self) -> None:
+        """The keyword form passes its arguments to ``Retrying``."""
+        calls = []
+
+        @tenacity.retry_method(stop=tenacity.stop_after_attempt(2))
+        def always_fails() -> None:
+            calls.append(1)
+            raise OSError("fail")
+
+        with pytest.raises(RetryError):
+            always_fails()
+        self.assertEqual(len(calls), 2)
+
+    def test_override_keeps_function_type(self) -> None:
+        """A ``@retry_method`` override keeps the type of the decorated function.
+
+        The annotations below are the assertions. mypy checks them when it
+        checks this file. The negative case uses warn_unused_ignores: if
+        ``retry_method`` returns ``Any``, the assignment is no longer an error,
+        and the unused ignore fails the type check. See issue #763.
+        """
+
+        class Base:
+            def compute(self, value: int) -> int:
+                raise NotImplementedError
+
+        class Impl(Base):
+            @override
+            @tenacity.retry_method(stop=tenacity.stop_after_attempt(3))
+            def compute(self, value: int) -> int:
+                return value * 2
+
+        impl = Impl()
+        _bound: typing.Callable[[int], int] = impl.compute
+        _mismatch: typing.Callable[[str], int] = impl.compute  # type: ignore[assignment]
+        self.assertEqual(impl.compute(21), 42)
+
+    def test_decorated_function_keeps_its_type(self) -> None:
+        """The bare and keyword forms return the type of the decorated function.
+
+        mypy checks the ``assert_type`` calls when it checks this file. If
+        ``retry_method`` returns ``Any`` or ``_RetryDecorated``, the type check
+        fails. See issue #763.
+        """
+
+        def num_to_str(number: int, /) -> str:
+            return str(number)
+
+        with_raw = tenacity.retry_method(num_to_str)
+        with_constructor = tenacity.retry_method()(num_to_str)
+        if typing.TYPE_CHECKING:
+            assert_type(with_raw, typing.Callable[[int], str])
+            assert_type(with_constructor, typing.Callable[[int], str])
+
+        self.assertEqual(with_raw(1), "1")
+        self.assertEqual(with_constructor(1), "1")
+
+    def test_retry_attributes_exist_at_runtime(self) -> None:
+        """``retry``, ``statistics`` and ``retry_with`` stay available at runtime.
+
+        Type checkers do not see these attributes. The ignores below assert
+        this, because warn_unused_ignores fails the type check if they are
+        not needed.
+        """
+
+        @tenacity.retry_method(stop=tenacity.stop_after_attempt(3))
+        def succeed() -> int:
+            return 1
+
+        self.assertEqual(succeed(), 1)
+        self.assertIsInstance(succeed.retry, Retrying)  # type: ignore[attr-defined]
+        self.assertEqual(succeed.statistics["attempt_number"], 1)  # type: ignore[attr-defined]
+        self.assertTrue(callable(succeed.retry_with))  # type: ignore[attr-defined]
 
 
 class TestMockingSleep:
