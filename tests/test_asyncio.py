@@ -15,9 +15,9 @@
 import asyncio
 import inspect
 import unittest
-from collections.abc import Callable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine
 from functools import wraps
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 from unittest import mock
 
 try:
@@ -40,6 +40,10 @@ from tenacity import (
     stop_after_attempt,
 )
 from tenacity import asyncio as tasyncio
+from tenacity._utils import override
+
+if TYPE_CHECKING:
+    from typing_extensions import assert_type
 from tenacity.wait import wait_fixed
 
 from .test_tenacity import (
@@ -654,6 +658,78 @@ class TestSyncFunctionWithAsyncSleep(unittest.TestCase):
             return thing.go()
 
         result = await sync_function()
+        assert result is True
+        assert mock_sleep.await_count == 2
+
+
+class TestAsyncRetryMethod(unittest.TestCase):
+    @asynctest
+    async def test_decorated_function_keeps_its_type(self) -> None:
+        """Each async form returns the type that matches the runtime result.
+
+        mypy checks the ``assert_type`` calls when it checks this file. A
+        coroutine function keeps its own type. A sync function with an async
+        ``sleep`` returns an awaitable. See issue #763.
+        """
+
+        def num_to_str(number: int, /) -> str:
+            return str(number)
+
+        async def async_num_to_str(number: int, /) -> str:
+            return str(number)
+
+        async def async_sleep(seconds: float) -> None:
+            return None
+
+        with_raw = tenacity.retry_method(async_num_to_str)
+        with_async_sleep = tenacity.retry_method(sleep=async_sleep)(async_num_to_str)
+        sync_with_async_sleep = tenacity.retry_method(sleep=async_sleep)(num_to_str)
+        if TYPE_CHECKING:
+            assert_type(with_raw, Callable[[int], Coroutine[Any, Any, str]])
+            assert_type(with_async_sleep, Callable[[int], Coroutine[Any, Any, str]])
+            assert_type(sync_with_async_sleep, Callable[[int], Awaitable[str]])
+
+        assert await with_raw(1) == "1"
+        assert await with_async_sleep(1) == "1"
+        assert await sync_with_async_sleep(1) == "1"
+
+    @asynctest
+    async def test_async_override_retries(self) -> None:
+        """A ``@retry_method`` coroutine override retries and keeps its type."""
+        thing = NoIOErrorAfterCount(2)
+
+        class Base:
+            async def fetch(self) -> bool:
+                raise NotImplementedError
+
+        class Impl(Base):
+            @override
+            @tenacity.retry_method
+            async def fetch(self) -> bool:
+                value: bool = thing.go()
+                return value
+
+        result: bool = await Impl().fetch()
+        assert result is True
+        assert thing.counter == 2
+
+    @asynctest
+    async def test_sync_function_with_async_sleep(self) -> None:
+        """A sync function with an async sleep callable returns an awaitable."""
+        mock_sleep = mock.AsyncMock()
+        thing = NoneReturnUntilAfterCount(2)
+
+        @tenacity.retry_method(
+            sleep=mock_sleep,
+            wait=wait_fixed(1),
+            retry=retry_if_result(lambda x: x is None),
+        )
+        def sync_function() -> bool:
+            value: bool = thing.go()
+            return value
+
+        awaitable: Awaitable[bool] = sync_function()
+        result = await awaitable
         assert result is True
         assert mock_sleep.await_count == 2
 

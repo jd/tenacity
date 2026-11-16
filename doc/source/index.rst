@@ -768,6 +768,45 @@ factory function instead:
 
     process(my_generator)  # each retry gets a fresh generator
 
+Overriding methods and type checkers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``@retry`` gives the decorated function a type that also declares the
+``retry``, ``statistics`` and ``retry_with`` attributes. pyright reports
+``reportIncompatibleMethodOverride`` when a method with this type overrides a
+base-class method. Runtime behavior is correct, and mypy reports no error.
+
+For a method that overrides a base-class method, use ``@retry_method``. It takes
+the same arguments as ``@retry`` and retries in the same way. The decorated
+method keeps its own type, so pyright accepts the override:
+
+.. testcode::
+
+    import abc
+
+    class Base(abc.ABC):
+        @abc.abstractmethod
+        def compute(self, x: int) -> int: ...
+
+    class Impl(Base):
+        @retry_method(stop=stop_after_attempt(3))
+        def compute(self, x: int) -> int:
+            return x * 2
+
+    print(Impl().compute(21))
+
+.. testoutput::
+
+   42
+
+If you give an async ``sleep`` to a sync method, the decorated method returns
+an awaitable, and its type shows this.
+
+Type checkers do not see the ``retry``, ``statistics`` and ``retry_with``
+attributes on a function that ``@retry_method`` decorates. These attributes
+are present at runtime. If you need them in typed code, keep ``@retry`` and add
+``# pyright: ignore[reportIncompatibleMethodOverride]`` to the method.
+
 Contribute
 ----------
 

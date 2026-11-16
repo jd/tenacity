@@ -807,6 +807,77 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
     return wrap
 
 
+_AwaitableFn = t.TypeVar("_AwaitableFn", bound=t.Callable[..., t.Awaitable[t.Any]])
+
+
+class _AsyncRetryMethodDecorator(t.Protocol):
+    @t.overload
+    def __call__(self, fn: _AwaitableFn) -> _AwaitableFn: ...
+    @t.overload
+    def __call__(self, fn: t.Callable[P, R]) -> t.Callable[P, t.Awaitable[R]]: ...
+
+
+@t.overload
+def retry_method(func: WrappedFn) -> WrappedFn: ...
+
+
+@t.overload
+def retry_method(
+    *,
+    sleep: t.Callable[[int | float], t.Awaitable[None]],
+    stop: "StopBaseT" = ...,
+    wait: "WaitBaseT" = ...,
+    retry: "RetryBaseT | tasyncio.retry.RetryBaseT" = ...,
+    before: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = ...,
+    after: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = ...,
+    before_sleep: t.Callable[["RetryCallState"], t.Awaitable[None] | None] | None = ...,
+    reraise: bool = ...,
+    retry_error_cls: type["RetryError"] = ...,
+    retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
+    | None = ...,
+    enabled: bool = ...,
+) -> _AsyncRetryMethodDecorator: ...
+
+
+@t.overload
+def retry_method(
+    sleep: t.Callable[[int | float], None] = sleep,
+    stop: "StopBaseT" = stop_never,
+    wait: "WaitBaseT" = wait_none(),
+    retry: "RetryBaseT | tasyncio.retry.RetryBaseT" = retry_if_exception_type(),
+    before: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = before_nothing,
+    after: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = after_nothing,
+    before_sleep: t.Callable[["RetryCallState"], t.Awaitable[None] | None]
+    | None = None,
+    reraise: bool = False,
+    retry_error_cls: type["RetryError"] = RetryError,
+    retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
+    | None = None,
+    enabled: bool = True,
+) -> t.Callable[[WrappedFn], WrappedFn]: ...
+
+
+def retry_method(*dargs: t.Any, **dkw: t.Any) -> t.Any:
+    """Wrap a function with a new `Retrying` object, and keep its own type.
+
+    At runtime, this decorator is the same as :func:`retry`. The difference
+    is for type checkers: the decorated function keeps its own type. Use it
+    on a method that overrides a base-class method, because pyright reports
+    ``reportIncompatibleMethodOverride`` when you use ``@retry`` there.
+
+    Use it on plain ``def`` and ``async def`` functions. If you give an async
+    ``sleep`` to a sync function, the decorated function returns an awaitable,
+    and its type shows this.
+
+    Type checkers do not see the ``retry``, ``statistics`` and ``retry_with``
+    attributes on the result. These attributes are present at runtime.
+
+    :param dargs: positional arguments passed to Retrying object
+    :param dkw: keyword arguments passed to the Retrying object
+    """
+    return retry(*dargs, **dkw)
+
+
 from tenacity.asyncio import AsyncRetrying  # noqa: E402
 
 if _has_tornado():
@@ -847,6 +918,7 @@ __all__ = [
     "retry_if_not_exception_type",
     "retry_if_not_result",
     "retry_if_result",
+    "retry_method",
     "retry_never",
     "retry_unless_exception_type",
     "sleep",

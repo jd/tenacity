@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    Add the ``retry_method`` decorator. At runtime it is the same as
+    ``retry``, but the decorated function keeps its own type (a sync
+    function with an async ``sleep`` returns an awaitable). Use it on a
+    method that overrides a base-class method: pyright reports
+    ``reportIncompatibleMethodOverride`` on such a method when you use
+    ``@retry``. Type checkers do not see the ``retry``, ``statistics`` and
+    ``retry_with`` attributes on a function that ``retry_method`` decorates,
+    but these attributes are present at runtime.
