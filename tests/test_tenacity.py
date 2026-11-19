@@ -621,6 +621,16 @@ class TestWaitConditions(unittest.TestCase):
         self.assertEqual(sleep_intervals, [1.0, 2.0, 3.0, 3.0])
         sleep_intervals[:] = []
 
+    def test_wait_chain_accepts_callable_strategy(self) -> None:
+        # A plain callable is a valid wait strategy everywhere else (`wait=`,
+        # `wait_fixed(...) + callable`, `wait_combine(...)`), so `wait_chain`
+        # must not require the callable's parameter to be named `retry_state`.
+        r = Retrying(
+            wait=tenacity.wait_chain(tenacity.wait_fixed(1), lambda _: 2.0),
+        )
+        self.assertEqual(r.wait(make_retry_state(1, 1)), 1.0)
+        self.assertEqual(r.wait(make_retry_state(2, 1)), 2.0)
+
     def test_wait_chain_requires_at_least_one_strategy(self) -> None:
         with self.assertRaises(ValueError):
             tenacity.wait_chain()
