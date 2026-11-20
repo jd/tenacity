@@ -2272,6 +2272,46 @@ class TestRetryException(unittest.TestCase):
         self.assertEqual(expected.last_attempt, actual.last_attempt)
 
 
+class TestRetryDecoratorCallForms(unittest.TestCase):
+    def test_positional_function_with_kwargs_applies_configuration(self) -> None:
+        """``retry(fn, **kwargs)`` must apply the keyword configuration.
+
+        ``retry()`` documents its keyword arguments as being passed to the
+        Retrying object.  When a callable is given positionally (the bare
+        ``@retry`` form) together with configuration keywords, the keywords
+        must still be honored instead of being silently dropped, which left
+        the default ``stop_never`` in place and retried forever.
+        """
+        calls: list[int] = []
+
+        def flaky() -> None:
+            calls.append(1)
+            raise ValueError("boom")
+
+        wrapped = retry(
+            flaky,
+            stop=tenacity.stop_after_attempt(2),
+            wait=tenacity.wait_fixed(0),
+        )
+        assert isinstance(wrapped.retry.stop, tenacity.stop_after_attempt)
+        assert wrapped.retry.stop.max_attempt_number == 2
+        with pytest.raises(RetryError):
+            wrapped()
+        assert len(calls) == 2
+
+    def test_positional_function_alone_still_decorates(self) -> None:
+        """The bare ``@retry`` form keeps working without keywords."""
+        calls: list[int] = []
+
+        @retry
+        def stable() -> int:
+            calls.append(1)
+            return 42
+
+        assert stable() == 42
+        assert len(calls) == 1
+
+
 class TestRetryTyping(unittest.TestCase):
     def test_retry_type_annotations(self) -> None:
         """The decorator should maintain types of decorated functions.

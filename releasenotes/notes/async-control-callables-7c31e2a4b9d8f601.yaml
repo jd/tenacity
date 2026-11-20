@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Passing an async callable as the ``retry``, ``stop``, ``wait``,
+    ``before``, ``after`` or ``before_sleep`` argument of ``@retry`` for a
+    synchronous target now selects ``AsyncRetrying`` so the callable is
+    actually awaited. Previously the coroutine object it returned was
+    silently coerced by truthiness (retry/stop predicates) or dropped
+    (hooks), so the user's logic never ran.
