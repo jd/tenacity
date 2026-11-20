@@ -626,6 +626,56 @@ class TestDecoratorWrapper(unittest.TestCase):
                 self.fail("RetryError should have been raised after 1 attempt")
 
 
+class TestAsyncCallablesOnSyncTarget(unittest.TestCase):
+    """Async control callables on a sync target must select AsyncRetrying.
+
+    On the sync path a returned coroutine object is silently coerced by
+    truthiness (retry/stop predicates) or dropped (hooks), so the user's
+    logic never runs.  The ``retry()`` overloads type the ``retry`` and
+    hook parameters as accepting awaitable results, so the decorator has
+    to route these calls through AsyncRetrying, which awaits them.
+    """
+
+    @asynctest
+    async def test_async_retry_predicate_is_awaited(self) -> None:
+        calls: list[int] = []
+
+        async def never_retry(retry_state: RetryCallState) -> bool:
+            return False
+
+        @retry(retry=never_retry, stop=stop_after_attempt(3), wait=wait_fixed(0))
+        def sync_fn() -> None:
+            calls.append(1)
+            raise ValueError("boom")
+
+        # The overloads still describe this shape as returning a sync wrapper
+        # (the async-parameter case has no dedicated overload yet), but at
+        # runtime AsyncRetrying is selected and the wrapper is a coroutine
+        # function.
+        with pytest.raises(ValueError):
+            await sync_fn()  # type: ignore[misc]
+        assert len(calls) == 1
+
+    @asynctest
+    async def test_async_before_hook_is_awaited(self) -> None:
+        seen: list[int] = []
+
+        async def before_hook(retry_state: RetryCallState) -> None:
+            seen.append(retry_state.attempt_number)
+
+        @retry(
+            stop=stop_after_attempt(2),
+            wait=wait_fixed(0),
+            before=before_hook,
+        )
+        def sync_fn() -> None:
+            raise ValueError("boom")
+
+        with pytest.raises(RetryError):
+            await sync_fn()  # type: ignore[misc]
+        assert seen == [1, 2]
+
+
 # make sure mypy accepts passing an async sleep function
 # https://github.com/jd/tenacity/issues/399
 async def my_async_sleep(x: float) -> None:
