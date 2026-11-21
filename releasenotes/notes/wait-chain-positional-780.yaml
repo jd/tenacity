@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    `wait_chain` now calls its strategies positionally, like
+    `wait_combine` does, so a plain callable wait strategy works
+    regardless of its parameter name. Previously it passed
+    `retry_state` as a keyword argument, raising `TypeError` on any
+    callable whose parameter is not named `retry_state`. Its
+    constructor also accepts any `WaitBaseT` callable now.

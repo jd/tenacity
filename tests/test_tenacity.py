@@ -629,6 +629,18 @@ class TestWaitConditions(unittest.TestCase):
         with self.assertRaises(ValueError):
             Retrying(wait=tenacity.wait_chain())
 
+    def test_wait_chain_passes_state_positionally(self) -> None:
+        # A WaitBaseT callable only promises to take the state positionally;
+        # its parameter name is its own business. Regression test for #780:
+        # wait_chain used to pass retry_state as a keyword, which raised
+        # TypeError on callables whose parameter is named otherwise.
+        chained = tenacity.wait_chain(
+            tenacity.wait_fixed(1),
+            lambda rs: 2.0,
+        )
+        self.assertEqual(chained(make_retry_state(1, 5)), 1.0)
+        self.assertEqual(chained(make_retry_state(2, 5)), 2.0)
+
     def test_wait_random_exponential(self) -> None:
         fn = tenacity.wait_random_exponential(0.5, 60.0)
 
