@@ -123,7 +123,7 @@ class wait_chain(wait_base):
                   "thereafter.")
     """
 
-    def __init__(self, *strategies: wait_base) -> None:
+    def __init__(self, *strategies: "WaitBaseT") -> None:
         if not strategies:
             raise ValueError("wait_chain() requires at least one strategy")
         self.strategies = strategies
@@ -132,7 +132,11 @@ class wait_chain(wait_base):
     def __call__(self, retry_state: "RetryCallState") -> float:
         wait_func_no = min(max(retry_state.attempt_number, 1), len(self.strategies))
         wait_func = self.strategies[wait_func_no - 1]
-        return wait_func(retry_state=retry_state)
+        # Positional, like `wait_combine.__call__`: a `WaitBaseT` callable is
+        # only guaranteed to take the state positionally, so passing it by
+        # keyword crashed on any callable whose parameter is not named
+        # `retry_state`.
+        return wait_func(retry_state)
 
 
 class wait_exception(wait_base):
