@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    ``wait_random`` now rejects negative ``min``/``max`` values at
+    construction with ``ValueError``. A negative bound previously let the
+    drawn wait go below zero, crashing the retry loop with
+    ``ValueError: sleep length must be non-negative`` from ``time.sleep``.

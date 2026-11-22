@@ -15,7 +15,7 @@
 import asyncio
 import inspect
 import unittest
-from collections.abc import Callable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine
 from functools import wraps
 from typing import Any, TypeVar
 from unittest import mock
@@ -196,6 +196,57 @@ class TestAsyncio(unittest.TestCase):
         things, attempt_nos2 = zip(*odd_thing_attempts)
         assert len(set(things)) == 1
         assert list(attempt_nos2) == [1, 2, 3]
+
+    @asynctest
+    async def test_retry_predicate_returning_awaitable_is_awaited(self) -> None:
+        # A sync callable returning an awaitable is a valid async RetryBaseT
+        # (`Callable[..., Awaitable[bool]]`). Its decision must be awaited,
+        # not decided by the truthiness of the coroutine object.
+        async def async_should_retry(retry_state: RetryCallState) -> bool:
+            return False
+
+        def retry_pred(retry_state: RetryCallState) -> Awaitable[bool]:
+            return async_should_retry(retry_state)
+
+        attempts = 0
+
+        async def failing() -> None:
+            nonlocal attempts
+            attempts += 1
+            raise ValueError("boom")
+
+        retrying = AsyncRetrying(
+            retry=retry_pred,
+            stop=stop_after_attempt(3),
+            wait=wait_fixed(0),
+        )
+        with pytest.raises(ValueError, match="boom"):
+            await retrying(failing)
+        assert attempts == 1
+
+    @asynctest
+    async def test_retry_predicate_returning_awaitable_true_retries(self) -> None:
+        async def async_should_retry(retry_state: RetryCallState) -> bool:
+            return True
+
+        def retry_pred(retry_state: RetryCallState) -> Awaitable[bool]:
+            return async_should_retry(retry_state)
+
+        attempts = 0
+
+        async def failing() -> None:
+            nonlocal attempts
+            attempts += 1
+            raise ValueError("boom")
+
+        retrying = AsyncRetrying(
+            retry=retry_pred,
+            stop=stop_after_attempt(3),
+            wait=wait_fixed(0),
+        )
+        with pytest.raises(RetryError):
+            await retrying(failing)
+        assert attempts == 3
 
 
 class TestAsyncEnabled(unittest.TestCase):

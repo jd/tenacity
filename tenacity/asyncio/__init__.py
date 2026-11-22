@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import functools
+import inspect
 import sys
 import typing as t
 
@@ -146,9 +147,14 @@ class AsyncRetrying(BaseRetrying):
 
     @override
     async def _run_retry(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
-        self.iter_state.retry_run_result = await _utils.wrap_to_async_func(self.retry)(
-            retry_state
-        )
+        result = await _utils.wrap_to_async_func(self.retry)(retry_state)
+        # A sync callable returning an awaitable is a valid async RetryBaseT
+        # (`Callable[..., Awaitable[bool]]`). wrap_to_async_func invokes it
+        # without awaiting the returned awaitable, and a coroutine object is
+        # always truthy, so the retry decision would silently become "retry".
+        if inspect.isawaitable(result):
+            result = await result
+        self.iter_state.retry_run_result = result
 
     @override
     async def _run_wait(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]

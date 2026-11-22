@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    ``AsyncRetrying`` now awaits awaitable results returned by sync retry
+    predicates, as already promised by the async ``RetryBaseT`` type.
+    Previously the coroutine object itself was judged truthy, so a
+    ``retry`` callable returning an awaitable always retried regardless of
+    the predicate's decision.
