@@ -337,6 +337,20 @@ class TestWaitConditions(unittest.TestCase):
             self.assertTrue(t >= 0)
             self.assertTrue(t <= 2)
 
+    def test_wait_random_rejects_negative_bounds(self) -> None:
+        # A negative bound lets the drawn wait go below zero; time.sleep then
+        # raises ValueError mid-retry, replacing the retry flow entirely.
+        for min_, max_ in ((-1, 1), (1, -1), (-1, -1)):
+            with (
+                self.subTest(min=min_, max=max_),
+                self.assertRaises(ValueError),
+            ):
+                tenacity.wait_random(min=min_, max=max_)
+
+    def test_wait_random_rejects_negative_timedelta_bounds(self) -> None:
+        with self.assertRaises(ValueError):
+            tenacity.wait_random(min=datetime.timedelta(seconds=-1), max=1)
+
     def test_exponential(self) -> None:
         r = Retrying(wait=tenacity.wait_exponential())
         self.assertEqual(r.wait(make_retry_state(1, 0)), 1)
