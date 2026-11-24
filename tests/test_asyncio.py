@@ -15,9 +15,9 @@
 import asyncio
 import inspect
 import unittest
-from collections.abc import Callable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine
 from functools import wraps
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 from unittest import mock
 
 try:
@@ -231,7 +231,8 @@ class TestAsyncEnabled(unittest.TestCase):
         def value() -> int:
             return 42
 
-        assert await value() == 42
+        # functools.wraps keeps the sync signature, so mypy still sees an int.
+        assert await cast("Awaitable[int]", value()) == 42
 
     @asynctest
     async def test_enabled_false_aiter_raises_original_exception(self) -> None:
