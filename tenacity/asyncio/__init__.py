@@ -148,11 +148,15 @@ class AsyncRetrying(BaseRetrying):
     @override
     async def _run_retry(self, retry_state: "RetryCallState") -> None:  # type: ignore[override]
         result = await _utils.wrap_to_async_func(self.retry)(retry_state)
-        # A sync callable returning an awaitable is a valid async RetryBaseT
+        # A sync callable returning a coroutine is a valid async RetryBaseT
         # (`Callable[..., Awaitable[bool]]`). wrap_to_async_func invokes it
-        # without awaiting the returned awaitable, and a coroutine object is
-        # always truthy, so the retry decision would silently become "retry".
-        if inspect.isawaitable(result):
+        # without awaiting the returned coroutine, and a coroutine object is
+        # always truthy, so the retry decision would silently become "retry"
+        # (and Python warns that the coroutine was never awaited). Only
+        # coroutine objects are awaited: a Future or Task returned by a sync
+        # callable is already scheduled, has no such warning, and keeps the
+        # behaviour it had before this change.
+        if inspect.iscoroutine(result):
             result = await result
         self.iter_state.retry_run_result = result
 

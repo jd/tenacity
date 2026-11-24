@@ -15,6 +15,7 @@
 import asyncio
 import inspect
 import unittest
+import warnings
 from collections.abc import Awaitable, Callable, Coroutine
 from functools import wraps
 from typing import Any, TypeVar
@@ -246,6 +247,65 @@ class TestAsyncio(unittest.TestCase):
         )
         with pytest.raises(RetryError):
             await retrying(failing)
+        assert attempts == 3
+
+    @asynctest
+    async def test_retry_predicate_returning_coroutine_leaves_none_unawaited(
+        self,
+    ) -> None:
+        """The returned coroutine is awaited, so Python emits no warning."""
+
+        def retry_pred(retry_state: RetryCallState) -> Coroutine[Any, Any, bool]:
+            async def should_retry() -> bool:
+                return False
+
+            return should_retry()
+
+        async def failing() -> None:
+            raise ValueError("boom")
+
+        retrying = AsyncRetrying(
+            retry=retry_pred,
+            stop=stop_after_attempt(3),
+            wait=wait_fixed(0),
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            with pytest.raises(ValueError, match="boom"):
+                await retrying(failing)
+
+    @asynctest
+    async def test_retry_predicate_returning_future_keeps_prior_behaviour(
+        self,
+    ) -> None:
+        """Only coroutines are awaited; a scheduled Future keeps its old result.
+
+        A pending Future is already running and, unlike a never-awaited
+        coroutine, is not dropped silently, so awaiting it would change
+        behaviour this change does not intend to touch.
+        """
+        loop = asyncio.get_running_loop()
+        fut = loop.create_future()
+        loop.call_soon(fut.set_result, False)
+
+        def retry_pred(retry_state: RetryCallState) -> Any:
+            return fut
+
+        attempts = 0
+
+        async def failing() -> None:
+            nonlocal attempts
+            attempts += 1
+            raise ValueError("boom")
+
+        retrying = AsyncRetrying(
+            retry=retry_pred,
+            stop=stop_after_attempt(3),
+            wait=wait_fixed(0),
+        )
+        with pytest.raises(RetryError):
+            await retrying(failing)
+        # Truthiness of the pending Future, as before this change.
         assert attempts == 3
 
 
