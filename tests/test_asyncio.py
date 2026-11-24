@@ -215,6 +215,25 @@ class TestAsyncEnabled(unittest.TestCase):
         assert call_count == 1
 
     @asynctest
+    async def test_enabled_false_accepts_sync_target(self) -> None:
+        """When enabled=False, a synchronous target is not awaited.
+
+        Selecting an async control (here ``before``) routes the decorator
+        through ``AsyncRetrying.wraps()``, whose disabled branch used to do
+        ``await fn(...)`` unconditionally and raised
+        ``TypeError: object int can't be used in 'await' expression``.
+        """
+
+        async def async_before(state: RetryCallState) -> None:
+            pass
+
+        @retry(before=async_before, enabled=False)
+        def value() -> int:
+            return 42
+
+        assert await value() == 42
+
+    @asynctest
     async def test_enabled_false_aiter_raises_original_exception(self) -> None:
         """When enabled=False, the async iterator raises the original exception,
         not a RetryError, and the body executes exactly once."""
