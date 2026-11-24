@@ -736,6 +736,25 @@ def retry(func: t.Callable[P, R]) -> _RetryDecorated[P, R]: ...
 
 @t.overload
 def retry(
+    func: t.Callable[P, R],
+    *,
+    sleep: t.Callable[[int | float], None] = ...,
+    stop: "StopBaseT" = ...,
+    wait: "WaitBaseT" = ...,
+    retry: "RetryBaseT | tasyncio.retry.RetryBaseT" = ...,
+    before: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = ...,
+    after: t.Callable[["RetryCallState"], t.Awaitable[None] | None] = ...,
+    before_sleep: t.Callable[["RetryCallState"], t.Awaitable[None] | None] | None = ...,
+    reraise: bool = ...,
+    retry_error_cls: type["RetryError"] = ...,
+    retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
+    | None = ...,
+    enabled: bool = ...,
+) -> _RetryDecorated[P, R]: ...
+
+
+@t.overload
+def retry(
     *,
     sleep: t.Callable[[int | float], t.Awaitable[None]],
     stop: "StopBaseT" = ...,
@@ -778,7 +797,7 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
     """
     # support both @retry and @retry() as valid syntax
     if len(dargs) == 1 and callable(dargs[0]):
-        return retry()(dargs[0])
+        return retry(**dkw)(dargs[0])
 
     def wrap(f: t.Callable[P, R]) -> _RetryDecorated[P, R]:
         if isinstance(f, retry_base):
@@ -789,9 +808,28 @@ def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
             )
         r: BaseRetrying
         sleep = dkw.get("sleep")
-        if _utils.is_coroutine_callable(f) or (
+        # A coroutine-returning callable passed for any control parameter
+        # needs the async machinery: on the sync path the coroutine object
+        # would be silently coerced by truthiness (retry/stop predicates),
+        # corrupt the computed sleep (wait) or be dropped entirely
+        # (before/after/before_sleep hooks) instead of being awaited.
+        uses_async = _utils.is_coroutine_callable(f) or (
             sleep is not None and _utils.is_coroutine_callable(sleep)
-        ):
+        )
+        if not uses_async:
+            for param_name in (
+                "retry",
+                "stop",
+                "wait",
+                "before",
+                "after",
+                "before_sleep",
+            ):
+                param = dkw.get(param_name)
+                if param is not None and _utils.is_coroutine_callable(param):
+                    uses_async = True
+                    break
+        if uses_async:
             r = AsyncRetrying(*dargs, **dkw)
         elif (
             _has_tornado()

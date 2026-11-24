@@ -15,9 +15,9 @@
 import asyncio
 import inspect
 import unittest
-from collections.abc import Callable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine
 from functools import wraps
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 from unittest import mock
 
 try:
@@ -213,6 +213,26 @@ class TestAsyncEnabled(unittest.TestCase):
         with pytest.raises(ValueError, match="fail"):
             await always_fails()
         assert call_count == 1
+
+    @asynctest
+    async def test_enabled_false_accepts_sync_target(self) -> None:
+        """When enabled=False, a synchronous target is not awaited.
+
+        Selecting an async control (here ``before``) routes the decorator
+        through ``AsyncRetrying.wraps()``, whose disabled branch used to do
+        ``await fn(...)`` unconditionally and raised
+        ``TypeError: object int can't be used in 'await' expression``.
+        """
+
+        async def async_before(state: RetryCallState) -> None:
+            pass
+
+        @retry(before=async_before, enabled=False)
+        def value() -> int:
+            return 42
+
+        # functools.wraps keeps the sync signature, so mypy still sees an int.
+        assert await cast("Awaitable[int]", value()) == 42
 
     @asynctest
     async def test_enabled_false_aiter_raises_original_exception(self) -> None:
@@ -624,6 +644,56 @@ class TestDecoratorWrapper(unittest.TestCase):
                 )
             else:
                 self.fail("RetryError should have been raised after 1 attempt")
+
+
+class TestAsyncCallablesOnSyncTarget(unittest.TestCase):
+    """Async control callables on a sync target must select AsyncRetrying.
+
+    On the sync path a returned coroutine object is silently coerced by
+    truthiness (retry/stop predicates) or dropped (hooks), so the user's
+    logic never runs.  The ``retry()`` overloads type the ``retry`` and
+    hook parameters as accepting awaitable results, so the decorator has
+    to route these calls through AsyncRetrying, which awaits them.
+    """
+
+    @asynctest
+    async def test_async_retry_predicate_is_awaited(self) -> None:
+        calls: list[int] = []
+
+        async def never_retry(retry_state: RetryCallState) -> bool:
+            return False
+
+        @retry(retry=never_retry, stop=stop_after_attempt(3), wait=wait_fixed(0))
+        def sync_fn() -> None:
+            calls.append(1)
+            raise ValueError("boom")
+
+        # The overloads still describe this shape as returning a sync wrapper
+        # (the async-parameter case has no dedicated overload yet), but at
+        # runtime AsyncRetrying is selected and the wrapper is a coroutine
+        # function.
+        with pytest.raises(ValueError):
+            await sync_fn()  # type: ignore[misc]
+        assert len(calls) == 1
+
+    @asynctest
+    async def test_async_before_hook_is_awaited(self) -> None:
+        seen: list[int] = []
+
+        async def before_hook(retry_state: RetryCallState) -> None:
+            seen.append(retry_state.attempt_number)
+
+        @retry(
+            stop=stop_after_attempt(2),
+            wait=wait_fixed(0),
+            before=before_hook,
+        )
+        def sync_fn() -> None:
+            raise ValueError("boom")
+
+        with pytest.raises(RetryError):
+            await sync_fn()  # type: ignore[misc]
+        assert seen == [1, 2]
 
 
 # make sure mypy accepts passing an async sleep function

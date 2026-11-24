@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    ``retry(fn, **kwargs)`` now applies the keyword configuration when a
+    callable is decorated positionally. Previously the keywords were
+    silently dropped, leaving the default ``stop_never`` in place, so a
+    consistently failing function retried forever.

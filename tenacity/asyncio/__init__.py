@@ -211,13 +211,18 @@ class AsyncRetrying(BaseRetrying):
     def wraps(self, fn: t.Callable[P, R]) -> _RetryDecorated[P, R]:
         wrapped = super().wraps(fn)
         # Ensure wrapper is recognized as a coroutine function.
+        is_async = _utils.is_coroutine_callable(fn)
 
         @functools.wraps(
             fn, functools.WRAPPER_ASSIGNMENTS + ("__defaults__", "__kwdefaults__")
         )
         async def async_wrapped(*args: t.Any, **kwargs: t.Any) -> t.Any:
             if not self.enabled:
-                return await fn(*args, **kwargs)  # type: ignore[misc]
+                # Mirror __call__: a synchronous target is not awaited, so
+                # @retry(..., enabled=False) still works on plain functions.
+                if is_async:
+                    return await fn(*args, **kwargs)  # type: ignore[misc]
+                return fn(*args, **kwargs)
             # Always create a copy to prevent overwriting the local contexts when
             # calling the same wrapped functions multiple times in the same stack
             copy = self.copy()
