@@ -27,7 +27,9 @@ from tenacity import (
     DoSleep,
     RetryCallState,
     RetryError,
+    _ClsT,
     _RetryDecorated,
+    _RetryDecoratedClassMethod,
     _utils,
     after_nothing,
     before_nothing,
@@ -207,8 +209,16 @@ class AsyncRetrying(BaseRetrying):
             else:
                 raise StopAsyncIteration
 
+    @t.overload
+    def wraps(
+        self, fn: t.Callable[t.Concatenate[type[_ClsT], P], R]
+    ) -> _RetryDecoratedClassMethod[_ClsT, P, R]: ...  # pyright: ignore[reportOverlappingOverload]
+
+    @t.overload
+    def wraps(self, fn: t.Callable[P, R]) -> _RetryDecorated[P, R]: ...
+
     @override
-    def wraps(self, fn: t.Callable[P, R]) -> _RetryDecorated[P, R]:
+    def wraps(self, fn: t.Callable[..., t.Any]) -> t.Any:
         wrapped = super().wraps(fn)
         # Ensure wrapper is recognized as a coroutine function.
 
@@ -236,7 +246,7 @@ class AsyncRetrying(BaseRetrying):
         async_wrapped.retry_with = wrapped.retry_with  # type: ignore[attr-defined]
         async_wrapped.statistics = {}  # type: ignore[attr-defined]
 
-        return t.cast("_RetryDecorated[P, R]", async_wrapped)
+        return async_wrapped
 
 
 __all__ = [
