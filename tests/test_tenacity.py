@@ -2325,6 +2325,46 @@ class TestRetryTyping(unittest.TestCase):
         result: int = doubler.double(value=21)
         self.assertEqual(result, 42)
 
+    def test_retry_decorated_classmethod_keeps_bound_signature(self) -> None:
+        """A @classmethod wrapping @retry must bind ``cls`` on class and instance access.
+
+        See issue #756.
+        """
+        import asyncio
+
+        class Multiplier:
+            factor = 3
+
+            @classmethod
+            @retry
+            def scale(cls, value: int) -> int:
+                return cls.factor * value
+
+            @classmethod
+            @retry(stop=tenacity.stop_after_attempt(2))
+            def scale_with_args(cls, value: int) -> int:
+                return cls.factor * value
+
+            @classmethod
+            @retry
+            async def ascale(cls, value: int) -> int:
+                return cls.factor * value
+
+        class SubMultiplier(Multiplier):
+            factor = 4
+
+        instance = Multiplier()
+        self.assertEqual(Multiplier.scale(5), 15)
+        self.assertEqual(Multiplier.scale(value=5), 15)
+        self.assertEqual(instance.scale(5), 15)
+        self.assertEqual(SubMultiplier.scale(5), 20)
+        self.assertEqual(Multiplier.scale_with_args(value=6), 18)
+        self.assertEqual(asyncio.run(Multiplier.ascale(7)), 21)
+        self.assertEqual(asyncio.run(instance.ascale(value=7)), 21)
+
+        bad_cls_arg: int = Multiplier.scale("bad")  # type: ignore[arg-type]
+        _ = bad_cls_arg
+
 
 class TestMockingSleep:
     RETRY_ARGS = {

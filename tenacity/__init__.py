@@ -115,6 +115,7 @@ WrappedFnReturnT = t.TypeVar("WrappedFnReturnT")
 WrappedFn = t.TypeVar("WrappedFn", bound=t.Callable[..., t.Any])
 P = t.ParamSpec("P")
 R = t.TypeVar("R")
+_ClsT = t.TypeVar("_ClsT")
 
 
 @dataclasses.dataclass(slots=True)
@@ -378,7 +379,15 @@ class BaseRetrying(ABC):
             self._local.iter_state = IterState()
         return self._local.iter_state  # type: ignore[no-any-return]
 
-    def wraps(self, f: t.Callable[P, R]) -> "_RetryDecorated[P, R]":
+    @t.overload
+    def wraps(
+        self, f: t.Callable[t.Concatenate[type[_ClsT], P], R]
+    ) -> "_RetryDecoratedClassMethod[_ClsT, P, R]": ...  # pyright: ignore[reportOverlappingOverload]
+
+    @t.overload
+    def wraps(self, f: t.Callable[P, R]) -> "_RetryDecorated[P, R]": ...
+
+    def wraps(self, f: t.Callable[..., t.Any]) -> t.Any:
         """Wrap a function for retrying.
 
         :param f: A function to wrap for retrying.
@@ -403,7 +412,7 @@ class BaseRetrying(ABC):
             self._local.statistics = stats
             return copy(f, *args, **kw)
 
-        def retry_with(*args: t.Any, **kwargs: t.Any) -> "_RetryDecorated[P, R]":
+        def retry_with(*args: t.Any, **kwargs: t.Any) -> t.Any:
             return self.copy(*args, **kwargs).wraps(f)
 
         # Preserve attributes
@@ -411,7 +420,7 @@ class BaseRetrying(ABC):
         wrapped_f.retry_with = retry_with  # type: ignore[attr-defined]
         wrapped_f.statistics = {}  # type: ignore[attr-defined]
 
-        return t.cast("_RetryDecorated[P, R]", wrapped_f)
+        return wrapped_f
 
     def begin(self) -> None:
         self.statistics.clear()
@@ -711,7 +720,66 @@ class _RetryDecorated(t.Protocol[P, R]):
     ) -> "_RetryDecorated[..., R]": ...
 
 
+class _RetryDecoratedClassMethod(t.Protocol[_ClsT, P, R]):
+    """Protocol for classmethods decorated with @retry.
+
+    Type checkers do not automatically apply ``@classmethod`` descriptor
+    binding to custom Protocol callables returned by ``@retry``. Defining
+    ``__get__`` here drops the leading ``cls`` parameter when accessed on the
+    owner class or an instance while preserving the remaining ``ParamSpec``.
+    See issue #756.
+    """
+
+    retry: "BaseRetrying"
+    statistics: dict[str, t.Any]
+    __wrapped__: "_RetryDecoratedClassMethod[_ClsT, P, R]"
+
+    def retry_with(
+        self, *args: t.Any, **kwargs: t.Any
+    ) -> "_RetryDecoratedClassMethod[_ClsT, P, R]": ...
+
+    def __call__(self, cls: type[_ClsT], /, *args: P.args, **kwargs: P.kwargs) -> R: ...
+
+    @t.overload
+    def __get__(
+        self, instance: None, owner: type[_ClsT]
+    ) -> "_RetryDecorated[P, R]": ...
+    @t.overload
+    def __get__(
+        self, instance: _ClsT, owner: type[_ClsT] | None = None
+    ) -> "_RetryDecorated[P, R]": ...
+
+
+class _RetryDecorator(t.Protocol):
+    @t.overload
+    def __call__(
+        self, fn: t.Callable[t.Concatenate[type[_ClsT], P], R]
+    ) -> "_RetryDecoratedClassMethod[_ClsT, P, R]": ...  # pyright: ignore[reportOverlappingOverload]
+    @t.overload
+    def __call__(self, fn: t.Callable[P, R]) -> "_RetryDecorated[P, R]": ...
+
+
 class _AsyncRetryDecorator(t.Protocol):
+    @t.overload
+    def __call__(  # type: ignore[overload-overlap]
+        self,
+        fn: "t.Callable[t.Concatenate[type[_ClsT], P], types.CoroutineType[t.Any, t.Any, R]]",
+    ) -> (
+        "_RetryDecoratedClassMethod[_ClsT, P, types.CoroutineType[t.Any, t.Any, R]]"
+    ): ...  # pyright: ignore[reportOverlappingOverload]
+    @t.overload
+    def __call__(  # type: ignore[overload-overlap]
+        self,
+        fn: t.Callable[t.Concatenate[type[_ClsT], P], t.Coroutine[t.Any, t.Any, R]],
+    ) -> "_RetryDecoratedClassMethod[_ClsT, P, t.Coroutine[t.Any, t.Any, R]]": ...  # pyright: ignore[reportOverlappingOverload]
+    @t.overload
+    def __call__(  # type: ignore[overload-overlap]
+        self, fn: t.Callable[t.Concatenate[type[_ClsT], P], t.Awaitable[R]]
+    ) -> "_RetryDecoratedClassMethod[_ClsT, P, t.Awaitable[R]]": ...  # pyright: ignore[reportOverlappingOverload]
+    @t.overload
+    def __call__(
+        self, fn: t.Callable[t.Concatenate[type[_ClsT], P], R]
+    ) -> "_RetryDecoratedClassMethod[_ClsT, P, t.Awaitable[R]]": ...  # pyright: ignore[reportOverlappingOverload]
     @t.overload
     def __call__(
         self, fn: "t.Callable[P, types.CoroutineType[t.Any, t.Any, R]]"
@@ -728,6 +796,12 @@ class _AsyncRetryDecorator(t.Protocol):
     def __call__(
         self, fn: t.Callable[P, R]
     ) -> "_RetryDecorated[P, t.Awaitable[R]]": ...
+
+
+@t.overload
+def retry(
+    func: t.Callable[t.Concatenate[type[_ClsT], P], R],
+) -> _RetryDecoratedClassMethod[_ClsT, P, R]: ...  # pyright: ignore[reportOverlappingOverload]
 
 
 @t.overload
@@ -767,7 +841,7 @@ def retry(
     retry_error_callback: t.Callable[["RetryCallState"], t.Any | t.Awaitable[t.Any]]
     | None = None,
     enabled: bool = True,
-) -> t.Callable[[t.Callable[P, R]], _RetryDecorated[P, R]]: ...
+) -> _RetryDecorator: ...
 
 
 def retry(*dargs: t.Any, **dkw: t.Any) -> t.Any:
